@@ -23,7 +23,7 @@ def _emit(payload: dict, error: bool = False) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="reels-maker",
-        description="Render manifest-driven vertical videos with scene caching")
+        description="Render manifest-driven videos in project-defined formats")
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("validate", "render"):
         command = commands.add_parser(name)

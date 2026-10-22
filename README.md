@@ -1,6 +1,6 @@
 # Reels Maker
 
-One Python/FFmpeg engine for many brands, usable from ChatGPT, Pi, OpenCode
+One Python/FFmpeg engine for many brands and video formats, usable from ChatGPT, Pi, OpenCode
 and any noninteractive terminal harness.
 
 **Refactor status:** Work stays on branch `refactor/modular-render-engine`,
@@ -48,3 +48,18 @@ assume brand style metadata alone guarantees pixel-perfect design: verify
 rendered typography and platform safe areas visually.
 
 Verify commercial usage rights and current facts before publishing media.
+
+## Independent output formats and brandbook PDF
+
+The brand sets **identity**, not output dimensions or a platform preset. Width,
+height, aspect ratio and FPS are configured independently in each project
+manifest; optional safe areas are also selected per project. A single brand can
+render portrait, landscape and square animations without changing brand.json.
+
+```sh
+python -m pip install -e '.[pdf]'
+reels-maker brandbook --brand asta-energy --json
+```
+
+The generated two-page PDF focuses on logo, palette, typography and usage
+rules. It does **not** prescribe a video size or aspect ratio.

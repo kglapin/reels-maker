@@ -8,12 +8,17 @@ import json
 from datetime import date
 from pathlib import Path
 
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
+# ReportLab is an optional extra. The video engine must import without it.
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfgen import canvas
+except ImportError:
+    colors = ImageReader = pdfmetrics = TTFont = canvas = None
+    A4 = None
 
 
 def _fonts(preferred: str = "") -> tuple[str, str]:
@@ -119,6 +124,9 @@ def _preview_image(profile: dict, root: Path | None) -> Path | None:
 def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None = None,
                    draft: bool = False) -> Path:
     """Draw a compact printable PDF without requiring hosted services."""
+    if canvas is None:
+        from .spec import ProjectError
+        raise ProjectError("PDF generation requires: pip install 'reels-maker[pdf]'")
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     name = str(profile.get("name") or profile.get("id") or "Nowa marka")
@@ -197,7 +205,7 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     _line(c, 44, h - 517, f"Fallback: {fallback_font}", font=regular, size=10)
     _line(c, 44, h - 570, "Prosta energia. Spójna komunikacja.",
           font=bold, size=17, limit=42)
-    _line(c, 44, h - 593, "Przykładowy nagłówek w bezpiecznej strefie kadru.",
+    _line(c, 44, h - 593, "Przykładowy nagłówek zgodny z identyfikacją marki.",
           font=regular, size=10)
     _line(c, 44, h - 630,
           "Podgląd korzysta z lokalnego fontu PDF; nazwa fontu marki jest rekomendacją.",
@@ -205,38 +213,40 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     _page_bottom(c, 1, regular, draft=draft)
     c.showPage()
 
-    # Page 2 — video-safe usage and verification list.
-    _line(c, 44, h - 62, "03   ZASTOSOWANIE W REELS", font=bold, size=14)
-    safe = profile.get("identity", {}).get("safe_areas", {})
-    top = int(safe.get("top_pixels", 190))
-    bottom = int(safe.get("bottom_pixels", 290))
-    horizontal = int(safe.get("horizontal_pixels", 88))
-    # 9:16 stage with boundaries; frame is a conceptual preview, not screenshot.
-    fx, fy, fw, fh = 44, h - 447, 180, 320
-    c.setFillColor(_rgb("#14241E"))
-    c.roundRect(fx, fy, fw, fh, 10, fill=1, stroke=0)
-    c.setFillColor(_rgb(accent))
-    c.roundRect(fx + 18, fy + 105, fw - 36, 5, 2, fill=1, stroke=0)
-    _line(c, fx + 18, fy + 153, "TWOJA MARKA", font=bold, size=11, ink="#FFFFFF")
-    _line(c, fx + 18, fy + 130, "Spójne wideo", font=regular, size=10, ink="#FFFFFF")
-    c.setStrokeColor(_rgb("#B1DBC4"))
-    c.setDash(4, 4)
-    c.rect(fx + horizontal / 1080 * fw,
-           fy + bottom / 1920 * fh,
-           fw * (1 - 2 * horizontal / 1080),
-           fh * (1 - (top + bottom) / 1920), fill=0, stroke=1)
-    c.setDash()
-    _line(c, 250, h - 145, "FORMAT I STREFY", font=bold, size=11)
-    _block(c, "9:16  |  1080 × 1920 px", 250, h - 172, 288,
-           font=regular, size=11)
-    _block(c, f"Górna rezerwa: {top} px", 250, h - 205, 288,
-           font=regular, size=10)
-    _block(c, f"Dolna rezerwa: {bottom} px", 250, h - 230, 288,
-           font=regular, size=10)
-    _block(c, f"Boczne marginesy: {horizontal} px", 250, h - 255, 288,
-           font=regular, size=10)
-    _block(c, "Przy publikacji sprawdź strefy zajęte przez interfejs platformy.",
-           250, h - 300, 281, font=regular, size=10, max_lines=3)
+    # Page 2 — aspect-ratio independent applications of the visual identity.
+    # Neither sizes nor platform-specific safe areas belong in a brandbook.
+    _line(c, 44, h - 62, "03   ZASTOSOWANIE IDENTYFIKACJI", font=bold, size=14)
+    _block(c, "Ta sama identyfikacja działa niezależnie od wielkości "
+           "i proporcji materiału. Kolory, logo i typografia pozostają wspólne.",
+           44, h - 91, w - 88, font=regular, size=10, max_lines=3)
+
+    # Two wide, format-neutral style swatches—not fixed-aspect-ratio video mockups.
+    card_width = (w - 100) / 2
+    x_light, x_dark = 44, 56 + card_width
+    card_y, card_h = h - 370, 208
+    c.setFillColor(_rgb("#FFFFFF"))
+    c.roundRect(x_light, card_y, card_width, card_h, 9, fill=1, stroke=0)
+    c.setStrokeColor(_rgb("#DDE3E3"))
+    c.roundRect(x_light, card_y, card_width, card_h, 9, fill=0, stroke=1)
+    c.setFillColor(_rgb("#14221A"))
+    c.roundRect(x_dark, card_y, card_width, card_h, 9, fill=1, stroke=0)
+    for x, dark_mode in ((x_light, False), (x_dark, True)):
+        c.setFillColor(_rgb(accent))
+        c.roundRect(x + 20, card_y + card_h - 40, 45, 4, 2, fill=1, stroke=0)
+        fg = "#FFFFFF" if dark_mode else "#14221A"
+        sub = "#E0E9E1" if dark_mode else "#43525A"
+        _line(c, x + 20, card_y + card_h - 73, name, font=bold,
+              size=14, ink=fg, limit=21)
+        _line(c, x + 20, card_y + card_h - 97, "Spójny styl marki",
+              font=regular, size=10, ink=sub, limit=26)
+        _line(c, x + 20, card_y + 35,
+              "WARIANT CIEMNY" if dark_mode else "WARIANT JASNY",
+              font=bold, size=9, ink=sub)
+
+    _line(c, 44, h - 402, "Wspólne: paleta, krój pisma, logo i zasady komunikacji.",
+          font=regular, size=10)
+    _line(c, 44, h - 424, "Układ, rozdzielczość i kadrowanie ustala osobny projekt.",
+          font=regular, size=10, ink="#687981")
 
     _line(c, 44, h - 493, "04   POCHODZENIE I WERYFIKACJA", font=bold, size=13)
     y = h - 523
@@ -250,7 +260,7 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
         "Kolory: porównaj z aktualną stroną i oficjalną księgą znaku.",
         "Logo: sprawdź wariant jasny / ciemny, tło i pole ochronne.",
         "Fonty: potwierdź krój, dostępne grubości i licencję.",
-        "Film: przetestuj czytelność i kontrast na telefonie.",
+        "Publikacja: sprawdź kontrast i czytelność w docelowym medium.",
     ]
     for item in suggestions:
         c.setFillColor(_rgb(accent))
@@ -307,3 +317,17 @@ def generate_brandbook(slug: str, root: Path, output: Path | None = None) -> dic
         "logo_included": _preview_image(profile, directory) is not None,
         "preferred_font": str(_fonts_from(profile).get("primary", "")),
     }
+
+
+def generate_brandbook(slug: str, root: Path, output: Path | None = None) -> dict:
+    """Export the accepted brand to a PDF without imposing any video format."""
+    from .brand import brand_directory
+    directory = brand_directory(slug, root)
+    profile = saved_brandbook_data(directory)
+    if profile.get("id") != slug:
+        raise ValueError(f"Brand ID does not match directory: {slug}")
+    destination = (Path(output) if output is not None else
+                   Path(root) / "renders" / slug / "brandbook.pdf").resolve()
+    make_brandbook(profile, destination, assets_root=directory)
+    return {"brand": slug, "source": str(directory / "brand.json"),
+            "output": str(destination), "pages": 2}

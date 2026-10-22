@@ -29,7 +29,7 @@ class BrandConfigurationTest(unittest.TestCase):
             resolved = apply_brand(load_project(manifest), root)
             self.assertEqual(resolved.branding["accent"], "#445566")
             self.assertEqual(resolved.branding["font_family"], "DejaVu Sans")
-            self.assertEqual(resolved.branding["safe_areas"], {})
+            self.assertNotIn("safe_areas", resolved.branding)
             self.assertEqual(resolved.branding["logo"],
                              "brands/sample-company/assets/logo.png")
             self.assertEqual(resolved.scenes[0]["file"],
@@ -39,7 +39,7 @@ class BrandConfigurationTest(unittest.TestCase):
             self.assertIsNone(resolved.brand)
             self.assertEqual(apply_brand(resolved, root), resolved)
 
-    def test_machine_safe_areas_inherited_from_brand(self):
+    def test_video_safe_areas_are_owned_by_project(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             brand = root / "brands" / "test-brand"
@@ -48,15 +48,17 @@ class BrandConfigurationTest(unittest.TestCase):
                 "id": "test-brand", "branding": {"accent": "#47A013"},
                 "identity": {
                     "typography": {"primary": "Open Sans"},
-                    "safe_areas": {"bottom_pixels": 290, "top_pixels": 190}
                 }
             }))
             p = root / "test.json"
             p.write_text(json.dumps({"brand": "test-brand",
+                 "video": {"width": 1920, "height": 1080, "fps": 30},
+                 "branding": {"safe_areas": {"bottom_pixels": 65, "top_pixels": 75}},
                  "scenes": [{"file": "media/demo.mp4", "duration": 1}]}))
             resolved = apply_brand(load_project(p), root)
             self.assertEqual(resolved.branding["font_family"], "Open Sans")
-            self.assertEqual(resolved.branding["safe_areas"]["bottom_pixels"], 290)
+            self.assertEqual(resolved.branding["safe_areas"]["bottom_pixels"], 65)
+            self.assertEqual((resolved.width, resolved.height, resolved.fps), (1920, 1080, 30))
 
     def test_brand_rejects_cross_directory_references(self):
         with tempfile.TemporaryDirectory() as d:

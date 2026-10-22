@@ -20,11 +20,7 @@ class BrandbookTests(unittest.TestCase):
                 "id": "demo", "name": "Demo Brand", "version": 1,
                 "identity": {
                     "palette": {"primary": "#47A013", "background": "#FFFFFF"},
-                    "typography": {"primary": "Open Sans", "fallback": "DejaVu Sans"},
-                    "safe_areas": {"top_pixels": 190, "bottom_pixels": 290,
-                                   "horizontal_pixels": 88},
-                    "format": {"default_width": 1080, "default_height": 1920,
-                               "default_fps": 25}
+                    "typography": {"primary": "Open Sans", "fallback": "DejaVu Sans"}
                 }
             }))
             result = generate_brandbook("demo", root)
@@ -32,6 +28,8 @@ class BrandbookTests(unittest.TestCase):
             self.assertEqual(result["pages"], 2)
             self.assertTrue(file.read_bytes().startswith(b"%PDF"))
             self.assertGreater(file.stat().st_size, 1000)
+            # PDF generation does not require identity.format or safe_areas.
+            self.assertNotIn("format", json.loads((brand / "brand.json").read_text())["identity"])
 
 
 if __name__ == "__main__":

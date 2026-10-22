@@ -10,9 +10,9 @@ editorial rules before generating an ASTA Energy Reel.
   installed, appropriately licensed Open Sans font path is configured.
 - Use `assets/logo.png` for video overlays. `assets/logo.svg` is the original.
 - Short headings and restrained typography; keep a clear hierarchy.
-- Default vertical 9:16, 1080×1920, with social-platform-safe placement.
-  Treat the safe-area values in brand.json as initial guidance, not a substitute
-  for platform-specific publishing checks.
+- This brand identity is format-independent. Each project defines its own
+  video width, height, FPS and platform-specific safe areas.
+  No video format is imposed by `brand.json`.
 - Avoid unnecessary motion, box-heavy layouts, excessive transitions and
   overcomplicated graphics. Keep transitions tied to the story or music.
 
@@ -48,11 +48,11 @@ copied per brand.
 
 ## Podgląd PDF
 
-Wygeneruj jednostronicowy brandbook z aktualnego `brand.json`:
+Wygeneruj dwustronicowy brandbook z aktualnego `brand.json`:
 
 ```sh
 python -m pip install -e '.[pdf]'
 reels-maker brandbook --brand asta-energy --json
 ```
 
-Wynik: `renders/asta-energy/brandbook.pdf` (plik generowany, poza Git). Zmiany kolorów, fontów i bezpiecznych stref w `brand.json` są widoczne w kolejnym eksporcie. PDF nie jest osobnym źródłem ustawień.
+Wynik: `renders/asta-energy/brandbook.pdf` (plik generowany, poza Git). Zmiany kolorów, fontów i logo w `brand.json` są widoczne w kolejnym eksporcie. Brandbook nie zawiera rozmiarów wideo ani marginesów platform. PDF nie jest osobnym źródłem ustawień.

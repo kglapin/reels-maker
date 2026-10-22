@@ -23,16 +23,6 @@
       "render_png": "assets/logo.png",
       "preview_background": "#14221A"
     },
-    "format": {
-      "default_width": 1080,
-      "default_height": 1920,
-      "default_fps": 25
-    },
-    "safe_areas": {
-      "top_pixels": 190,
-      "bottom_pixels": 290,
-      "horizontal_pixels": 88
-    },
     "motion": {
       "style": "minimal, purposeful; no automatic effects",
       "audio": "music and SFX only when specified per project"

@@ -57,6 +57,6 @@ the renderer uses a locally installed compatible fallback.
 
 ## Brand-safe typography and performance timings
 
-The renderer uses `branding.safe_areas` inherited from `brand.json` to position the logo and text. `branding.font_family` chooses an installed Open Sans family when available, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
+The renderer uses optional `branding.safe_areas` from the individual project to position its logo and text. The brand preset never imposes resolution, aspect ratio, frame rate or platform-specific margins. `branding.font_family` chooses an installed Open Sans family when available, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
 
 Each render reports `timings_seconds.preflight`, `scene_encoding`, `assembly_audio_validation`, and `total` plus `cache_hit_rate`. Compare a cold render to a repeated warm render before choosing a concurrency level. These are measurements, not promised speed-ups.

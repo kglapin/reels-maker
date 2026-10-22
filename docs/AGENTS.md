@@ -7,10 +7,11 @@ required.
 ```sh
 reels-maker doctor --json
 reels-maker catalog --brand asta-energy --json
-reels-maker validate brands/asta-energy/projects/asta-rush-demo.json --syntax-only --json
+reels-maker validate brands/asta-energy/projects/asta-rush-demo.json --syntax-only --strict-quality --json
 reels-maker validate brands/asta-energy/projects/asta-rush-demo.json --json
-reels-maker render brands/asta-energy/projects/asta-rush-demo.json --jobs 2 --json
+reels-maker render brands/asta-energy/projects/asta-rush-demo.json --jobs 2 --strict-quality --json
 reels-maker inspect renders/asta-energy/asta-rush-demo.mp4 --json
+reels-maker storyboard brands/asta-energy/projects/asta-rush-demo.json --video renders/asta-energy/asta-rush-demo.mp4 --output renders/asta-energy/qa/shot-review.png --json
 ```
 
 Machine contract: successful JSON on stdout with `schema_version: 1` and

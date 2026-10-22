@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--no-cache", action="store_true")
             command.add_argument("--jobs", type=int, default=2,
                                  help="Concurrent scene encodes (default: 2)")
+            command.add_argument("--strict-quality", action="store_true",
+                                 help="Refuse to render when editorial warnings remain")
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
@@ -156,6 +158,15 @@ def main(argv: list[str] | None = None) -> int:
                               "duration": project.duration, "music": bool(data["music"]),
                               "media_checked": True}
             else:
+                if args.strict_quality:
+                    check = review_project(project)
+                    if check["warning_count"]:
+                        _emit({"status": "error", "ok": False,
+                               "quality": check,
+                               "error": {"type": "QualityReviewRequired",
+                                         "message": "Resolve design warnings before rendering"}},
+                              error=True)
+                        return 2
                 result = render(project, root=args.root, output=args.output,
                                 cache_dir=args.cache_dir,
                                 cache=not args.no_cache, jobs=args.jobs)

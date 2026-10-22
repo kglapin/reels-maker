@@ -11,11 +11,12 @@ Do not merge or write to `main` during refactor; changes belong in the
 2. Query local assets: `reels-maker catalog --brand asta-energy --json`.
 3. Create/edit a project in `brands/<slug>/projects/`. Manifest paths are
    relative to that brand directory, not to the shell working directory.
-4. Run `reels-maker validate <manifest> --syntax-only --json`.
+4. Run `reels-maker validate <manifest> --syntax-only --strict-quality --json`; fix or explicitly review design warnings.
 5. Run `reels-maker validate <manifest> --root . --json`.
-6. Run `reels-maker render <manifest> --root . --json`.
-7. Require exit code 0 and a successful JSON response. Open/inspect the MP4
-   before reporting it as finished.
+6. Run `reels-maker render <manifest> --root . --strict-quality --json` for delivery. If creative intent requires an exception, record the reason before omitting strict mode.
+7. Require exit code 0 and a successful JSON response. Generate a contact sheet
+   with `reels-maker storyboard <manifest> --video <mp4> --output <png> --json`.
+   Inspect the real MP4 with audio and the contact sheet before calling it finished.
 
 Keep brand media and project manifests separate from reusable Python modules.
 No agent integration may bypass the CLI and quietly inject another rendering

@@ -1,0 +1,100 @@
+name: ASTA real-footage creative QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - refactor/modular-render-engine
+    paths:
+      - .github/workflows/real-media-qa.yml
+      - brands/asta-energy/projects/asta-creative-qa-*.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asta-creative-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-footage-qa:
+    name: Render real ASTA footage and compare editorial cuts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /pyproject.toml
+            /brands/asta-energy/brand.json
+            /brands/asta-energy/assets/logo.png
+            /brands/asta-energy/media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4
+            /brands/asta-energy/media/footage/8_asta-pila-realizacja-30kwp.mp4
+            /brands/asta-energy/projects/asta-creative-qa-cut.json
+            /brands/asta-energy/projects/asta-creative-qa-dissolve.json
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install engine
+        run: python -m pip install -e .
+      - name: Verify real media, font and FFmpeg
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          if ! fc-match -f '%{family}\n' "Open Sans" | grep -qi '^Open Sans'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq fonts-open-sans
+          fi
+          fc-match "Open Sans"
+          ffmpeg -version | head -n 1
+          mkdir -p renders/asta-energy/qa/reports
+          for file in \
+            "brands/asta-energy/media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4" \
+            "brands/asta-energy/media/footage/8_asta-pila-realizacja-30kwp.mp4"; do
+            test -s "$file"
+            if head -c 80 "$file" | grep -q 'git-lfs.github.com/spec'; then
+              echo "Unexpected Git LFS pointer: $file" >&2
+              exit 1
+            fi
+            ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration \
+              -of json "$file"
+          done
+      - name: Produce cut and dissolve variants from identical shots
+        run: |
+          set -euo pipefail
+          for kind in cut dissolve; do
+            project="brands/asta-energy/projects/asta-creative-qa-$kind.json"
+            video="renders/asta-energy/qa/creative-$kind.mp4"
+            prefix="renders/asta-energy/qa/reports/$kind"
+            reels-maker validate "$project" --syntax-only --strict-quality --json \
+              > "$prefix-creative-check.json"
+            reels-maker validate "$project" --root . --json \
+              > "$prefix-preflight.json"
+            reels-maker render "$project" --root . --jobs 2 --strict-quality --json \
+              > "$prefix-render.json"
+            reels-maker verify "$project" --video "$video" --json \
+              > "$prefix-verify.json"
+            reels-maker storyboard "$project" --video "$video" \
+              --output "renders/asta-energy/qa/$kind-contact-sheet.png" --json \
+              > "$prefix-frames.json"
+            reels-maker storyboard "$project" --video "$video" --motion-strip \
+              --output "renders/asta-energy/qa/$kind-motion-strip.png" --json \
+              > "$prefix-motion.json"
+          done
+      - name: Package verified videos, actual-frame storyboards and reports
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asta-creative-qa-cut-vs-dissolve
+          path: renders/asta-energy/qa/
+          if-no-files-found: error
+          retention-days: 7

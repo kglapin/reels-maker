@@ -1,0 +1,80 @@
+{
+  "brand": "asta-energy",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 25
+  },
+  "branding": {
+    "safe_areas": {
+      "horizontal_pixels": 60,
+      "top_pixels": 118,
+      "bottom_pixels": 175
+    }
+  },
+  "name": "asta-creative-qa-dissolve",
+  "scenes": [
+    {
+      "file": "media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4",
+      "start": 0,
+      "duration": 3.2,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "ENERGIA",
+              "scale": 1.24,
+              "color": "accent",
+              "weight": "bold"
+            },
+            {
+              "text": " dla firm",
+              "scale": 0.78,
+              "break_before": true
+            }
+          ]
+        },
+        "body": "Instalacje fotowoltaiczne"
+      },
+      "motion": {
+        "preset": "rise_soft",
+        "duration_frames": 7,
+        "stagger_frames": 2,
+        "distance_px": 16
+      }
+    },
+    {
+      "file": "media/footage/8_asta-pila-realizacja-30kwp.mp4",
+      "start": 0,
+      "duration": 3.2,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "TECHNOLOGIA",
+              "scale": 1.14,
+              "color": "accent",
+              "weight": "bold"
+            },
+            {
+              "text": " w praktyce",
+              "scale": 0.78,
+              "break_before": true
+            }
+          ]
+        },
+        "body": "Realizacje ASTA Energy"
+      },
+      "motion": {
+        "preset": "fade_stagger",
+        "duration_frames": 8,
+        "stagger_frames": 2
+      },
+      "transition_in": {
+        "type": "dissolve",
+        "frames": 5
+      }
+    }
+  ],
+  "output": "renders/asta-energy/qa/creative-dissolve.mp4"
+}

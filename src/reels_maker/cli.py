@@ -1,4 +1,4 @@
-"""Stable noninteractive CLI for ChatGPT, Pi, OpenCode and ordinary terminals."""
+"""Noninteractive, versioned JSON CLI for ChatGPT, Pi, OpenCode and automation."""
 from __future__ import annotations
 
 import argparse
@@ -6,51 +6,81 @@ import json
 import sys
 from pathlib import Path
 
-from .ffmpeg import RenderError, probe
+from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
 from .renderer import preflight, render
 from .spec import ProjectError, load_project
 
+SCHEMA_VERSION = 1
+
+
+def _emit(payload: dict, error: bool = False) -> None:
+    print(json.dumps({"schema_version": SCHEMA_VERSION, **payload},
+                     ensure_ascii=False), file=sys.stderr if error else sys.stdout)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="reels-maker",
-        description="Render reusable video manifests with cached FFmpeg scenes")
+        description="Render manifest-driven vertical videos with scene caching")
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("validate", "render"):
         command = commands.add_parser(name)
         command.add_argument("project", type=Path, help="JSON manifest path")
-        command.add_argument("--root", type=Path, default=ROOT,
-                             help="Asset directory (defaults to repository root)")
-        command.add_argument("--json", action="store_true", help="JSON-only stdout")
-        if name == "render":
+        command.add_argument("--root", type=Path, default=ROOT, help="Asset root")
+        command.add_argument("--json", action="store_true", help="Versioned JSON output")
+        if name == "validate":
+            command.add_argument("--syntax-only", action="store_true",
+                                 help="Validate JSON schema without media or FFmpeg")
+        else:
             command.add_argument("--output", type=Path)
             command.add_argument("--cache-dir", type=Path)
             command.add_argument("--no-cache", action="store_true")
+            command.add_argument("--jobs", type=int, default=2,
+                                 help="Concurrent scene encodes (default: 2)")
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
+    doctor = commands.add_parser("doctor")
+    doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command == "doctor":
+            import subprocess
+            report = {}
+            for name in ("ffmpeg", "ffprobe"):
+                try:
+                    exe = require_tool(name)
+                    report[name] = subprocess.run(
+                        [exe, "-version"], capture_output=True, text=True,
+                        check=True).stdout.splitlines()[0]
+                except (OSError, RenderError, subprocess.CalledProcessError):
+                    report[name] = None
+            valid = all(report.values())
+            _emit({"status": "ok" if valid else "error",
+                   "ok": valid, "tools": report}, error=not valid)
+            return 0 if valid else 3
         if args.command == "inspect":
-            result = {"ok": True, "file": str(args.file.resolve()),
-                      "metadata": probe(args.file)}
+            result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
         else:
             project = load_project(args.project)
             if args.command == "validate":
-                data = preflight(project, args.root)
-                result = {"ok": True, "project": project.name,
-                          "scenes": len(data["sources"]),
-                          "duration": project.duration,
-                          "music": bool(data["music"])}
+                if args.syntax_only:
+                    result = {"project": project.name, "scenes": len(project.scenes),
+                              "duration": project.duration, "media_checked": False}
+                else:
+                    data = preflight(project, args.root)
+                    result = {"project": project.name, "scenes": len(data["sources"]),
+                              "duration": project.duration, "music": bool(data["music"]),
+                              "media_checked": True}
             else:
-                result = render(project, root=args.root,
-                                output=args.output, cache_dir=args.cache_dir,
-                                cache=not args.no_cache)
-        print(json.dumps(result, ensure_ascii=False))
+                result = render(project, root=args.root, output=args.output,
+                                cache_dir=args.cache_dir,
+                                cache=not args.no_cache, jobs=args.jobs)
+        _emit({"status": "ok", "ok": True, **result})
         return 0
     except (ProjectError, AssetError, RenderError, OSError, ValueError) as exc:
-        error = {"ok": False, "error": {"type": type(exc).__name__, "message": str(exc)}}
-        print(json.dumps(error, ensure_ascii=False), file=sys.stdout if args.json else sys.stderr)
+        _emit({"status": "error", "ok": False,
+               "error": {"type": type(exc).__name__, "message": str(exc)}}, error=True)
         return 2
 
 

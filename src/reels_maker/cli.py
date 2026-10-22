@@ -51,6 +51,13 @@ def main(argv: list[str] | None = None) -> int:
     cues.add_argument("--output", type=Path, help="Optional JSON report destination")
     cues.add_argument("--json", action="store_true")
 
+    audio_qc = commands.add_parser("audio-qc",
+        help="Measure integrated LUFS and true peak without modifying the audio")
+    audio_qc.add_argument("file", type=Path)
+    audio_qc.add_argument("--reference-lufs", type=float,
+                          help="Optional editorial loudness reference, not a platform standard")
+    audio_qc.add_argument("--json", action="store_true")
+
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
@@ -167,6 +174,10 @@ def main(argv: list[str] | None = None) -> int:
                     json.dumps(result, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8")
                 result["report"] = str(location)
+        elif args.command == "audio-qc":
+            from .audio_qc import analyze_audio_loudness
+            result = analyze_audio_loudness(
+                args.file, reference_lufs=args.reference_lufs)
         elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
         elif args.command == "verify":

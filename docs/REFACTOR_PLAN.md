@@ -20,6 +20,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Optional independent narration soundtrack with deterministic offset, silence padding, music ducking and peak limiting.
 - [x] Frame-accurate cue-sheet exporter with global timeline and xfade overlap warnings for human narration spotting.
 - [x] Editor-verified audio word marker audit with explicit frame tolerances, source checks and strict-quality drift warnings.
+- [x] Read-only FFmpeg/EBU R128 loudness and AAC true-peak QC, with warnings but no automatic mastering.
 - [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
 - [x] Machine-readable editorial quality warnings for reading speed, over-emphasis and transition density, with CLI strict mode.
 - [x] Real-MP4 storyboard generation for human shot/crop/text inspection.

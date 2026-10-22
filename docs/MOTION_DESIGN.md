@@ -173,3 +173,24 @@ visual entrances. It does not prove a WAV actually contains that word, or
 replace listening to the final file. When narration is retrimmed, re-check
 the original source timestamps. Never silently treat unmarked speech as
 aligned.
+
+## Read-only audio mastering QC (LUFS and true peak)
+
+```sh
+reels-maker audio-qc renders/my-brand/final.mp4 --json
+reels-maker audio-qc renders/my-brand/final.mp4 --reference-lufs -16 --json
+```
+
+The command measures the **actual exported AAC audio track** using FFmpeg's
+EBU R128 / `loudnorm` first-pass measurements, reporting integrated LUFS,
+true peak (dBTP) and loudness range. It never writes or normalizes source
+files. Warnings flag gross problems (e.g. unusual quiet, excessive overall
+loudness or true peak above -1 dBTP), not deviation from an invented universal
+Instagram/TikTok target. A `--reference-lufs` is an optional editor-set
+comparison; it does not trigger processing or platform-specific guarantees.
+
+The existing audio peak limiter is **sample-domain protection**, not a
+guarantee of true-peak compliance after AAC. This read-only meter can catch
+inter-sample overs and mastering surprises. LUFS cannot measure narration
+intelligibility, masking, pumping, timing or the artistic quality of a score:
+listen to the decoded export with suitable headphones and a phone speaker.

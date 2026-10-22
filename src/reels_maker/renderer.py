@@ -88,7 +88,7 @@ def _check_output(project: Project, target: Path) -> dict:
 
 
 def render(project: Project, *, root: Path, output: Path | None = None,
-           cache_dir: Path | None = None, use_cache: bool = True) -> dict:
+           cache_dir: Path | None = None, use_cache: bool = True, jobs: int = 2) -> dict:
     """Validate then generate MP4, reusing unchanged H.264 clips between runs."""
     root = Path(root).resolve()
     inputs = preflight(project, root)
@@ -105,35 +105,39 @@ def render(project: Project, *, root: Path, output: Path | None = None,
     cache = Path(cache_dir).resolve() if cache_dir else root / ".cache" / "reels-maker"
     if use_cache:
         cache.mkdir(parents=True, exist_ok=True)
-    hits = 0
+    if not isinstance(jobs, int) or isinstance(jobs, bool) or jobs < 1 or jobs > 8:
+        raise RenderError("jobs must be an integer between 1 and 8")
 
-    with tempfile.TemporaryDirectory(prefix="reels-maker-") as temp:
+    # Scratch and persistent cache share a filesystem: completed segments move
+    # atomically into cache without an extra large file copy.
+    with tempfile.TemporaryDirectory(
+            prefix="reels-maker-", dir=cache if use_cache else None) as temp:
         work = Path(temp)
-        segments = []
-        for index, shot in enumerate(inputs.shots):
-            key = _shot_key(project, shot, inputs.logo)
+        keyed_shots = [(_shot_key(project, shot, inputs.logo), i, shot)
+                       for i, shot in enumerate(inputs.shots)]
+        unique = {key: (i, shot) for key, i, shot in keyed_shots}
+
+        def build(entry):
+            key, (index, shot) = entry
             stored = cache / (key + ".mp4")
-            if use_cache and stored.exists() and stored.stat().st_size > 512:
-                segments.append(stored)
-                hits += 1
-                continue
+            if use_cache and stored.is_file() and stored.stat().st_size > 512:
+                return key, stored, False
             scratch = work / f"shot_{index:03d}"
             scratch.mkdir()
             encoded = scratch / "clip.mp4"
             _encode_scene(project, shot, inputs.logo, encoded, scratch)
             if use_cache:
-                # Temporary file resides next to the destination so replace is atomic.
-                with tempfile.NamedTemporaryFile(prefix=key + "-", suffix=".mp4",
-                                                 dir=cache, delete=False) as fh:
-                    staged = Path(fh.name)
-                try:
-                    shutil.copyfile(encoded, staged)
-                    os.replace(staged, stored)
-                finally:
-                    staged.unlink(missing_ok=True)
-                segments.append(stored)
-            else:
-                segments.append(encoded)
+                os.replace(encoded, stored)
+                return key, stored, True
+            return key, encoded, True
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(jobs, len(unique))) as pool:
+            resolved = list(pool.map(build, unique.items()))
+        by_key = {key: path for key, path, _ in resolved}
+        segments = [by_key[key] for key, _, _ in keyed_shots]
+        misses = sum(rendered for _, _, rendered in resolved)
+        hits = len(segments) - misses
 
         concat = work / "concat.txt"
         concat.write_text("".join("file '" + str(p).replace("'", "'\\''") + "'\n"
@@ -168,5 +172,5 @@ def render(project: Project, *, root: Path, output: Path | None = None,
         finally:
             staged_output.unlink(missing_ok=True)
         result.update({"output": str(target), "cache_hits": hits,
-                       "cache_misses": len(segments) - hits, "status": "ok"})
+                       "cache_misses": misses, "workers": min(jobs, len(unique)), "status": "ok"})
         return result

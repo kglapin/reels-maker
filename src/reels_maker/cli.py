@@ -40,6 +40,7 @@ def main(argv=None) -> int:
             sub.add_argument("--output", type=Path, help="Override output path")
             sub.add_argument("--cache-dir", type=Path, help="Override persistent scene cache")
             sub.add_argument("--no-cache", action="store_true")
+            sub.add_argument("--jobs", type=int, default=2, help="Concurrent FFmpeg shot encodes (1-8)")
 
     doctor = commands.add_parser("doctor", help="Check required executable availability")
     doctor.add_argument("--json", action="store_true")
@@ -72,7 +73,8 @@ def main(argv=None) -> int:
                               "media_checked": False}
             else:
                 result = render(project, root=args.root, output=args.output,
-                                cache_dir=args.cache_dir, use_cache=not args.no_cache)
+                                cache_dir=args.cache_dir, use_cache=not args.no_cache,
+                                jobs=args.jobs)
         _emit(result)
         return 0
     except (ProjectError, AssetError, RenderError, OSError, ValueError) as exc:

@@ -57,10 +57,11 @@ class TinyRenderTest(unittest.TestCase):
                 ], "output": "output/out.mp4"
             }))
             project = load_project(project_path)
-            first = render(project, root=root)
-            second = render(project, root=root)
+            first = render(project, root=root, jobs=2)
+            second = render(project, root=root, jobs=2)
             self.assertEqual(first["cache_misses"], 2)
             self.assertEqual(second["cache_hits"], 2)
+            self.assertEqual(second["workers"], 2)
             self.assertAlmostEqual(second["duration"], 2, delta=0.15)
             self.assertTrue(Path(second["output"]).exists())
 

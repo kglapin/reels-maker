@@ -1,0 +1,94 @@
+"""Pre-render simple safe-zone typography once per distinct segment."""
+from pathlib import Path
+
+from PIL import Image, ImageDraw, ImageFont
+
+from .ffmpeg import RenderError
+from .spec import Project
+
+
+def _font(size: int, bold: bool):
+    try:
+        return ImageFont.truetype("DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf", size)
+    except OSError as exc:
+        raise RenderError("DejaVu Sans font missing (install fonts-dejavu-core)") from exc
+
+
+def _wrap(draw, value: str, face, width: int) -> list[str]:
+    result = []
+    for paragraph in value.splitlines():
+        current = ""
+        for word in paragraph.split():
+            trial = (current + " " + word).strip()
+            if draw.textlength(trial, font=face) <= width:
+                current = trial
+            elif current:
+                result.append(current)
+                current = word
+            else:
+                raise RenderError(f"Single word too wide for frame: {word}")
+        if current:
+            result.append(current)
+    return result
+
+
+def draw_card(project: Project, title: dict, logo: Path | None, target: Path) -> bool:
+    if not any(title.get(k) for k in ("kicker", "headline", "body", "footer")) and logo is None:
+        return False
+
+    w, h = project.width, project.height
+    scale = w / 1080
+    margin = round(w * 0.09)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    if title:
+        y0 = int(h * 0.38)
+        gradient = Image.new("RGBA", (1, h - y0))
+        px = gradient.load()
+        for y in range(h - y0):
+            t = y / max(1, h - y0 - 1)
+            px[0, y] = (5, 20, 13, int(225 * t * t))
+        img.alpha_composite(gradient.resize((w, h - y0)), (0, y0))
+
+    if logo:
+        try:
+            source = Image.open(logo).convert("RGBA")
+            lw = round(w * 0.21)
+            lh = round(lw * source.height / source.width)
+            img.alpha_composite(source.resize((lw, lh), Image.Resampling.LANCZOS),
+                                (margin, round(h * 0.075)))
+        except (OSError, ValueError, ZeroDivisionError) as exc:
+            raise RenderError(f"Could not load PNG logo: {logo}") from exc
+
+    draw = ImageDraw.Draw(img)
+    fields = [str(title.get(k, "")) for k in ("kicker", "headline", "body", "footer")]
+    size = [round(v * scale) for v in (29, 69, 37, 25)]
+    faces = [_font(max(9, n), i < 2) for i, n in enumerate(size)]
+    available = w - 2 * margin - round(22 * scale)
+    lines = [_wrap(draw, s.upper() if i == 0 else s, f, available)
+             for i, (s, f) in enumerate(zip(fields, faces))]
+    spacing = [round(v * scale) for v in (44, 83, 55, 37)]
+    block_height = sum(len(line) * step for line, step in zip(lines, spacing))
+    block_height += round(22 * scale) * sum(bool(line) for line in lines[1:])
+    bottom = round(h * 0.87)
+    y = bottom - block_height
+    if y < round(h * 0.36):
+        raise RenderError("Title card exceeds safe text area; shorten its text")
+    accent_hex = str(project.branding.get("accent", "#47A013")).lstrip("#")
+    try:
+        accent = "#" + accent_hex if len(accent_hex) == 6 else "#47A013"
+        Image.new("RGB", (1, 1), accent)
+    except ValueError as exc:
+        raise RenderError("Invalid branding.accent hex color") from exc
+    colors = [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"]
+    if any(lines):
+        draw.rectangle((margin, y, margin + round(6 * scale), bottom), fill=accent)
+    for i, (group, face, step, ink) in enumerate(zip(lines, faces, spacing, colors)):
+        if i and group:
+            y += round(22 * scale)
+        for line in group:
+            draw.text((margin + round(25 * scale), y), line, fill=ink, font=face)
+            y += step
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    img.save(target)
+    return True

@@ -1,5 +1,7 @@
 # Reels Maker — single-PR refactor tracker
 
+> **NADRZĘDNY PLAN:** [MASTER_PLAN.md](MASTER_PLAN.md) — priorytety P0/P1/P2, pełna lista zadań, zależności, kryteria odbioru, gate'y i kolejność prac. Automatyczny wskaźnik bieżącego etapu: [ROADMAP_STATUS.json](ROADMAP_STATUS.json). Ten plik jest historycznym trackerem wdrożeń, nie aktualną kolejką zadań.
+
 All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 `main` must remain unchanged until final approval.
 

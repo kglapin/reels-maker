@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-10-22",
+  "repo": "kglapin/reels-maker",
+  "privacy_verified": "private",
+  "working_branch": "refactor/modular-render-engine",
+  "pr_number": 1,
+  "pr_draft": true,
+  "main_is_frozen": true,
+  "baseline_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
+  "reference_ci_run": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
+  "master_plan": "docs/MASTER_PLAN.md",
+  "current_focus": "SEC-03",
+  "next_work_package": "01",
+  "milestones": [
+    {
+      "id": "M00",
+      "label": "Privacy/security",
+      "state": "in_progress",
+      "gate": "G0",
+      "priority": "P0"
+    },
+    {
+      "id": "M01",
+      "label": "Clean source footage and rights",
+      "state": "blocked_on_clean_masters",
+      "gate": "G1",
+      "priority": "P0"
+    },
+    {
+      "id": "M02",
+      "label": "Specification/core reproducibility",
+      "state": "in_progress",
+      "gate": "G2",
+      "priority": "P0"
+    },
+    {
+      "id": "M03",
+      "label": "Editorial art direction",
+      "state": "not_accepted",
+      "gate": "G3",
+      "priority": "P0"
+    },
+    {
+      "id": "M04",
+      "label": "Transitions/montage",
+      "state": "in_progress",
+      "gate": "G4",
+      "priority": "P0"
+    },
+    {
+      "id": "M05",
+      "label": "Kinetic typography",
+      "state": "in_progress",
+      "gate": "G5",
+      "priority": "P0"
+    },
+    {
+      "id": "M06",
+      "label": "Audio and narration",
+      "state": "in_progress",
+      "gate": "G6",
+      "priority": "P0"
+    },
+    {
+      "id": "M07",
+      "label": "Multi-brand/brandbooks",
+      "state": "partially_implemented",
+      "gate": "G7",
+      "priority": "P1"
+    },
+    {
+      "id": "M08",
+      "label": "Technical+creative QA",
+      "state": "in_progress",
+      "gate": "G8",
+      "priority": "P0"
+    },
+    {
+      "id": "M09",
+      "label": "Performance/reproducibility",
+      "state": "not_accepted",
+      "gate": "G9",
+      "priority": "P0"
+    },
+    {
+      "id": "M10",
+      "label": "Storage/CI/creator workflow",
+      "state": "in_progress",
+      "gate": "G10",
+      "priority": "P0"
+    },
+    {
+      "id": "M11",
+      "label": "Final approved deliverables/release",
+      "state": "not_started",
+      "gate": "G11",
+      "priority": "P0"
+    },
+    {
+      "id": "M12",
+      "label": "Optional post-1.0 features",
+      "state": "deferred",
+      "gate": null,
+      "priority": "P2"
+    }
+  ],
+  "next_tasks": [
+    {
+      "id": "SEC-03",
+      "status": "todo",
+      "why": "Private access controls must be audited."
+    },
+    {
+      "id": "SEC-05",
+      "status": "todo",
+      "why": "Prior public history may contain sensitive artifacts."
+    },
+    {
+      "id": "MED-03",
+      "status": "todo",
+      "why": "Only two of fifteen ASTA footage clips have editorial classification."
+    },
+    {
+      "id": "MED-04",
+      "status": "blocked",
+      "why": "Requires approved clean, unbranded ASTA footage from owner."
+    },
+    {
+      "id": "CORE-06",
+      "status": "todo",
+      "why": "Versioned manifest contract reduces accidental feature drift."
+    }
+  ],
+  "completed_only_when": "Code committed, tests/evidence passed, acceptance met, master plan checked and status updated.",
+  "constraints": [
+    "Do not merge PR #1 or change main without explicit owner approval.",
+    "Do not change repository visibility away from private.",
+    "Do not commit new proprietary media to other public repositories or artifacts.",
+    "Do not call technical CI success creative sign-off.",
+    "Do not rewrite/delete repository history without explicit approval."
+  ]
+}

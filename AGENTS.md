@@ -4,6 +4,15 @@ This repository contains a deterministic, local Python/FFmpeg rendering engine.
 Do not merge or write to `main` during refactor; changes belong in the
 `refactor/modular-render-engine` branch and draft PR #1.
 
+## Master backlog and execution order
+
+Before implementing another feature or interpreting "kontynuuj", read
+[docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) and
+[docs/ROADMAP_STATUS.json](docs/ROADMAP_STATUS.json). Work on the next
+unblocked P0 task; verify evidence and update both sources plus Draft PR.
+Do not add speculative effects while clean footage and legal/privacy gates
+are open. A CI success does not equal human creative acceptance.
+
 ## Workflow
 
 1. Read the selected brand's `BRAND.md` and `brand.json`. For ASTA Energy:

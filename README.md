@@ -7,6 +7,14 @@ and any noninteractive terminal harness.
 within draft [PR #1](https://github.com/kglapin/reels-maker/pull/1).
 `main` is unchanged until explicit approval.
 
+## Canonical 1.0 completion plan
+
+The comprehensive, ordered backlog is
+[docs/MASTER_PLAN.md](docs/MASTER_PLAN.md), with a compact machine-readable
+[milestone status](docs/ROADMAP_STATUS.json). Use these for all follow-up
+work. A passing CI run is not a creative sign-off. The repository **must
+remain private** and the Draft PR must not be merged without approval.
+
 ## Architecture
 
 - `src/reels_maker/` — shared Python/FFmpeg engine; no per-brand copies.

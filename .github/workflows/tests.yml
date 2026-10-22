@@ -77,12 +77,23 @@ jobs:
             sudo mv "$source" "$source.disabled"
           done < <(sudo grep -lr 'packages.microsoft.com' \
             /etc/apt/sources.list.d --include='*.list' --include='*.sources' || true)
-      - name: Ensure FFmpeg is available
+      - name: Ensure reproducible FFmpeg and FFprobe binaries
         run: |
+          set -euo pipefail
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq ffmpeg
+            python -m pip install 'static-ffmpeg==3.0'
+            python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          assert Path(ffmpeg).is_file() and Path(ffprobe).is_file()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as handle:
+              handle.write(str(Path(ffmpeg).parent) + "\n")
+          print("Portable FFmpeg/FFprobe loaded:", ffmpeg, ffprobe)
+          PY
           fi
+          # FFmpeg binary and source version must remain visible in the logs.
           ffmpeg -version | head -n 1
           ffprobe -version | head -n 1
       - run: python -m unittest discover -s tests -v

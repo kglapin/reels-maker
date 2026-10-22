@@ -132,3 +132,44 @@ for each text run, accounting for `xfade` overlaps. It includes narrator
 `offset_seconds` and marks reveals partially hidden by incoming/outgoing
 transitions. It never guesses spoken content or rewrites the narration.
 Match the output to the final WAV waveform, then audit in motion on a phone.
+
+## Optional manually verified spoken-word markers (strict sync QA)
+
+To guard against an edit that makes text appear too early or late relative to
+the *actual* narrator, add manually spotted word timestamps from the **original
+voice recording**. Markers are never guessed by speech recognition:
+
+```json
+{
+  "voiceover": {
+    "file": "media/audio/narrator.wav",
+    "start": 0.20,
+    "offset_seconds": 0.10,
+    "sync_marks": [
+      {
+        "scene": 2,
+        "role": "headline-1",
+        "source_seconds": 2.18,
+        "tolerance_frames": 2
+      }
+    ]
+  }
+}
+```
+
+`scene` is 1-based. `source_seconds` points into the original audio file,
+**before** `voiceover.start` trims it. The expected final-timeline time is
+`source_seconds - voiceover.start + voiceover.offset_seconds`; meanwhile,
+the visual text's global frame accounts for all intervening xfade overlaps.
+If the absolute difference exceeds `tolerance_frames` (default 2, range
+0–6), `cue-sheet` reports `narration_cue_drift`; `--strict-quality`
+refuses the campaign before render. Markers pointing outside the final
+timeline, to missing text runs, or beyond the WAV source duration also fail
+validation. The cue-sheet report now includes `sync_marks`, `delta_frames`,
+and `delta_seconds`, making editing decisions auditable.
+
+This checks **declared** manually verified word times against programmed
+visual entrances. It does not prove a WAV actually contains that word, or
+replace listening to the final file. When narration is retrimmed, re-check
+the original source timestamps. Never silently treat unmarked speech as
+aligned.

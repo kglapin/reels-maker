@@ -30,3 +30,9 @@ Historical files under `legacy/` and `archives/` are for reference only.
 
 Check media rights and time-sensitive marketing claims before publication.
 Other details: `docs/AGENTS.md`, `docs/CLI.md`, `docs/REFACTOR_PLAN.md`.
+
+For narrator-led campaigns, annotate a few manually verified word onsets
+in `voiceover.sync_marks` and compare to visual `headline-N` cue positions.
+`cue-sheet` exposes signed drift in frames; require `--strict-quality` to
+catch edited audio offsets, transitions and mistimed emphasis. Missing marks
+mean no automatic audio-text guarantee. Do not guess word timestamps.

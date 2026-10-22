@@ -92,3 +92,14 @@ reels-maker catalog --root . --probe --limit 100 --json
 ```
 
 The default catalog scans paths and file sizes only (no FFprobe). It excludes render outputs and working/cache folders. `available: false` identifies an unhydrated Git LFS pointer, which must be downloaded before rendering.
+
+## Declarative legacy baselines
+
+- `projects/asta-vamos-beat.json`: 22 cuts preserving the original beat times.
+- `projects/asta-subsidy-external.json`: 9 externally sourced scenes, Polish overlays and supplied Rush audio.
+- `projects/asta-rush-demo.json`: short branded integration reference.
+
+These are configuration-driven **baselines**, not frame-identical exports of the original
+scripts. Legacy green-flash transition overlays, exact source in-points, and original
+compositing treatments are pending migration. The subsidy edit requires Git LFS
+footage (`git lfs pull`) and a fresh check of programme claims and licences.

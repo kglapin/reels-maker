@@ -8,8 +8,8 @@ project manifests, invoke documented CLI commands and inspect their JSON respons
 
 1. Discover local clips quickly with `reels-maker catalog --root . --json` (no FFprobe by default).
 2. Create a small JSON project based on `projects/asta-rush-demo.json`.
-4. Run `reels-maker validate <path> --syntax-only --json` for schema errors.
-3. Run `reels-maker validate <path> --root <repo-root> --json` to inspect assets
+3. Run `reels-maker validate <path> --syntax-only --json` for schema errors.
+4. Run `reels-maker validate <path> --root <repo-root> --json` to inspect assets
    and prevent expensive failed renders.
 5. Run `reels-maker render <path> --root <repo-root> --json`.
 6. Read the successful JSON `output` field and inspect/preview the resulting MP4.

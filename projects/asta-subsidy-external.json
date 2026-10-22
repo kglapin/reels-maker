@@ -1,0 +1,122 @@
+{
+  "name": "asta-subsidy-external-baseline",
+  "description": "Declarative version of an existing promotional edit; verify subsidy rules before publication.",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25
+  },
+  "branding": {
+    "accent": "#47A013",
+    "logo": "engine/assets/asta_logo.png"
+  },
+  "scenes": [
+    {
+      "file": "engine/assets/commons/battery_cutaway.webm",
+      "start": 49.5,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Magazyn energii",
+        "headline": "Magazyn energii\nw Twoim domu",
+        "body": "Nadwyżki z fotowoltaiki zostają w domu i czekają na moment, gdy ich potrzebujesz."
+      }
+    },
+    {
+      "file": "engine/assets/commons/battery_cutaway.webm",
+      "start": 63,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Magazyn energii",
+        "headline": "Ładuje się,\ngdy jest nadmiar",
+        "body": "EMS steruje ładowaniem i rozładowaniem magazynu, a zużycie energii planujesz sam."
+      }
+    },
+    {
+      "file": "engine/assets/commons/wind_turbine_montrigaud.webm",
+      "start": 3,
+      "duration": 3.3,
+      "framing": "crop",
+      "title": {
+        "kicker": "Program PME 2",
+        "headline": "Dotacja do\n19 000 zł",
+        "body": "Tyle łącznie może wynieść wsparcie: magazyn energii, magazyn ciepła i premia UE."
+      }
+    },
+    {
+      "file": "engine/assets/commons/white_house_solar.webm",
+      "start": 106,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Dla kogo?",
+        "headline": "Prosument\nz instalacją OZE",
+        "body": "Mikroinstalacja przyłączona do sieci oraz wymagana umowa dotycząca sprzedaży energii."
+      }
+    },
+    {
+      "file": "engine/assets/commons/battery_cutaway.webm",
+      "start": 78,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Magazyn energii",
+        "headline": "Magazyn\nmin. 10 kWh",
+        "body": "Taka minimalna pojemność nominalna oraz dwukrotność mocy szczytowej instalacji PV."
+      }
+    },
+    {
+      "file": "engine/assets/commons/battery_cutaway.webm",
+      "start": 85,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Magazyn energii",
+        "headline": "Praca wyspowa,\nczyli awaryjnie",
+        "body": "Sprzęt z EMS potrafi zasilać dom także wtedy, gdy zabraknie zasilania z sieci."
+      }
+    },
+    {
+      "file": "engine/assets/commons/white_house_solar.webm",
+      "start": 75.5,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "Nabór aktywny",
+        "headline": "Premia UE\ndo 2 000 zł",
+        "body": "Przysługuje, gdy magazyn energii albo niezbędny falownik hybrydowy pochodzi z UE."
+      }
+    },
+    {
+      "file": "engine/assets/commons/agrivoltaics_heggelbach_05.webm",
+      "start": 8,
+      "duration": 3.3,
+      "framing": "crop",
+      "title": {
+        "kicker": "Nabór aktywny",
+        "headline": "Do 1.10.2027",
+        "body": "Nabór trwa do 1 października 2027 r. lub do wyczerpania budżetu programu."
+      }
+    },
+    {
+      "file": "engine/assets/commons/battery_cutaway.webm",
+      "start": 90,
+      "duration": 3.3,
+      "framing": "pad",
+      "title": {
+        "kicker": "ASTA Energy",
+        "headline": "Porozmawiaj\nz doradcą",
+        "body": "Sprawdź, czy ta forma wsparcia pasuje do Twojej inwestycji.",
+        "footer": "Kwota zależy od warunków programu. Dotacja nie obejmuje samej fotowoltaiki."
+      }
+    }
+  ],
+  "music": {
+    "file": "mewwwwwww-rush-433449.mp3",
+    "start": 10.635,
+    "volume": 0.65,
+    "fade_out": 1.2
+  },
+  "output": "output/asta-subsidy-external.mp4"
+}

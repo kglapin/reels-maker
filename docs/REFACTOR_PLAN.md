@@ -15,7 +15,7 @@ where useful, but do not duplicate FFmpeg pipelines or build unneeded wrappers.
 - [x] B. Shared FFmpeg renderer with cached scene encodes and stream-copy assembly.
 - [x] C. Noninteractive JSON CLI: validate, render, inspect.
 - [x] D. JSON example for an ASTA music montage.
-- [ ] E. Convert legacy generators to configuration-driven renderers.
+- [~] E. Migrate legacy generators: declarative Rush, Vamos and subsidy baselines now exist; their legacy transition effects still require parity work.
 - [ ] F. Add effects, reusable brand presets and safety-zone configurations.
 - [ ] G. Review media licensing, binary storage and deterministic production outputs.
 - [ ] H. Validate real source media in a full-size production export.

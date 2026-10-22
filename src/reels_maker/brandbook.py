@@ -263,6 +263,11 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
               size=14, ink=fg, limit=21)
         _line(c, x + 20, card_y + card_h - 97, "Spójny styl marki",
               font=regular, size=10, ink=sub, limit=26)
+        # Show the authentic bright logo on the dark example; a white logo
+        # must not be placed on the light example where it becomes invisible.
+        if dark_mode and logo_img:
+            _draw_logo(c, logo_img, x + 20, card_y + 58,
+                       card_width - 40, 42)
         _line(c, x + 20, card_y + 35,
               "WARIANT CIEMNY" if dark_mode else "WARIANT JASNY",
               font=bold, size=9, ink=sub)

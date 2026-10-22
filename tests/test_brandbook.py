@@ -50,6 +50,25 @@ class BrandbookTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Brand logo is missing"):
                 generate_brandbook("sample", root)
 
+    def test_asta_brandbook_embeds_real_repo_logo(self):
+        try:
+            import reportlab
+        except ImportError:
+            self.skipTest("Optional PDF dependency not installed")
+        from reels_maker.brandbook import generate_brandbook
+        root = Path(__file__).resolve().parents[1]
+        logo = root / "brands" / "asta-energy" / "assets" / "logo.png"
+        if not logo.is_file():
+            self.skipTest("ASTA brand asset excluded from checkout")
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "asta-brandbook.pdf"
+            result = generate_brandbook("asta-energy", root, output)
+            data = output.read_bytes()
+            self.assertTrue(result["logo_included"])
+            self.assertEqual(result["pages"], 2)
+            self.assertGreaterEqual(data.count(b"/Subtype /Image"), 1)
+            self.assertTrue(data.startswith(b"%PDF"))
+
     def test_generates_pdf_from_brand_json(self):
         try:
             import reportlab

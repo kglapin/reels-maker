@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+from .catalog import catalog
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
 from .renderer import preflight, render
@@ -40,6 +41,12 @@ def main(argv: list[str] | None = None) -> int:
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
+    discover = commands.add_parser("catalog")
+    discover.add_argument("--root", type=Path, default=ROOT)
+    discover.add_argument("--probe", action="store_true",
+                          help="Inspect each available media file (slower)")
+    discover.add_argument("--limit", type=int, default=500)
+    discover.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -59,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
             _emit({"status": "ok" if valid else "error",
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
-        if args.command == "inspect":
+        if args.command == "catalog":
+            result = catalog(args.root, include_metadata=args.probe, limit=args.limit)
+        elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
         else:
             project = load_project(args.project)

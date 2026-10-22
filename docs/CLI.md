@@ -83,3 +83,12 @@ The CLI does not require an interactive shell, elevated credentials, access to
 a model API or any persistent network connection.
 
 Parallel scene encoding: `--jobs 1..8` (default: 2). `doctor --json` checks FFmpeg. `validate --syntax-only --json` verifies manifests without requiring media.
+
+## Find source files before authoring a manifest
+
+```sh
+reels-maker catalog --root . --json
+reels-maker catalog --root . --probe --limit 100 --json
+```
+
+The default catalog scans paths and file sizes only (no FFprobe). It excludes render outputs and working/cache folders. `available: false` identifies an unhydrated Git LFS pointer, which must be downloaded before rendering.

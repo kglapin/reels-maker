@@ -6,13 +6,14 @@ project manifests, invoke documented CLI commands and inspect their JSON respons
 
 ## Recommended loop
 
-1. Create a small JSON project based on `projects/asta-rush-demo.json`.
-2. Run `reels-maker validate <path> --syntax-only --json` for schema errors.
+1. Discover local clips quickly with `reels-maker catalog --root . --json` (no FFprobe by default).
+2. Create a small JSON project based on `projects/asta-rush-demo.json`.
+4. Run `reels-maker validate <path> --syntax-only --json` for schema errors.
 3. Run `reels-maker validate <path> --root <repo-root> --json` to inspect assets
    and prevent expensive failed renders.
-4. Run `reels-maker render <path> --root <repo-root> --json`.
-5. Read the successful JSON `output` field and inspect/preview the resulting MP4.
-6. On failure, use stderr JSON `type` and `message` to revise the manifest.
+5. Run `reels-maker render <path> --root <repo-root> --json`.
+6. Read the successful JSON `output` field and inspect/preview the resulting MP4.
+7. On failure, use stderr JSON `type` and `message` to revise the manifest.
 
 ## Machine interface
 
@@ -52,3 +53,7 @@ set -e
 reels-maker validate projects/asta-rush-demo.json --root . --json
 reels-maker render projects/asta-rush-demo.json --root . --json
 ```
+
+## Media discovery
+
+`reels-maker catalog --root . --json` emits paths, size, kind and availability without opening expensive video decoders. `--probe` adds codec/duration inspection when needed. Files in `output/`, `render/`, `engine/work/` and cache directories are excluded. Missing Git LFS content is marked `available: false`.

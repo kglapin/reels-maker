@@ -7,11 +7,21 @@ from .ffmpeg import RenderError
 from .spec import Project
 
 
-def _font(size: int, bold: bool):
-    try:
-        return ImageFont.truetype("DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf", size)
-    except OSError as exc:
-        raise RenderError("DejaVu Sans font missing (install fonts-dejavu-core)") from exc
+def _font(size: int, bold: bool, custom: str | None = None):
+    choices = [
+        custom,
+        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+    ]
+    for name in choices:
+        if name:
+            try:
+                return ImageFont.truetype(name, size)
+            except OSError:
+                continue
+    raise RenderError("No TrueType font available. Install DejaVu Sans or set branding fonts")
 
 
 def _wrap(draw, value: str, face, width: int) -> list[str]:
@@ -62,7 +72,10 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
     draw = ImageDraw.Draw(img)
     fields = [str(title.get(k, "")) for k in ("kicker", "headline", "body", "footer")]
     size = [round(v * scale) for v in (29, 69, 37, 25)]
-    faces = [_font(max(9, n), i < 2) for i, n in enumerate(size)]
+    faces = [
+        _font(max(9, n), i < 2, project.branding.get("font_bold" if i < 2 else "font_regular"))
+        for i, n in enumerate(size)
+    ]
     available = w - 2 * margin - round(22 * scale)
     lines = [_wrap(draw, s.upper() if i == 0 else s, f, available)
              for i, (s, f) in enumerate(zip(fields, faces))]

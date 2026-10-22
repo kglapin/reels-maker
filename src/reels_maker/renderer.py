@@ -14,137 +14,14 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
-from .ffmpeg import RenderError, duration, execute, probe, require_tool
-from .paths import ROOT, resolve_asset
+from .cards import draw_card
+from .ffmpeg import RenderError, execute, probe
+from .media import preflight as inspect_media
+from .paths import ROOT
 from .spec import Project
 
-CACHE_SCHEMA = 1
+CACHE_SCHEMA = 2
 SUPPORTED_ENCODER = "libx264"
-
-
-def _color(value: str, default: str) -> tuple[int, int, int]:
-    value = value if isinstance(value, str) else default
-    value = value.lstrip("#")
-    if len(value) != 6:
-        value = default.lstrip("#")
-    try:
-        return tuple(bytes.fromhex(value))
-    except ValueError:
-        return tuple(bytes.fromhex(default.lstrip("#")))
-
-
-def _font(size: int, bold: bool = False, custom: str | None = None) -> ImageFont.FreeTypeFont:
-    choices = [custom] if custom else []
-    choices.extend([
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
-        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
-    ])
-    for path in choices:
-        if not path:
-            continue
-        try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            continue
-    raise RenderError("No usable TrueType font. Install DejaVu Sans or configure font_bold/font_regular.")
-
-
-def _wrap(draw: ImageDraw.ImageDraw, message: str, font: ImageFont.FreeTypeFont,
-          max_width: int) -> list[str]:
-    lines = []
-    for paragraph in message.splitlines():
-        words = paragraph.split()
-        if not words:
-            lines.append("")
-            continue
-        line = ""
-        for word in words:
-            proposal = f"{line} {word}".strip()
-            if line and draw.textlength(proposal, font=font) > max_width:
-                lines.append(line)
-                line = word
-            else:
-                line = proposal
-        lines.append(line)
-    return lines
-
-
-def _make_card(scene: dict, project: Project, root: Path, dest: Path) -> bool:
-    title = scene.get("title") or {}
-    branding = project.branding
-    if not title and not branding.get("logo"):
-        return False
-    w, h = project.width, project.height
-    image = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    accent = _color(branding.get("accent", "#5fe39a"), "#5fe39a")
-    margin = int(w * 0.085)
-    max_width = w - 2 * margin
-    scale = w / 1080
-    bold_path = branding.get("font_bold")
-    regular_path = branding.get("font_regular")
-    headline = str(title.get("headline", ""))
-    kicker = str(title.get("kicker", ""))
-    body = str(title.get("body", ""))
-
-    if headline or kicker or body:
-        # Lightweight semi-transparent scrim; avoid an expensive per-pixel gradient.
-        top = int(h * 0.49)
-        draw.rectangle((0, top, w, h), fill=(2, 21, 17, 190))
-        f_head = _font(round(72 * scale), True, bold_path)
-        f_kicker = _font(round(31 * scale), True, bold_path)
-        f_body = _font(round(37 * scale), False, regular_path)
-        lines_head = _wrap(draw, headline, f_head, max_width)
-        lines_body = _wrap(draw, body, f_body, max_width)
-        line_head = round(87 * scale)
-        line_body = round(54 * scale)
-        block = (round(63 * scale) if kicker else 0)
-        block += len(lines_head) * line_head
-        block += (round(32 * scale) + len(lines_body) * line_body) if body else 0
-        # Preserve safe bottom area for social controls and UI labels.
-        safe_bottom = max(round(290 * h / 1920), int(h * 0.13))
-        safe_top = round(h * 0.20)
-        y = max(safe_top, h - safe_bottom - block)
-        if y + block > h - safe_bottom + 1:
-            raise RenderError("Text exceeds vertical safe area: shorten headline/body")
-        draw.rounded_rectangle(
-            (margin, y, margin + round(7 * scale), y + block),
-            radius=round(3 * scale), fill=(*accent, 255),
-        )
-        x = margin + round(28 * scale)
-        if kicker:
-            draw.text((x, y), kicker.upper(), font=f_kicker, fill=(*accent, 255))
-            y += round(63 * scale)
-        for line in lines_head:
-            if draw.textlength(line, font=f_head) > max_width - (x - margin):
-                raise RenderError(f"Headline is too wide: {line}")
-            draw.text((x, y), line, font=f_head, fill="white")
-            y += line_head
-        if body:
-            y += round(32 * scale)
-            for line in lines_body:
-                if draw.textlength(line, font=f_body) > max_width - (x - margin):
-                    raise RenderError(f"Body line is too wide: {line}")
-                draw.text((x, y), line, font=f_body, fill="#dfefe6")
-                y += line_body
-
-    if branding.get("logo"):
-        logo_path = resolve_asset(branding["logo"], root)
-        with Image.open(logo_path) as raw_logo:
-            logo = raw_logo.convert("RGBA")
-        logo_width = round(w * 0.22)
-        logo_height = round(logo.height * logo_width / logo.width)
-        logo.thumbnail((logo_width, round(h * 0.13)), Image.Resampling.LANCZOS)
-        image.alpha_composite(logo, (margin, round(h * 0.105)))
-
-    image.save(dest)
-    return True
 
 
 def _scene_key(source: Path, scene: dict, project: Project,
@@ -169,53 +46,26 @@ def _scene_key(source: Path, scene: dict, project: Project,
     return hashlib.sha256(raw).hexdigest()
 
 
-def _media_video_duration(path: Path) -> float:
-    return duration(path)
-
-
 def preflight(project: Project, root: Path = ROOT) -> dict:
-    """Validate every referenced media item before expensive rendering."""
-    require_tool("ffmpeg")
-    require_tool("ffprobe")
-    root = Path(root).resolve()
-    branding_files = []
-    for key in ("logo", "font_regular", "font_bold"):
-        if project.branding.get(key):
-            # Font paths may be absolute system paths, but logo stays project-relative.
-            if key == "logo":
-                branding_files.append(resolve_asset(project.branding[key], root))
-            elif not Path(project.branding[key]).is_file():
-                raise RenderError(f"Missing font: {project.branding[key]}")
-            else:
-                branding_files.append(Path(project.branding[key]))
-    sources = []
-    inspected = {}
-    for index, scene in enumerate(project.scenes):
-        source = resolve_asset(scene["file"], root)
-        if source not in inspected:
-            inspected[source] = probe(source)
-        meta = inspected[source]
-        if not any(s.get("codec_type") == "video" for s in meta.get("streams", [])):
-            raise RenderError(f"No video stream in {source}")
-        try:
-            src_duration = float(meta["format"]["duration"])
-        except (KeyError, ValueError, TypeError) as exc:
-            raise RenderError(f"Source has no readable duration: {source}") from exc
-        if scene.get("start", 0) + scene["duration"] > src_duration + 0.05:
-            raise RenderError(f"Scene {index} exceeds source duration: {source.name}")
-        sources.append(source)
-    music = resolve_asset(project.music["file"], root) if project.music else None
-    if music:
-        meta = inspected.get(music) or probe(music)
-        if not any(s.get("codec_type") == "audio" for s in meta.get("streams", [])):
-            raise RenderError("Music file contains no audio stream")
-        if float(project.music.get("start", 0)) + project.duration > float(meta.get("format", {}).get("duration", 0)) + 0.1:
-            raise RenderError("Music is shorter than requested segment")
-    return {"sources": sources, "music": music, "branding_files": branding_files}
+    """Check each unique source once and resolve brand assets before rendering."""
+    inputs = inspect_media(project, Path(root).resolve())
+    fonts = []
+    for field in ("font_regular", "font_bold"):
+        if project.branding.get(field):
+            path = Path(project.branding[field])
+            if not path.is_file():
+                raise RenderError(f"Missing branding font: {path}")
+            fonts.append(path)
+    return {
+        "sources": [shot.path for shot in inputs.shots],
+        "music": inputs.music,
+        "logo": inputs.logo,
+        "branding_files": ([inputs.logo] if inputs.logo else []) + fonts,
+    }
 
 
 def _encode_scene(source: Path, scene: dict, project: Project,
-                  root: Path, dest: Path, scratch: Path) -> None:
+                  logo: Path | None, dest: Path, scratch: Path) -> None:
     w, h, fps = project.width, project.height, project.fps
     crop = (f"scale={w}:{h}:force_original_aspect_ratio=increase,"
             f"crop={w}:{h},setsar=1")
@@ -224,7 +74,7 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     vf = crop if scene.get("framing", "crop") == "crop" else pad
     vf += f",fps={fps},format=yuv420p"
     card = scratch / "card.png"
-    show_card = _make_card(scene, project, root, card)
+    show_card = draw_card(project, scene.get("title") or {}, logo, card)
     args = ["-ss", str(scene.get("start", 0)), "-i", str(source)]
     if show_card:
         args += ["-loop", "1", "-framerate", str(fps), "-i", str(card)]
@@ -286,7 +136,7 @@ def render(project: Project, *, root: Path = ROOT,
         def encode_task(task):
             source, scene, scene_dir, cached, indices = task
             part = scene_dir / "scene.mp4"
-            _encode_scene(source, scene, project, root, part, scene_dir)
+            _encode_scene(source, scene, project, inputs["logo"], part, scene_dir)
             return part, cached, indices
 
         # Independent scenes encode concurrently. Duplicate shots are encoded once.

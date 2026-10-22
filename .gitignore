@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+# Local render artifacts (existing tracked media are deliberately not removed)
+output/
+.cache/
+.tmp/
+engine/work/
+# Editors / operating systems
+.DS_Store
+.idea/
+.vscode/

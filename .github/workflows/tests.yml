@@ -3,10 +3,17 @@ on:
   push:
     branches:
       - refactor/modular-render-engine
+
+# Only the latest feature-branch commit needs to spend runner minutes.
+concurrency:
+  group: reels-maker-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python-syntax:
     name: Syntax and manifest contract
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +44,7 @@ jobs:
           PY
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,13 +65,23 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - run: python -m pip install -e ".[brand]"
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      # Runner images often already provide FFmpeg: avoid an unnecessary apt
+      # update on every commit; install only if either executable is missing.
+      - name: Ensure FFmpeg is available
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
       - run: python -m unittest discover -s tests -v
 
 
   brandbook:
     name: Export brandbook (without FFmpeg)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:

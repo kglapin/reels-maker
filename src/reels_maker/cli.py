@@ -12,6 +12,7 @@ from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
 from .renderer import preflight, render
 from .spec import ProjectError, load_project
+from .quality import review_project
 
 SCHEMA_VERSION = 1
 
@@ -33,6 +34,8 @@ def main(argv: list[str] | None = None) -> int:
         if name == "validate":
             command.add_argument("--syntax-only", action="store_true",
                                  help="Validate JSON schema without media or FFmpeg")
+            command.add_argument("--strict-quality", action="store_true",
+                                 help="Return error when editorial warnings are detected")
         else:
             command.add_argument("--output", type=Path)
             command.add_argument("--cache-dir", type=Path)
@@ -145,6 +148,15 @@ def main(argv: list[str] | None = None) -> int:
                 result = render(project, root=args.root, output=args.output,
                                 cache_dir=args.cache_dir,
                                 cache=not args.no_cache, jobs=args.jobs)
+        if args.command == "validate":
+            quality = review_project(project)
+            result["quality"] = quality
+            if args.strict_quality and quality["warning_count"]:
+                _emit({"status": "error", "ok": False, **result,
+                       "error": {"type": "QualityReviewRequired",
+                                 "message": "Editorial warnings require review"}},
+                      error=True)
+                return 2
         _emit({"status": "ok", "ok": True, **result})
         return 0
     except (ProjectError, AssetError, RenderError, OSError, ValueError) as exc:

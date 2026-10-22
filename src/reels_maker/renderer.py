@@ -21,6 +21,7 @@ from .ffmpeg import RenderError, execute, probe
 from .media import preflight as inspect_media
 from .paths import ROOT
 from .spec import Project
+from .quality import review_project
 from .transitions import assemble, timeline_frames, transition_plan
 
 CACHE_SCHEMA = 4
@@ -248,6 +249,7 @@ def render(project: Project, *, root: Path = ROOT,
         "cache_hits": hits,
         "cache_hit_rate": round(hits / len(parts), 4),
         "transitions": transitions,
+        "quality": review_project(project),
         "transition_overlaps_frames": sum(t["frames"] for t in transitions),
         "assembly_mode": ("xfade" if any(t["type"] != "cut" for t in transitions)
                           else "stream_copy"),

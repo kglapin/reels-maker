@@ -17,6 +17,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Independent opt-in title/logo animation layers with stagger, easing, validation and FFmpeg test coverage.
 - [x] Mixed-size highlighted words and curated directional typography entrance presets.
 - [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
+- [x] Machine-readable editorial quality warnings for reading speed, over-emphasis and transition density, with CLI strict mode.
 - [ ] Verify representative production render from each existing project.
 - [ ] Compare cold/warm performance and visual regressions for legacy footage.
 - [ ] Validate third-party source licences, programme facts and publish rights.

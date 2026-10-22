@@ -41,3 +41,17 @@ Reference principles:
 
 Do not interpret these sources as a frame-by-frame audit of any specific ad.
 Creative parity requires comparing actual reference videos and exported frames.
+
+## Editorial quality gate (automated, but not aesthetic certification)
+
+`reels-maker validate <manifest> --syntax-only --strict-quality --json`
+returns a machine-readable failure if conservative warnings are present.
+The render API emits `quality.status`, `quality.warning_count` and
+structured warnings for downstream agents. It checks text reading-time
+budget (~19 characters/s), a settled frame hold, too many emphasized runs,
+and excessive or repeated transition presets. It never automatically
+rewrites the user's story or inserts effects.
+
+**Passing these checks does not certify professional quality.** A real final
+review still needs proxy playback on a phone, legible contrast against
+footage, deliberate shot choice, narrated audio timing and licensed content.

@@ -1,11 +1,9 @@
 name: reels-maker Python tests
 on:
-  push:
-    branches:
-      - refactor/modular-render-engine
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 jobs:
   tests:
     runs-on: ubuntu-latest

@@ -1,0 +1,15 @@
+{
+  "name": "asta-rush-demo",
+  "video": {"width": 1080, "height": 1920, "fps": 25},
+  "branding": {"accent": "#47A013", "logo": "engine/assets/asta_logo.png"},
+  "scenes": [
+    {"file": "2_dron-pv-dla-firm-asta.mp4", "start": 0, "duration": 2, "framing": "crop",
+     "title": {"kicker": "ASTA Energy", "headline": "Energia dla firm"}},
+    {"file": "10_tracker-pv.mp4", "start": 1, "duration": 2, "framing": "crop",
+     "title": {"headline": "Fotowoltaika w praktyce"}},
+    {"file": "8_asta-pila-realizacja-30kwp.mp4", "start": 1, "duration": 2, "framing": "crop",
+     "title": {"headline": "Sprawdzone realizacje"}}
+  ],
+  "music": {"file": "mewwwwwww-rush-433449.mp3", "start": 10.635, "volume": 0.65, "fade_out": 0.8},
+  "output": "output/asta-rush-demo.mp4"
+}

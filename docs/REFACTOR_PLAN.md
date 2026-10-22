@@ -1,26 +1,36 @@
-# Reels Maker — single-PR refactor plan
+# Single draft-PR refactor plan
 
-All work for this refactor is committed to `refactor/modular-render-engine`.
-The `main` branch must not be changed before the complete draft PR is reviewed.
+Development branch: `refactor/modular-render-engine`. All changes belong
+to one draft PR. Do not merge until regression acceptance and a manual review.
 
-## Ordered milestones
+## Milestones
 
-- [x] A. Introduce Python package, versioned dependencies, portable paths and Unicode/LFS safety checks.
-- [ ] B. Build a shared FFmpeg render pipeline, validation and quality inspection.
-- [ ] C. Add JSON manifests for legacy Rush, Vamos, ASTA subsidy videos.
-- [ ] D. Convert legacy entrypoints to thin wrappers while preserving their names.
-- [ ] E. Add CLI, documentation, regression tests and continuous integration.
-- [ ] F. Review media licensing, binary asset storage and deterministic production outputs.
+- [x] A. Package Python source and pin compatible dependency ranges.
+- [x] B. Introduce portable paths, Unicode normalization and LFS checks.
+- [x] C. Implement a reusable FFmpeg pipeline and isolated scratch work.
+- [x] D. Add cached per-shot encodes and atomic final MP4 outputs.
+- [x] E. Provide versioned JSON CLI for ChatGPT, Pi and OpenCode harnesses.
+- [x] F. Add a sample manifest, basic tests and GitHub workflow.
+- [ ] G. Port Rush/Vamos legacy visual effects and preserve beats/transitions.
+- [ ] H. Convert legacy scripts into configuration-based compatibility commands.
+- [ ] I. Compare audio/video outputs for migrated samples and optimize performance.
+- [ ] J. Review licensed binaries, LFS fetches and final build documentation.
 
-## Compatibility criteria
+## Success criteria
 
-1. No fixed `/Users/...`, `/System/Library/...`, or shared `/tmp` paths.
-2. Projects can be rendered from anywhere after `pip install -e .` with FFmpeg installed.
-3. Git LFS pointers are detected with an actionable error before rendering.
-4. Renders are 9:16 H.264 MP4 with AAC audio if a music track is configured.
-5. The pull request stays in draft until reproducible render validation is documented.
+- Cross-platform without absolute macOS paths in new engine.
+- Render API/CLI independent of an interactive terminal.
+- Exact JSON status and output path for each invocation.
+- Hot-cache render does not re-encode unchanged shots.
+- Concurrent jobs use separate temp directories and atomic cache writes.
+- Archive scripts remain available until compatible replacements are verified.
+- `main` remains unchanged until explicit approval of the complete PR.
 
-## Existing Git data
+## Deliberately excluded from the first working renderer
 
-Retain pre-existing renders and intermediate files in the refactor PR for safety.
-Do not attempt to purge past Git history as part of this refactor.
+- Beat quantization and complex overlays from the historical montage tools.
+- SFX / voiceover mixing and dynamic keyframed animations.
+- Hardware-specific codec optimizations and distributed render workers.
+
+These features must be added only when benchmarked against real use cases,
+not as speculative extra abstraction.

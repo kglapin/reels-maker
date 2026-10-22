@@ -12,6 +12,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Legacy sources and historic intermediates moved without rewriting Git blobs.
 - [x] FFmpeg scene cache, stream-copy assembly, frame-accurate montage cuts.
 - [x] Agent/terminal documentation and synthetically generated integration tests.
+- [x] Brand-scoped synthetic render tests, including brand change cache invalidation.
 - [ ] Migrate old transition effects / music edits to declarative configuration.
 - [ ] Verify representative production render from each existing project.
 - [ ] Compare cold/warm performance and visual regressions for legacy footage.

@@ -78,6 +78,56 @@ class RenderIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(result_2["timings_seconds"]["total"], 0)
             self.assertTrue(Path(result_2["output"]).is_file())
 
+    def test_brand_scoped_render_and_cache_invalidation(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brand = root / "brands" / "demo-brand"
+            for dirname in ("assets", "media", "projects"):
+                (brand / dirname).mkdir(parents=True)
+            Image.new("RGBA", (120, 40), (30, 160, 40, 255)).save(
+                brand / "assets" / "logo.png")
+            execute(["-f", "lavfi", "-i", "color=c=blue:s=320x568:r=12:d=3",
+                     "-an", "-c:v", "libx264",
+                     str(brand / "media" / "shot.mp4")])
+            settings = brand / "brand.json"
+            def write_brand(accent):
+                settings.write_text(json.dumps({
+                    "id": "demo-brand",
+                    "branding": {"accent": accent, "logo": "assets/logo.png"},
+                    "identity": {
+                        "typography": {"primary": "Open Sans"},
+                        "safe_areas": {
+                            "top_pixels": 190, "bottom_pixels": 290,
+                            "horizontal_pixels": 88
+                        }
+                    }
+                }))
+            write_brand("#47A013")
+            manifest = brand / "projects" / "test.json"
+            manifest.write_text(json.dumps({
+                "name": "brand-example",
+                "brand": "demo-brand",
+                "video": {"width": 320, "height": 568, "fps": 12},
+                "scenes": [
+                    {"file": "media/shot.mp4", "duration": 1,
+                     "title": {"headline": "Energia"}},
+                    {"file": "media/shot.mp4", "start": 1, "duration": 1}
+                ],
+                "output": "renders/demo-brand/example.mp4"
+            }))
+            project = load_project(manifest)
+            cold = render(project, root=root)
+            self.assertEqual(cold["scenes_encoded"], 2)
+            self.assertTrue(Path(cold["output"]).is_file())
+            warm = render(project, root=root)
+            self.assertEqual(warm["scenes_encoded"], 0)
+            self.assertEqual(warm["cache_hits"], 2)
+            write_brand("#112233")
+            changed = render(project, root=root)
+            self.assertEqual(changed["scenes_encoded"], 2)
+            self.assertEqual(changed["cache_hits"], 0)
+
     def test_silent_render_and_no_cache(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

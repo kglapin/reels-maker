@@ -28,6 +28,28 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(paths["music.mp3"]["kind"], "audio")
             self.assertTrue(paths["one.mp4"]["available"])
 
+    def test_cli_brand_catalog_is_brand_scoped(self):
+        import contextlib
+        import io
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            brand = root / "brands" / "example"
+            (brand / "media").mkdir(parents=True)
+            (brand / "media" / "clip.mp4").write_bytes(b"x")
+            other = root / "brands" / "other"
+            (other / "media").mkdir(parents=True)
+            (other / "media" / "private.mp4").write_bytes(b"x")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["catalog", "--root", str(root),
+                             "--brand", "example", "--json"])
+            self.assertEqual(code, 0)
+            response = json.loads(output.getvalue())
+            self.assertEqual(response["brand"], "example")
+            self.assertEqual([x["file"] for x in response["items"]],
+                             ["media/clip.mp4"])
+
     def test_listing_does_not_invoke_ffprobe_by_default(self):
         with tempfile.TemporaryDirectory() as temp:
             (Path(temp) / "clip.mp4").write_bytes(b"placeholder")

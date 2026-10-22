@@ -15,6 +15,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Brand-scoped synthetic render tests, including brand change cache invalidation.
 - [x] Curated opt-in xfade presets, frame-accurate overlap, validation and synthetic tests.
 - [x] Independent opt-in title/logo animation layers with stagger, easing, validation and FFmpeg test coverage.
+- [x] Mixed-size highlighted words and curated directional typography entrance presets.
 - [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
 - [ ] Verify representative production render from each existing project.
 - [ ] Compare cold/warm performance and visual regressions for legacy footage.

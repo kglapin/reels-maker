@@ -1,0 +1,87 @@
+{
+  "name": "asta-typography-editorial-demo",
+  "brand": "asta-energy",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25
+  },
+  "branding": {
+    "safe_areas": {
+      "top_pixels": 190,
+      "bottom_pixels": 290,
+      "horizontal_pixels": 88
+    }
+  },
+  "scenes": [
+    {
+      "file": "media/footage/2_dron-pv-dla-firm-asta.mp4",
+      "start": 0,
+      "duration": 2.6,
+      "title": {
+        "kicker": "ASTA ENERGY",
+        "headline": {
+          "runs": [
+            {
+              "text": "WIĘCEJ ",
+              "scale": 0.84,
+              "color": "white"
+            },
+            {
+              "text": "ENERGII",
+              "scale": 1.3,
+              "color": "accent",
+              "break_before": true
+            },
+            {
+              "text": " dla firmy",
+              "scale": 0.8,
+              "color": "white",
+              "break_before": true
+            }
+          ]
+        },
+        "body": "Fotowoltaika i magazyny energii"
+      },
+      "motion": {
+        "preset": "rise_soft",
+        "duration_frames": 7,
+        "stagger_frames": 2,
+        "distance_px": 18
+      }
+    },
+    {
+      "file": "media/footage/10_tracker-pv.mp4",
+      "start": 0,
+      "duration": 2.4,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "Projekt.",
+              "scale": 1.1
+            },
+            {
+              "text": " Montaż.",
+              "scale": 1.1,
+              "color": "accent",
+              "break_before": true
+            },
+            {
+              "text": " Serwis.",
+              "scale": 1,
+              "break_before": true
+            }
+          ]
+        },
+        "body": "Kompleksowe wsparcie dla biznesu"
+      },
+      "motion": {
+        "preset": "fade_stagger",
+        "duration_frames": 8,
+        "stagger_frames": 2
+      }
+    }
+  ],
+  "output": "renders/asta-energy/asta-typography-editorial-demo.mp4"
+}

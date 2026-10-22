@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import tempfile
+from time import perf_counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -127,8 +128,10 @@ def render(project: Project, *, root: Path = ROOT,
            output: Path | None = None, cache_dir: Path | None = None,
            cache: bool = True, jobs: int = 2) -> dict:
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
+    started_at = perf_counter()
     root = Path(root).resolve()
     inputs = preflight(project, root)
+    preflight_seconds = round(perf_counter() - started_at, 4)
     project = inputs["resolved_project"]
     frames = _frame_counts(project)
     quantized_duration = sum(frames) / project.fps
@@ -167,6 +170,7 @@ def render(project: Project, *, root: Path = ROOT,
             return part, cached, indices
 
         # Independent scenes encode concurrently. Duplicate shots are encoded once.
+        encode_started = perf_counter()
         with ThreadPoolExecutor(max_workers=min(jobs, max(1, len(pending)))) as pool:
             futures = [pool.submit(encode_task, item) for item in pending.values()]
             for future in as_completed(futures):
@@ -177,9 +181,11 @@ def render(project: Project, *, root: Path = ROOT,
                     part = cached
                 for i in indices:
                     parts[i] = part
+        encode_seconds = round(perf_counter() - encode_started, 4)
         encoded = len(pending)
         hits = len(parts) - encoded
         silent = scratch / "silent.mp4"
+        mux_started = perf_counter()
         _join(parts, silent, scratch)
         final = scratch / "final.mp4"
         if inputs["music"]:
@@ -208,6 +214,8 @@ def render(project: Project, *, root: Path = ROOT,
             raise RenderError("Empty output video")
         # Atomic final delivery; errors never overwrite an existing successful render.
         os.replace(final, dest)
+    finishing_seconds = round(perf_counter() - mux_started, 4)
+    elapsed_seconds = round(perf_counter() - started_at, 4)
     return {
         "ok": True,
         "output": str(dest),
@@ -226,5 +234,12 @@ def render(project: Project, *, root: Path = ROOT,
         "scenes_total": len(parts),
         "scenes_encoded": encoded,
         "cache_hits": hits,
+        "cache_hit_rate": round(hits / len(parts), 4),
+        "timings_seconds": {
+            "preflight": preflight_seconds,
+            "scene_encoding": encode_seconds,
+            "assembly_audio_validation": finishing_seconds,
+            "total": elapsed_seconds,
+        },
         "size_bytes": dest.stat().st_size,
     }

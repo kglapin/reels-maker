@@ -54,3 +54,9 @@ rebuilds; `--cache-dir` selects another cache location.
 Do not assume `brand.json` font-family guidance automatically installs or
 embeds a font. Until explicit font-file selection is implemented and tested,
 the renderer uses a locally installed compatible fallback.
+
+## Brand-safe typography and performance timings
+
+The renderer uses `branding.safe_areas` inherited from `brand.json` to position the logo and text. `branding.font_family` chooses an installed Open Sans family when available, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
+
+Each render reports `timings_seconds.preflight`, `scene_encoding`, `assembly_audio_validation`, and `total` plus `cache_hit_rate`. Compare a cold render to a repeated warm render before choosing a concurrency level. These are measurements, not promised speed-ups.

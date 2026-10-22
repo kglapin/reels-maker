@@ -7,14 +7,21 @@ from .ffmpeg import RenderError
 from .spec import Project
 
 
-def _font(size: int, bold: bool, custom: str | None = None):
-    choices = [
-        custom,
+def _font(size: int, bold: bool, custom: str | None = None,
+          family: str | None = None):
+    choices = [custom]
+    if family and family.lower().replace(" ", "") == "opensans":
+        choices.extend([
+            "OpenSans-Bold.ttf" if bold else "OpenSans-Regular.ttf",
+            "/usr/share/fonts/truetype/open-sans/OpenSans-Bold.ttf" if bold else
+            "/usr/share/fonts/truetype/open-sans/OpenSans-Regular.ttf",
+        ])
+    choices.extend([
         "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
-    ]
+    ])
     for name in choices:
         if name:
             try:
@@ -48,7 +55,15 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
 
     w, h = project.width, project.height
     scale = w / 1080
-    margin = round(w * 0.09)
+    safe = project.branding.get("safe_areas", {})
+    if not isinstance(safe, dict):
+        raise RenderError("branding.safe_areas must be an object")
+    margin = round(float(safe.get("horizontal_pixels", 97)) * w / 1080)
+    top_safe = round(float(safe.get("top_pixels", 165)) * h / 1920)
+    bottom_safe = round(float(safe.get("bottom_pixels", 250)) * h / 1920)
+    if not (0 <= margin < w / 3 and 0 <= top_safe < h / 2 and
+            0 <= bottom_safe < h / 2):
+        raise RenderError("Safe-area values are invalid for the selected frame")
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     if title:
         y0 = int(h * 0.38)
@@ -65,7 +80,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
             lw = round(w * 0.21)
             lh = round(lw * source.height / source.width)
             img.alpha_composite(source.resize((lw, lh), Image.Resampling.LANCZOS),
-                                (margin, round(h * 0.075)))
+                                (margin, max(round(h * 0.075), top_safe)))
         except (OSError, ValueError, ZeroDivisionError) as exc:
             raise RenderError(f"Could not load PNG logo: {logo}") from exc
 
@@ -73,7 +88,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
     fields = [str(title.get(k, "")) for k in ("kicker", "headline", "body", "footer")]
     size = [round(v * scale) for v in (29, 69, 37, 25)]
     faces = [
-        _font(max(9, n), i < 2, project.branding.get("font_bold" if i < 2 else "font_regular"))
+        _font(max(9, n), i < 2,
+              project.branding.get("font_bold" if i < 2 else "font_regular"),
+              project.branding.get("font_family"))
         for i, n in enumerate(size)
     ]
     available = w - 2 * margin - round(22 * scale)
@@ -82,9 +99,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
     spacing = [round(v * scale) for v in (44, 83, 55, 37)]
     block_height = sum(len(line) * step for line, step in zip(lines, spacing))
     block_height += round(22 * scale) * sum(bool(line) for line in lines[1:])
-    bottom = round(h * 0.87)
+    bottom = h - bottom_safe
     y = bottom - block_height
-    if y < round(h * 0.36):
+    if y < max(top_safe, round(h * 0.36)):
         raise RenderError("Title card exceeds safe text area; shorten its text")
     accent_hex = str(project.branding.get("accent", "#47A013")).lstrip("#")
     try:

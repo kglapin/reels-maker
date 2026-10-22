@@ -50,7 +50,19 @@ def apply_brand(project: Project, root: Path) -> Project:
     defaults = config.get("branding", {})
     if not isinstance(defaults, dict):
         raise ProjectError("Brand defaults must contain a branding object")
-    branding = {**defaults, **project.branding}
+    identity = config.get("identity", {})
+    if not isinstance(identity, dict):
+        raise ProjectError("identity must be an object")
+    typography = identity.get("typography", {})
+    safe_areas = identity.get("safe_areas", {})
+    if not isinstance(typography, dict) or not isinstance(safe_areas, dict):
+        raise ProjectError("identity typography and safe_areas must be objects")
+    brand_style = {
+        "font_family": typography.get("primary", "DejaVu Sans"),
+        "safe_areas": safe_areas,
+    }
+    # Brand-wide defaults cascade into the project; per-project overrides win.
+    branding = {**brand_style, **defaults, **project.branding}
     if branding.get("logo"):
         branding["logo"] = _scoped_path(project.brand, branding["logo"])
     scenes = [{**scene, "file": _scoped_path(project.brand, scene["file"])}

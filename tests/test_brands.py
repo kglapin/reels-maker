@@ -28,6 +28,8 @@ class BrandConfigurationTest(unittest.TestCase):
             }))
             resolved = apply_brand(load_project(manifest), root)
             self.assertEqual(resolved.branding["accent"], "#445566")
+            self.assertEqual(resolved.branding["font_family"], "DejaVu Sans")
+            self.assertEqual(resolved.branding["safe_areas"], {})
             self.assertEqual(resolved.branding["logo"],
                              "brands/sample-company/assets/logo.png")
             self.assertEqual(resolved.scenes[0]["file"],
@@ -36,6 +38,25 @@ class BrandConfigurationTest(unittest.TestCase):
                              "brands/sample-company/media/audio/music.mp3")
             self.assertIsNone(resolved.brand)
             self.assertEqual(apply_brand(resolved, root), resolved)
+
+    def test_machine_safe_areas_inherited_from_brand(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            brand = root / "brands" / "test-brand"
+            brand.mkdir(parents=True)
+            (brand / "brand.json").write_text(json.dumps({
+                "id": "test-brand", "branding": {"accent": "#47A013"},
+                "identity": {
+                    "typography": {"primary": "Open Sans"},
+                    "safe_areas": {"bottom_pixels": 290, "top_pixels": 190}
+                }
+            }))
+            p = root / "test.json"
+            p.write_text(json.dumps({"brand": "test-brand",
+                 "scenes": [{"file": "media/demo.mp4", "duration": 1}]}))
+            resolved = apply_brand(load_project(p), root)
+            self.assertEqual(resolved.branding["font_family"], "Open Sans")
+            self.assertEqual(resolved.branding["safe_areas"]["bottom_pixels"], 290)
 
     def test_brand_rejects_cross_directory_references(self):
         with tempfile.TemporaryDirectory() as d:

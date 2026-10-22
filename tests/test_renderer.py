@@ -74,6 +74,8 @@ class RenderIntegrationTests(unittest.TestCase):
             result_2 = render(project, root=root)
             self.assertEqual(result_2["scenes_encoded"], 0)
             self.assertEqual(result_2["cache_hits"], 2)
+            self.assertEqual(result_2["cache_hit_rate"], 1.0)
+            self.assertGreaterEqual(result_2["timings_seconds"]["total"], 0)
             self.assertTrue(Path(result_2["output"]).is_file())
 
     def test_silent_render_and_no_cache(self):

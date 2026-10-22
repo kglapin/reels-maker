@@ -21,6 +21,7 @@ class Inputs:
     shots: tuple[Shot, ...]
     music: Path | None
     logo: Path | None
+    voiceover: Path | None = None
 
 
 def preflight(project: Project, root: Path) -> Inputs:
@@ -58,7 +59,23 @@ def preflight(project: Project, root: Path) -> Inputs:
         if float(project.music.get("start", 0)) + project.duration > float(metadata["format"]["duration"]) + 0.05:
             raise RenderError("Music segment is shorter than the requested video")
 
+    voiceover = (resolve_asset(project.voiceover["file"], root)
+                 if project.voiceover else None)
+    if voiceover:
+        metadata = info(voiceover)
+        if not any(s.get("codec_type") == "audio"
+                   for s in metadata.get("streams", [])):
+            raise RenderError(f"Voiceover file has no audio stream: {voiceover}")
+        try:
+            source_duration = float(metadata["format"]["duration"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RenderError(f"Missing voiceover duration: {voiceover}") from exc
+        if project.voiceover.get("start", 0) >= source_duration:
+            raise RenderError("voiceover.start exceeds source audio duration")
+        # Voiceovers may naturally end before the last visual scene. In that
+        # case the channel is padded with silence, not loops or fake speech.
+
     logo = resolve_asset(project.branding["logo"], root) if project.branding.get("logo") else None
     if logo and logo.suffix.lower() != ".png":
         raise RenderError("Logo overlay requires transparent PNG; convert SVG once in advance")
-    return Inputs(tuple(shots), music, logo)
+    return Inputs(tuple(shots), music, logo, voiceover)

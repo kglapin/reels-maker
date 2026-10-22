@@ -1,5 +1,6 @@
 """Validate manifest settings before a render starts."""
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ class Project:
     branding: dict
     output: str
     brand: str | None = None
+    voiceover: dict | None = None
 
     @property
     def duration(self) -> float:
@@ -159,6 +161,37 @@ def load_project(path: str | Path) -> Project:
             raise ProjectError("music.volume must be <=4")
         if music.get("fade_out", 0) > sum(s["duration"] for s in scenes):
             raise ProjectError("music.fade_out exceeds video duration")
+
+    voiceover = data.get("voiceover")
+    if voiceover is not None:
+        if (not isinstance(voiceover, dict) or
+                not isinstance(voiceover.get("file"), str) or
+                not voiceover["file"].strip()):
+            raise ProjectError("voiceover.file must be a nonempty file path")
+        if set(voiceover) - {"file", "start", "offset_seconds", "volume"}:
+            raise ProjectError("voiceover has unsupported settings")
+        for key, default, max_val in (
+                ("start", 0, 36000), ("offset_seconds", 0, 36000),
+                ("volume", 1, 4)):
+            value = voiceover.get(key, default)
+            if (isinstance(value, bool) or
+                    not isinstance(value, (int, float)) or
+                    not math.isfinite(value) or not 0 <= value <= max_val):
+                raise ProjectError(f"voiceover.{key} must be a finite nonnegative number")
+        if voiceover.get("offset_seconds", 0) >= sum(s["duration"] for s in scenes):
+            raise ProjectError("voiceover.offset_seconds must precede the end of the video")
+
+    # When both tracks are supplied, artists may explicitly opt into
+    # moderate narration-driven music ducking; nothing is enabled randomly.
+    if music:
+        if set(music) - {"file", "start", "volume", "fade_out", "ducking"}:
+            raise ProjectError("music contains unsupported settings")
+        mode = music.get("ducking", "off")
+        if mode not in ("off", "sidechain"):
+            raise ProjectError("music.ducking must be off or sidechain")
+        if mode == "sidechain" and voiceover is None:
+            raise ProjectError("Sidechain ducking requires a voiceover track")
+
     branding = data.get("branding", {})
     if not isinstance(branding, dict):
         raise ProjectError("branding must be an object")
@@ -171,4 +204,5 @@ def load_project(path: str | Path) -> Project:
     brand = data.get("brand")
     if brand is not None and not isinstance(brand, str):
         raise ProjectError("brand must be a slug string")
-    return Project(name, width, height, fps, scenes, music, branding, output, brand)
+    return Project(name, width, height, fps, scenes, music, branding,
+                   output, brand, voiceover)

@@ -67,5 +67,9 @@ def apply_brand(project: Project, root: Path) -> Project:
               for scene in project.scenes]
     music = ({**project.music, "file": _scoped_path(project.brand, project.music["file"])}
              if project.music else None)
+    voiceover = ({**project.voiceover,
+                  "file": _scoped_path(project.brand, project.voiceover["file"])}
+                 if project.voiceover else None)
     # Remove brand identifier after expansion so later code never prefixes twice.
-    return replace(project, scenes=scenes, music=music, branding=branding, brand=None)
+    return replace(project, scenes=scenes, music=music, voiceover=voiceover,
+                   branding=branding, brand=None)

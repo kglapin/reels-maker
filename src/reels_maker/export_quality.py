@@ -73,7 +73,7 @@ def verify_metadata(metadata: dict, project: Project, *,
     if abs(track_duration - ideal_duration) > max(.025, .55 / project.fps):
         raise RenderError("Export video track duration does not match expected frame timing")
 
-    with_music = project.music is not None
+    with_music = project.music is not None or project.voiceover is not None
     if with_music and len(audios) != 1:
         raise RenderError("Expected one audio stream but output is missing or duplicated")
     if not with_music and audios:

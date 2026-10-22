@@ -171,6 +171,7 @@ def main(argv: list[str] | None = None) -> int:
                     data = preflight(project, args.root)
                     result = {"project": project.name, "scenes": len(data["sources"]),
                               "duration": project.duration, "music": bool(data["music"]),
+                              "voiceover": bool(data["voiceover"]),
                               "media_checked": True}
             else:
                 if args.strict_quality:

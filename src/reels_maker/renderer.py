@@ -81,6 +81,7 @@ def preflight(project: Project, root: Path = ROOT) -> dict:
     return {
         "sources": [shot.path for shot in inputs.shots],
         "music": inputs.music,
+        "voiceover": inputs.voiceover,
         "logo": inputs.logo,
         "branding_files": ([inputs.logo] if inputs.logo else []) + fonts,
         "resolved_project": project,
@@ -203,22 +204,12 @@ def render(project: Project, *, root: Path = ROOT,
         else:
             _join(parts, silent, scratch)
         final = scratch / "final.mp4"
-        if inputs["music"]:
-            music = project.music
-            volume = float(music.get("volume", 1.0))
-            fade = float(music.get("fade_out", 0))
-            audio_filter = (f"[1:a]atrim=duration={quantized_duration:.4f},"
-                            f"asetpts=PTS-STARTPTS,volume={volume:.4f}")
-            if fade > 0:
-                audio_filter += (f",afade=t=out:st={quantized_duration-fade:.4f}:"
-                                 f"d={fade:.4f}")
-            audio_filter += "[aout]"
-            execute(["-i", str(silent), "-ss", str(music.get("start", 0)),
-                     "-i", str(inputs["music"]), "-filter_complex", audio_filter,
-                     "-map", "0:v:0", "-map", "[aout]",
-                     "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                     "-t", str(quantized_duration), "-movflags", "+faststart",
-                     str(final)])
+        audio_report = None
+        if inputs["music"] or inputs["voiceover"]:
+            from .audio_mix import mux_audio
+            audio_report = mux_audio(
+                project, silent, final, inputs["music"],
+                inputs["voiceover"], quantized_duration)
         else:
             shutil.copyfile(silent, final)
         metadata = probe(final)
@@ -243,7 +234,8 @@ def render(project: Project, *, root: Path = ROOT,
         "schema_version": 1,
         "cache_misses": encoded,
         "workers": jobs,
-        "audio": bool(inputs["music"]),
+        "audio": bool(inputs["music"] or inputs["voiceover"]),
+        "audio_mix": audio_report,
         "width": project.width,
         "height": project.height,
         "fps": project.fps,

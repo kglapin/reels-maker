@@ -1,7 +1,7 @@
 # Reels Maker — single-PR refactor plan
 
-All refactor work is committed only to \`refactor/modular-render-engine\`.
-The \`main\` branch must not be changed before the complete draft PR is reviewed.
+All refactor work is committed only to `refactor/modular-render-engine`.
+The `main` branch must not be changed before the complete draft PR is reviewed.
 
 ## Architecture principle
 
@@ -22,9 +22,9 @@ where useful, but do not duplicate FFmpeg pipelines or build unneeded wrappers.
 
 ## Compatibility criteria
 
-1. No fixed \`/Users/...\`, \`/System/Library/...\` or shared \`/tmp\` paths
+1. No fixed `/Users/...`, `/System/Library/...` or shared `/tmp` paths
    in active rendering paths.
-2. Projects render after \`pip install -e .\` with FFmpeg available.
+2. Projects render after `pip install -e .` with FFmpeg available.
 3. Git LFS pointers fail with an actionable error before rendering.
 4. Renders are H.264 MP4 with AAC audio when music is configured.
 5. Subsequent identical renders reuse the cached scene videos.

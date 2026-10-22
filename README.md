@@ -1,71 +1,77 @@
 # Reels Maker
 
-Portable Python and FFmpeg rendering engine for vertical social videos.
+A Python + FFmpeg rendering engine for vertical video. Usable from normal
+shells, ChatGPT, Pi, OpenCode and other terminal-driven agents.
 
-**Status:** active refactor. The original source footage and `engine/scripts/` remain in place.
-All changes are accumulated on branch `refactor/modular-render-engine` in a single draft PR.
-This engine currently implements **cuts, crop/pad, static branded title overlays and music**.
-Historical green-overlay / beat-montage variants are not yet ported; the older scripts remain the source of truth for those effects.
+**Current status:** refactoring in progress on the
+`refactor/modular-render-engine` branch and draft [PR #1](https://github.com/kglapin/reels-maker/pull/1).
+Do not merge into `main` until real-media regression and legacy FX parity
+have been verified.
 
 ## Install
 
-Requirements: Python 3.11+, FFmpeg with `ffprobe`, `libx264`, and DejaVu Sans fonts.
-On macOS, Linux or Windows install FFmpeg system-wide and ensure the executables are on PATH.
+Requirements: Python >=3.11, FFmpeg with `libx264` and FFprobe, plus optional
+Git LFS for externally sourced media.
 
 ```sh
-python3 -m pip install -e .
+python -m pip install -e .
 reels-maker doctor --json
+reels-maker catalog --root . --json
 ```
 
-## Non-interactive terminal interface
-
-Run from the repository root, or set `--root /absolute/media/root`.
-Paths inside the manifest are **relative to that root**, not to the manifest.
+## Build a video from a manifest
 
 ```sh
 reels-maker validate projects/asta-rush-demo.json --syntax-only --json
 reels-maker validate projects/asta-rush-demo.json --root . --json
-reels-maker render projects/asta-rush-demo.json --root . --json
-reels-maker render projects/asta-rush-demo.json --root . --output output/demo.mp4 --json
-reels-maker inspect output/demo.mp4 --json
+reels-maker render projects/asta-rush-demo.json --root . --jobs 2 --json
 ```
 
-You can also use `python3 -m reels_maker render ...` instead of the installed command.
+Success prints machine-readable JSON with an absolute `output` path, frame
+dimensions, duration and cache statistics. Failure exits with a nonzero code
+and a structured JSON error on stderr. No interactive input is required.
 
-- Standard output is a single JSON object with `schema_version: 1`.
-- Errors print a JSON object to standard error and terminate with exit code 2.
-- `doctor` exits with code 3 if FFmpeg / FFprobe executables are unavailable.
-- Render output contains `output`, `duration`, `cache_hits`, `cache_misses` and `status`.
-- The CLI never asks for input, starts a daemon or modifies Git.
-- It is safe for harnesses to parse the final JSON response; shell exit code signals success/failure.
-- Cache lives in `.cache/reels-maker/`. Unchanged shots are not re-encoded.
-- An isolated scratch directory is used for each render invocation. Export is atomic.
-- `--no-cache` forces a cold render; `--cache-dir` sets the cache directory.
-- `validate --syntax-only` works without local media or FFmpeg binaries.
-- External source videos under `engine/assets/commons/` require `git lfs pull`.
+The `catalog` command lists video/audio files without opening their decoders
+unless `--probe` is supplied. It also detects Git LFS pointer files. Use
+`git lfs pull` when the required stock footage is not yet hydrated.
 
-## Harness-compatible call
+## Internals
 
-Pi, OpenCode, ChatGPT tooling, CI runners and other agents can invoke exactly the same contract:
+- `src/reels_maker/spec.py`: validated JSON project schema.
+- `src/reels_maker/media.py`: single-pass source validation and metadata.
+- `src/reels_maker/cards.py`: safe-area text and PNG brand overlays.
+- `src/reels_maker/renderer.py`: parallel cached scene encoding, cumulative
+  frame-accurate timing, stream-copy assembly and audio multiplexing.
+- `src/reels_maker/cli.py`: stable terminal interface.
+- `src/reels_maker/catalog.py`: fast asset discovery for agents.
+- `projects/`: reusable animation configurations.
+- `tests/`: unit and synthetic-video integration tests.
+- `engine/scripts/`: original legacy scripts retained for compatibility
+  and visual comparison (not migrated yet).
 
-```sh
-reels-maker render projects/asta-rush-demo.json --root "$PWD" --json
-```
+Source clips, reusable assets and finished historical exports remain available
+in the repository for now. New output and cache files are ignored by Git.
 
-Read the stdout JSON only if the subprocess exits with status zero.
-Use the returned `output` path as the result artifact; never infer a filename.
-See [docs/AGENTS.md](docs/AGENTS.md) for agent execution constraints.
+## Performance model
 
-## Development
+Unchanged video scenes are restored from local cache. FFmpeg normalizes only
+cache misses, encodes independent scenes concurrently, concatenates them with
+stream copy and adds audio in the final step without re-encoding the picture.
+Frame counts are calculated from cumulative cut boundaries to avoid beat drift.
+Use distinct output paths for concurrent agent jobs.
 
-```sh
-python3 -m unittest discover -s tests -v
-```
+The existing large media repository can be cloned selectively using Git
+partial clone/sparse checkout; however, each media blob still needs downloading
+when that specific file is rendered. Avoid unconditional `git lfs pull` for
+stock assets that a given video does not use.
 
-The baseline tests are fast and do not require the original large movie files.
+## Known limitations
 
-## Source rights
+Historical film-burn and green-flash transition treatments are not yet migrated;
+legacy manifests are **functional baselines**, not pixel-identical replacements.
+Automated synthetic tests do not prove production footage, design or music
+licensing. Validate claims and legal attributions before publication.
 
-Some source movies are covered by separate licenses. Review
-`engine/assets/stock_credits.txt` before publishing any adapted production.
-Do not assume the project files are cleared for redistribution.
+Detailed agent contract: [docs/AGENTS.md](docs/AGENTS.md).
+CLI and manifest reference: [docs/CLI.md](docs/CLI.md).
+Implementation tracker: [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md).

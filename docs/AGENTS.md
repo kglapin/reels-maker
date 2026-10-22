@@ -34,7 +34,7 @@ project manifests, invoke documented CLI commands and inspect their JSON respons
 
 - Reuse normalized shot cache when changing only audio or shot ordering.
 - Independent shots encode concurrently with two FFmpeg workers by default.
-  Set \`--jobs 1\` on memory-constrained runners or \`--jobs 4\` on stronger hosts.
+  Set `--jobs 1` on memory-constrained runners or `--jobs 4` on stronger hosts.
   The number of workers is bounded to 1–8.
 - Avoid `--no-cache` except while debugging.
 - Prefer `crop` for vertical sources; `pad` for wider sources where losing

@@ -53,6 +53,7 @@ As observed from the working branch on 2026-10-22:
 - Eight historical MP4 reference exports and dozens of legacy intermediates are kept for regression evidence.
 - Current Git tree represents roughly **716 MB of file content**, primarily media; repository history/storage and LFS strategy remain open.
 - Last checked successful main test run: https://github.com/kglapin/reels-maker/actions/runs/39818837543
+- **Current HEAD CI requires attention:** after the repository was made private, run https://github.com/kglapin/reels-maker/actions/runs/39821829684 failed *before a hosted runner or any workflow step was assigned*. All three jobs show no runner name, zero steps and no accessible job logs; this does **not** establish a Python regression. Check private Actions billing/quota, account budget, repository Actions policy, and GitHub-hosted runner provisioning before claiming current CI green. Do not switch back to public.
 - Audio / timing gates, cue sheets, decoded AAC onset testing and read-only LUFS/true-peak checks have code and passing CI evidence.
 - Real-footage A/B cut/dissolve renders have passed **technical checks**, but visual review flagged duplicate baked-in graphics, tiny supporting text and weak contrast. Those renders are negative-control QA, **not approved advertising**.
 
@@ -252,6 +253,9 @@ Objective: make professional art direction the constraint; effects are secondary
 - [ ] **OPS-08 · S** Keep an explicit machine-readable roadmap status and next-task pointer for future ChatGPT/Pi/OpenCode continuations.
 - [ ] **OPS-09 · M** Add private delivery packages, short retention and recoverable approved masters/proxies; never put client/private media into public examples.
 - [ ] **OPS-10 · S** Require each PR to link task IDs, tests, changed outputs and QA evidence; no repeated uncontrolled feature additions.
+- [ ] **OPS-11 · S · P0 BLOCKER** Restore private-repository CI runner assignment: verify GitHub Actions free-minute allowance, spending budget and failed-payment blocks in account Billing; verify Settings -> Actions -> General; retry one minimal job once hosting is available. If billing is fine, investigate GitHub-hosted runner provisioning / GitHub Support. **No public-repo workaround.**
+
+**Immediate known blocker:** Private GitHub-hosted runners failed before job initialization on 2026-10-22; verify account minute quota/budgets/permissions and re-run when available. This is **not** permission to make the repository public.
 
 **Exit G10:** Private-access and media strategy accepted; a second person/agent can reproduce an approved reel without guessing paths, tools or permissions.
 
@@ -330,6 +334,7 @@ These are the next bounded tasks, sequenced to avoid polishing the wrong footage
 
 | Order | Task | Prio | Depends on | Deliverable |
 |---|---|---|---|---|
+| 00 | OPS-11: restore private GitHub Actions runner availability | P0 BLOCKER | Private repo settings / owner billing check | Fresh private-repo CI runner executes real test steps |
 | 01 | SEC-03/05: audit access and repository exposure | P0 | SEC-01 | Private security checklist with no secrets disclosed |
 | 02 | MED-03: inspect all 15 clips across timelines | P0 | G0 | Reviewed media catalog with clean/finished/unknown |
 | 03 | MED-04/06: obtain and license clean source set | P0 | 02 | Six verified unbranded shots, rights log |

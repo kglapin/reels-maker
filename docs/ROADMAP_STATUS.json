@@ -10,8 +10,8 @@
   "baseline_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
   "reference_ci_run": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
   "master_plan": "docs/MASTER_PLAN.md",
-  "current_focus": "SEC-03",
-  "next_work_package": "01",
+  "current_focus": "OPS-11",
+  "next_work_package": "00 — private CI startup blocker",
   "milestones": [
     {
       "id": "M00",
@@ -107,29 +107,29 @@
   ],
   "next_tasks": [
     {
+      "id": "OPS-11",
+      "status": "blocked_on_actions_runner",
+      "why": "Private repo CI fails before checkout; owner billing/policy review needed."
+    },
+    {
       "id": "SEC-03",
       "status": "todo",
-      "why": "Private access controls must be audited."
+      "why": "Audit users and connected GitHub Apps."
     },
     {
       "id": "SEC-05",
       "status": "todo",
-      "why": "Prior public history may contain sensitive artifacts."
+      "why": "Audit secrets/metadata from prior public history."
     },
     {
       "id": "MED-03",
       "status": "todo",
-      "why": "Only two of fifteen ASTA footage clips have editorial classification."
-    },
-    {
-      "id": "MED-04",
-      "status": "blocked",
-      "why": "Requires approved clean, unbranded ASTA footage from owner."
+      "why": "Classify remaining 13 ASTA source video files."
     },
     {
       "id": "CORE-06",
       "status": "todo",
-      "why": "Versioned manifest contract reduces accidental feature drift."
+      "why": "Define a versioned project schema."
     }
   ],
   "completed_only_when": "Code committed, tests/evidence passed, acceptance met, master plan checked and status updated.",
@@ -139,5 +139,22 @@
     "Do not commit new proprietary media to other public repositories or artifacts.",
     "Do not call technical CI success creative sign-off.",
     "Do not rewrite/delete repository history without explicit approval."
-  ]
+  ],
+  "last_known_successful_ci_run": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
+  "latest_ci_observation": {
+    "run_id": 39821829684,
+    "url": "https://github.com/kglapin/reels-maker/actions/runs/39821829684",
+    "state": "failure_before_runner_start",
+    "runner_assigned": false,
+    "executed_steps": 0,
+    "job_logs_available": false,
+    "cause_confirmed": false,
+    "suspected_causes": [
+      "private-repo Actions minutes or spending budget",
+      "runner provisioning",
+      "repository Actions policy"
+    ],
+    "required_manual_check": "Owner GitHub Settings -> Billing and plans -> Actions usage / budgets and repository Settings -> Actions -> General",
+    "remedy_must_not_be": "Make repository public"
+  }
 }

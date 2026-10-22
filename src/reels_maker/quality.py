@@ -95,6 +95,22 @@ def review_project(project: Project, *, root: Path | None = None) -> dict:
                     project.fps, scene_frames)
             except ValueError as exc:
                 warn("invalid_motion_timing", str(exc), index)
+                # Never conceal further legibility failures just because an
+                # automatically authored schedule also violates timing rules.
+                # A broken timeline should generate actionable warnings for
+                # both choreography and the on-screen copy itself.
+                warn("no_reading_hold",
+                     "Motion schedule cannot guarantee a settled reading window.",
+                     index)
+                approximate_window = max(
+                    0, (usable_frames -
+                        motion.get("duration_frames",
+                                   max(2, round(project.fps * .24)))) /
+                    project.fps)
+                if len(message) / MAX_CHARS_PER_SECOND > approximate_window:
+                    warn("reading_speed",
+                         "On-screen copy is too dense for the available shot.",
+                         index)
                 continue
             duration_frames = schedule.duration_frames
             text_end = max(

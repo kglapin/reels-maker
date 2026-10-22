@@ -82,6 +82,34 @@ def load_project(path: str | Path) -> Project:
         title = scene.get("title", {})
         if not isinstance(title, dict):
             raise ProjectError(f"scene {index}: title must be an object")
+        for field in ("kicker", "headline", "body", "footer"):
+            value = title.get(field)
+            if value is None:
+                continue
+            if field == "headline" and isinstance(value, dict):
+                if set(value) != {"runs"} or not isinstance(value["runs"], list):
+                    raise ProjectError(f"scene {index}: headline requires runs array")
+                if not 1 <= len(value["runs"]) <= 16:
+                    raise ProjectError(f"scene {index}: headline requires 1..16 runs")
+                for run in value["runs"]:
+                    if not isinstance(run, dict) or not set(run).issubset(
+                            {"text", "scale", "color", "weight", "break_before"}):
+                        raise ProjectError(f"scene {index}: invalid headline run")
+                    text = run.get("text")
+                    if not isinstance(text, str) or not text.strip() or len(text) > 120:
+                        raise ProjectError(f"scene {index}: invalid headline run text")
+                    scale = run.get("scale", 1.0)
+                    if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not .65 <= scale <= 1.45:
+                        raise ProjectError(f"scene {index}: run scale must be 0.65..1.45")
+                    if run.get("color", "white") not in ("white", "accent", "muted"):
+                        raise ProjectError(f"scene {index}: invalid run color")
+                    if run.get("weight", "bold") not in ("bold", "regular"):
+                        raise ProjectError(f"scene {index}: invalid run weight")
+                    if type(run.get("break_before", False)) is not bool:
+                        raise ProjectError(f"scene {index}: break_before must be boolean")
+            elif not isinstance(value, str):
+                raise ProjectError(f"scene {index}: {field} must be text")
+
         motion = scene.get("motion")
         if motion is not None:
             if not isinstance(motion, dict) or motion.get("preset") not in (

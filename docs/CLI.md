@@ -106,3 +106,35 @@ Safe ranges: reveal 2–0.45 s, stagger 0–0.15 s, distance 0–64 px at 1080px
 reference width. The renderer refuses an entrance that cannot complete within
 the scene. Motion is **off by default** and leaves existing static cards intact.
 The media, branding and project files remain format-independent.
+
+## Emphasized words and motion presets
+
+The headline may be a plain string or a structured array of styled text runs:
+
+```json
+"title": {
+  "kicker": "ASTA ENERGY",
+  "headline": {
+    "runs": [
+      {"text": "Zwiększ ", "scale": 0.78, "color": "white"},
+      {"text": "ZYSK", "scale": 1.35, "color": "accent",
+       "weight": "bold"},
+      {"text": " z energii", "scale": 0.78, "break_before": true}
+    ]
+  },
+  "body": "Fotowoltaika i magazyny energii dla firm"
+},
+"motion": {"preset": "rise_soft", "duration_frames": 7,
+           "stagger_frames": 2, "distance_px": 18}
+```
+
+The renderer measures actual glyph widths, wraps words and respects safe text
+areas. A highlighted run may be 65–145% of the standard headline size.
+Colors are restricted to `white`, `accent`, `muted`, so the brand palette
+remains the single source of truth; no arbitrary HTML/CSS enters the manifest.
+
+Deliberate entrance styles: `fade_stagger` (opacity only),
+`editorial_reveal` and `rise_soft` (gentle upward movement),
+`slide_left` and `slide_right` (horizontal movement). Motion always
+stops; it is not applied by default. Use one style per scene and prefer short,
+stable reading windows rather than continuous gimmicks.

@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .ffmpeg import RenderError
 from .spec import Project
+from .typography import layout_runs
 
 
 def _font(size: int, bold: bool, custom: str | None = None,
@@ -102,7 +103,10 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,\n 
             raise RenderError(f"Could not load PNG logo: {logo}") from exc
 
     draw = ImageDraw.Draw(img)
-    fields = [str(title.get(k, "")) for k in ("kicker", "headline", "body", "footer")]
+    headline_spec = title.get("headline")
+    rich = isinstance(headline_spec, dict)
+    fields = [str(title.get(k, "")) if k != "headline" or not rich else ""
+              for k in ("kicker", "headline", "body", "footer")]
     size = [round(v * scale) for v in (29, 69, 37, 25)]
     faces = [
         _font(max(9, n), i < 2,
@@ -114,7 +118,19 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,\n 
     lines = [_wrap(draw, s.upper() if i == 0 else s, f, available)
              for i, (s, f) in enumerate(zip(fields, faces))]
     spacing = [round(v * scale) for v in (44, 83, 55, 37)]
-    block_height = sum(len(line) * step for line, step in zip(lines, spacing))
+    accent = str(project.branding.get("accent", "#47A013"))
+    rich_layout = (layout_runs(
+        draw, headline_spec["runs"],
+        lambda n, bold: _font(
+            n, bold,
+            project.branding.get("font_bold" if bold else "font_regular"),
+            project.branding.get("font_family")),
+        max(9, size[1]), available, accent) if rich else None)
+    if rich_layout:
+        lines[1] = ["<rich>"]
+    block_height = sum((rich_layout.height if i == 1 and rich_layout
+                        else len(line) * spacing[i])
+                       for i, line in enumerate(lines))
     block_height += round(22 * scale) * sum(bool(line) for line in lines[1:])
     bottom = h - bottom_safe
     y = bottom - block_height
@@ -139,9 +155,17 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,\n 
             continue
         element = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         element_draw = ImageDraw.Draw(element)
-        for line in group:
-            element_draw.text((margin + round(25 * scale), y), line, fill=ink, font=face)
-            y += step
+        if i == 1 and rich_layout:
+            for token, token_face, token_ink, px, py in rich_layout.parts:
+                element_draw.text(
+                    (margin + round(25 * scale) + px, y + py),
+                    token, fill=token_ink, font=token_face, anchor="lt")
+            y += rich_layout.height
+        else:
+            for line in group:
+                element_draw.text((margin + round(25 * scale), y),
+                                  line, fill=ink, font=face)
+                y += step
         store_layer(element, ("kicker", "headline", "body", "footer")[i])
 
     target.parent.mkdir(parents=True, exist_ok=True)

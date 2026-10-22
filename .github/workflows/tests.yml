@@ -4,6 +4,37 @@ on:
     branches:
       - refactor/modular-render-engine
 jobs:
+  python-syntax:
+    name: Syntax and manifest contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /brands/*/brand.json
+            /brands/*/projects/
+            /pyproject.toml
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile modules and tests without importing media dependencies
+        run: python -m compileall -q src/reels_maker tests
+      - name: Validate every project JSON parses
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files = sorted(Path("brands").glob("*/projects/*.json"))
+          assert files, "No manifests found"
+          for path in files:
+              json.loads(path.read_text(encoding="utf-8"))
+          print(f"Validated {len(files)} project JSON manifests")
+          PY
   tests:
     runs-on: ubuntu-latest
     steps:

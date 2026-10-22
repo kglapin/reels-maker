@@ -319,15 +319,3 @@ def generate_brandbook(slug: str, root: Path, output: Path | None = None) -> dic
     }
 
 
-def generate_brandbook(slug: str, root: Path, output: Path | None = None) -> dict:
-    """Export the accepted brand to a PDF without imposing any video format."""
-    from .brand import brand_directory
-    directory = brand_directory(slug, root)
-    profile = saved_brandbook_data(directory)
-    if profile.get("id") != slug:
-        raise ValueError(f"Brand ID does not match directory: {slug}")
-    destination = (Path(output) if output is not None else
-                   Path(root) / "renders" / slug / "brandbook.pdf").resolve()
-    make_brandbook(profile, destination, assets_root=directory)
-    return {"brand": slug, "source": str(directory / "brand.json"),
-            "output": str(destination), "pages": 2}

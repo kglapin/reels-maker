@@ -140,6 +140,7 @@ def render(project: Project, *, root: Path = ROOT,
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
     started_at = perf_counter()
     root = Path(root).resolve()
+    creative_review = review_project(project, root=root)
     inputs = preflight(project, root)
     preflight_seconds = round(perf_counter() - started_at, 4)
     project = inputs["resolved_project"]
@@ -251,7 +252,7 @@ def render(project: Project, *, root: Path = ROOT,
         "cache_hits": hits,
         "cache_hit_rate": round(hits / len(parts), 4),
         "transitions": transitions,
-        "quality": review_project(project),
+        "quality": creative_review,
         "transition_overlaps_frames": sum(t["frames"] for t in transitions),
         "assembly_mode": ("xfade" if any(t["type"] != "cut" for t in transitions)
                           else "stream_copy"),

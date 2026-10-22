@@ -44,3 +44,19 @@ explicit approval.
 7. Verify claims, media licence and approval before external publication.
 
 A passing technical QA is **not** an independent creative certification.
+
+## What the first real render revealed (2026-10-22)
+
+The videos passed technical QA, **but are not acceptable production creatives**:
+there is already a rendered ASTA logo on both source reels, and the Piła footage
+has prominent baked-in location/capacity captions. Adding a second logo and
+lower thirds led to visual collisions. The small supporting text and green
+accent on complex aerial footage also need an editorial redesign. This is
+precisely why automated pixel-free linting cannot claim world-class motion.
+
+The reviewed clips are now classified as `finished_promo` in
+`brands/asta-energy/media/asset-reviews.json`. Strict quality validation for
+a new overlaid video must refuse those clips. The QA workflow intentionally
+renders a **negative control** and asserts that the source collision was
+flagged; its output is not publication approved. For a clean campaign, acquire
+original, unbranded source exports or deliberately design a text-free reuse.

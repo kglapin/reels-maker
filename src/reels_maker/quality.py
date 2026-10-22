@@ -5,6 +5,8 @@ catches predictable editorial errors before expensive video encoding.
 """
 from __future__ import annotations
 from .spec import Project
+from pathlib import Path
+from .asset_reviews import load_media_reviews
 
 MAX_CHARS_PER_SECOND = 19.0
 HOLD_SECONDS = 0.55
@@ -21,7 +23,7 @@ def _body(title: dict) -> str:
     return " ".join(chunk.strip() for chunk in chunks if chunk.strip())
 
 
-def review_project(project: Project) -> dict:
+def review_project(project: Project, *, root: Path | None = None) -> dict:
     """Return actionable, structured creative warnings, without touching media."""
     warnings = []
     def warn(code, message, scene=None):
@@ -42,8 +44,21 @@ def review_project(project: Project) -> dict:
         warn("repeated_transition",
              "Three consecutive identical transitions risk looking templated.")
 
+    reviewed = (load_media_reviews(project.brand, Path(root).resolve())
+                if root is not None and project.brand else {})
     for index, scene in enumerate(project.scenes):
         title = scene.get("title") or {}
+        asset = reviewed.get(scene.get("file"), {})
+        if asset.get("type") == "finished_promo":
+            additions = bool(title) or bool(project.brand)
+            if additions:
+                warn(
+                    "source_is_prebranded",
+                    "Source is a finished promo with pre-existing graphics ("
+                    + ", ".join(asset.get("burned_in", []))
+                    + "). Use clean master footage; do not add another logo or "
+                    "lower-third to this asset.", index)
+
         message = _body(title)
         if not message:
             continue
@@ -85,7 +100,7 @@ def review_project(project: Project) -> dict:
             warn("text_density", "Scene carries too much on-screen copy.", index)
 
     return {
-        "standard": "editorial-v1",
+        "standard": "editorial-v2",
         "status": "review" if warnings else "pass",
         "warning_count": len(warnings),
         "warnings": warnings,

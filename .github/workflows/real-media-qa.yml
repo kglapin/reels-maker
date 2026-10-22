@@ -30,6 +30,7 @@ jobs:
             /src/
             /pyproject.toml
             /brands/asta-energy/brand.json
+            /brands/asta-energy/media/asset-reviews.json
             /brands/asta-energy/assets/logo.png
             /brands/asta-energy/media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4
             /brands/asta-energy/media/footage/8_asta-pila-realizacja-30kwp.mp4
@@ -75,11 +76,20 @@ jobs:
             project="brands/asta-energy/projects/asta-creative-qa-$kind.json"
             video="renders/asta-energy/qa/creative-$kind.mp4"
             prefix="renders/asta-energy/qa/reports/$kind"
-            reels-maker validate "$project" --syntax-only --strict-quality --json \
+            # Deliberately show a low-quality source collision as a regression
+            # example; unlike production, do not suppress its warnings.
+            reels-maker validate "$project" --syntax-only --json \
               > "$prefix-creative-check.json"
             reels-maker validate "$project" --root . --json \
               > "$prefix-preflight.json"
-            reels-maker render "$project" --root . --jobs 2 --strict-quality --json \
+            python - "$prefix-creative-check.json" <<'PY'
+          import json, sys
+          report=json.load(open(sys.argv[1]))
+          codes={w["code"] for w in report["quality"]["warnings"]}
+          assert "source_is_prebranded" in codes, codes
+          print("Expected QC warning: prebranded footage is not publication ready")
+          PY
+            reels-maker render "$project" --root . --jobs 2 --json \
               > "$prefix-render.json"
             reels-maker verify "$project" --video "$video" --json \
               > "$prefix-verify.json"

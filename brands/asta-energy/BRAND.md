@@ -62,3 +62,12 @@ Brandbook PDF automatycznie osadza zatwierdzone logo z `branding.logo` (ASTA: `a
 ## Weryfikacja eksportu w CI
 
 GitHub Actions generuje brandbook PDF z zatwierdzonego `brand.json` i prawdziwego `assets/logo.png`; po udanym teście udostępnia go jako artefakt `asta-energy-brandbook` (14 dni). Test integracyjny potwierdza obecność osadzonego obrazu w PDF. W przykładzie na ciemnym tle pokazywane jest rzeczywiste logo marki.
+
+## Media source hygiene
+
+Do not overlay new titles/logos on existing ASTA videos that already have
+burned-in logos or labels. Check `media/asset-reviews.json`. In particular,
+`5_reels-asta-pv-dla-branzy-drzewnej.mp4` and
+`8_asta-pila-realizacja-30kwp.mp4` are **finished promotional edits**, not
+clean source shots. The strict editorial quality gate blocks rebranding them.
+Request clean source exports for new ads with professional moving typography.

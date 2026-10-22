@@ -46,3 +46,13 @@ FPS and audio before trusting the MP4. Still images are diagnostics, not a
 substitute for video playback, rhythm judgement or human creative sign-off.
 
 The motion strip is opt-in because it extracts three times as many images.
+
+## Pre-existing rendered graphics must be classified
+
+Before assigning footage, inspect a few actual source frames for embedded
+wordmarks, location captions, prices and other baked-in information. Write
+confirmed observations into the brand's `media/asset-reviews.json` and treat
+sources labelled `finished_promo` as reuse-only, not as clean backgrounds for
+an independent title/logo system. Agent `--strict-quality` checks refuse
+adding titles over confirmed prebranded sources. Do not assume that a clean
+technical export has clean creative footage.

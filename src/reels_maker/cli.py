@@ -170,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
                               "media_checked": True}
             else:
                 if args.strict_quality:
-                    check = review_project(project)
+                    check = review_project(project, root=args.root)
                     if check["warning_count"]:
                         _emit({"status": "error", "ok": False,
                                "quality": check,
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
                                 cache_dir=args.cache_dir,
                                 cache=not args.no_cache, jobs=args.jobs)
         if args.command == "validate":
-            quality = review_project(project)
+            quality = review_project(project, root=args.root)
             result["quality"] = quality
             if args.strict_quality and quality["warning_count"]:
                 _emit({"status": "error", "ok": False, **result,

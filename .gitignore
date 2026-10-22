@@ -17,3 +17,6 @@ renders/
 .DS_Store
 .idea/
 .vscode/
+
+# Website scan proposals / logo candidates are not approved brand assets
+brands/*/imports/

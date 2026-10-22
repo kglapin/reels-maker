@@ -63,3 +63,18 @@ reels-maker brandbook --brand asta-energy --json
 
 The generated two-page PDF focuses on logo, palette, typography and usage
 rules. It does **not** prescribe a video size or aspect ratio.
+
+## Discover brand styling directly from a public website
+
+Install the optional website scanner and PDF exporter:
+
+```sh
+python -m pip install -e ".[brand]"
+reels-maker brand-scan https://www.example.com --brand example --json
+```
+
+The scanner prepares a reviewable `website-report.json`, saves logo
+candidates under `brands/example/imports/assets/` and creates
+`renders/example/brandbook-proposal.pdf` (2 pages). It **never** overwrites
+accepted `brand.json`. Review the PDF and evidence before activating the
+suggested identity. See [docs/BRAND_SCAN.md](docs/BRAND_SCAN.md).

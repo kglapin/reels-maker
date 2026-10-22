@@ -49,6 +49,16 @@ def main(argv: list[str] | None = None) -> int:
                           help="Inspect each available media file (slower)")
     discover.add_argument("--limit", type=int, default=500)
     discover.add_argument("--json", action="store_true")
+    site = commands.add_parser("brand-scan",
+        help="Create CSS/font/logo proposal and brandbook PDF from a public website")
+    site.add_argument("url", help="Public HTTP(S) website address")
+    site.add_argument("--brand", required=True, help="Brand slug")
+    site.add_argument("--root", type=Path, default=ROOT)
+    site.add_argument("--output", type=Path, help="JSON audit destination")
+    site.add_argument("--no-logo-download", action="store_true")
+    site.add_argument("--no-pdf", action="store_true")
+    site.add_argument("--json", action="store_true")
+
     brandbook = commands.add_parser("brandbook")
     brandbook.add_argument("--brand", required=True)
     brandbook.add_argument("--root", type=Path, default=ROOT)
@@ -73,7 +83,41 @@ def main(argv: list[str] | None = None) -> int:
             _emit({"status": "ok" if valid else "error",
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
-        if args.command == "brandbook":
+        if args.command == "brand-scan":
+            try:
+                from .brand_scan import analyze_site, download_logo_candidates, suggested_brand
+                from .brandbook import make_brandbook
+            except ImportError as exc:
+                raise ProjectError(
+                    'Website brand scan requires: pip install -e ".[brand]"'
+                ) from exc
+            brand_dir = brand_directory(args.brand, args.root)
+            imports = brand_dir / "imports"
+            imports.mkdir(parents=True, exist_ok=True)
+            audit = analyze_site(args.url)
+            if not args.no_logo_download:
+                audit["downloaded_logos"] = download_logo_candidates(
+                    audit, imports / "assets")
+            audit["suggested_brand"] = suggested_brand(audit, args.brand)
+            report = (args.output or imports / "website-report.json").resolve()
+            report.parent.mkdir(parents=True, exist_ok=True)
+            report.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n",
+                              encoding="utf-8")
+            pdf = None
+            if not args.no_pdf:
+                pdf = make_brandbook(
+                    audit, Path(args.root).resolve() / "renders" /
+                    args.brand / "brandbook-proposal.pdf", draft=True)
+            result = {
+                "brand": args.brand, "source_url": audit["source_url"],
+                "report": str(report), "brandbook_pdf": str(pdf) if pdf else None,
+                "palette": audit["palette"],
+                "font": audit["typography"]["primary"],
+                "logo_candidates": len(audit["logos"]),
+                "downloaded_logos": audit.get("downloaded_logos", []),
+                "warnings": audit["warnings"], "applied": False,
+            }
+        elif args.command == "brandbook":
             try:
                 from .brandbook import generate_brandbook
             except ImportError as exc:

@@ -7,7 +7,7 @@ from pathlib import Path
 from .ffmpeg import RenderError, probe
 
 _MEDIA = {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".m4a"}
-_SKIP = {".git", ".cache", ".venv", ".tmp", "output", "render", "__pycache__", "work"}
+_SKIP = {".git", ".cache", ".venv", ".tmp", "output", "render", "renders", "__pycache__", "work"}
 
 
 def catalog(root: Path, *, include_metadata: bool = False, limit: int = 500) -> dict:

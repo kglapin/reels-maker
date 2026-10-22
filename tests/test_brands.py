@@ -1,0 +1,69 @@
+"""Brand isolation, preset inheritance and multi-brand project tests."""
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from reels_maker.brand import apply_brand, brand_directory
+from reels_maker.spec import ProjectError, load_project
+
+
+class BrandConfigurationTest(unittest.TestCase):
+    def test_defaults_and_overrides(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            brand = root / "brands" / "sample-company"
+            brand.mkdir(parents=True)
+            (brand / "brand.json").write_text(json.dumps({
+                "id": "sample-company",
+                "branding": {"accent": "#112233", "logo": "assets/logo.png"}
+            }))
+            manifest = root / "video.json"
+            manifest.write_text(json.dumps({
+                "brand": "sample-company",
+                "name": "intro",
+                "branding": {"accent": "#445566"},
+                "scenes": [{"file": "media/video/demo.mp4", "duration": 1}],
+                "music": {"file": "media/audio/music.mp3"},
+            }))
+            resolved = apply_brand(load_project(manifest), root)
+            self.assertEqual(resolved.branding["accent"], "#445566")
+            self.assertEqual(resolved.branding["logo"],
+                             "brands/sample-company/assets/logo.png")
+            self.assertEqual(resolved.scenes[0]["file"],
+                             "brands/sample-company/media/video/demo.mp4")
+            self.assertEqual(resolved.music["file"],
+                             "brands/sample-company/media/audio/music.mp3")
+            self.assertIsNone(resolved.brand)
+            self.assertEqual(apply_brand(resolved, root), resolved)
+
+    def test_brand_rejects_cross_directory_references(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            b = root / "brands" / "example"
+            b.mkdir(parents=True)
+            (b / "brand.json").write_text('{"id":"example","branding":{}}')
+            manifest = root / "project.json"
+            manifest.write_text(json.dumps({
+                "brand": "example",
+                "scenes": [{"file": "../other-brand/video.mp4", "duration": 1}]
+            }))
+            with self.assertRaises(ProjectError):
+                apply_brand(load_project(manifest), root)
+
+    def test_brand_slug_validation(self):
+        with self.assertRaises(ProjectError):
+            brand_directory("../secret", Path.cwd())
+        with self.assertRaises(ProjectError):
+            brand_directory("Brand Name", Path.cwd())
+
+    def test_missing_brand_config_fails_explicitly(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "project.json"
+            p.write_text('{"brand":"missing","scenes":[{"file":"clip.mp4","duration":1}]}')
+            with self.assertRaisesRegex(ProjectError, "Cannot load brand configuration"):
+                apply_brand(load_project(p), Path(d))
+
+
+if __name__ == "__main__":
+    unittest.main()

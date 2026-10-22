@@ -18,6 +18,7 @@ class Project:
     music: dict | None
     branding: dict
     output: str
+    brand: str | None = None
 
     @property
     def duration(self) -> float:
@@ -80,4 +81,7 @@ def load_project(path: str | Path) -> Project:
     name = data.get("name", source.stem)
     if not isinstance(name, str) or not name:
         raise ProjectError("name must be a nonempty string")
-    return Project(name, width, height, fps, scenes, music, branding, output)
+    brand = data.get("brand")
+    if brand is not None and not isinstance(brand, str):
+        raise ProjectError("brand must be a slug string")
+    return Project(name, width, height, fps, scenes, music, branding, output, brand)

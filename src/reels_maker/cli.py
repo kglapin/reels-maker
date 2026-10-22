@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+from .brand import brand_directory
 from .catalog import catalog
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
@@ -43,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     inspect.add_argument("--json", action="store_true")
     discover = commands.add_parser("catalog")
     discover.add_argument("--root", type=Path, default=ROOT)
+    discover.add_argument("--brand", help="Limit media catalog to a brand slug")
     discover.add_argument("--probe", action="store_true",
                           help="Inspect each available media file (slower)")
     discover.add_argument("--limit", type=int, default=500)
@@ -67,7 +69,10 @@ def main(argv: list[str] | None = None) -> int:
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
         if args.command == "catalog":
-            result = catalog(args.root, include_metadata=args.probe, limit=args.limit)
+            media_root = brand_directory(args.brand, args.root) if args.brand else args.root
+            result = catalog(media_root, include_metadata=args.probe, limit=args.limit)
+            if args.brand:
+                result["brand"] = args.brand
         elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
         else:

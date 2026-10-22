@@ -14,6 +14,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from .brand import apply_brand
 from .cards import draw_card
 from .ffmpeg import RenderError, execute, probe
 from .media import preflight as inspect_media
@@ -64,6 +65,7 @@ def _scene_key(source: Path, scene: dict, project: Project,
 
 def preflight(project: Project, root: Path = ROOT) -> dict:
     """Check each unique source once and resolve brand assets before rendering."""
+    project = apply_brand(project, Path(root).resolve())
     inputs = inspect_media(project, Path(root).resolve())
     fonts = []
     for field in ("font_regular", "font_bold"):
@@ -77,6 +79,7 @@ def preflight(project: Project, root: Path = ROOT) -> dict:
         "music": inputs.music,
         "logo": inputs.logo,
         "branding_files": ([inputs.logo] if inputs.logo else []) + fonts,
+        "resolved_project": project,
     }
 
 
@@ -126,6 +129,7 @@ def render(project: Project, *, root: Path = ROOT,
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
     root = Path(root).resolve()
     inputs = preflight(project, root)
+    project = inputs["resolved_project"]
     frames = _frame_counts(project)
     quantized_duration = sum(frames) / project.fps
     dest = (Path(output) if output is not None else root / project.output).resolve()

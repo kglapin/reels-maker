@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .brand import brand_directory
+from .asset_reviews import load_media_reviews
 from .catalog import catalog
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
@@ -144,7 +145,10 @@ def main(argv: list[str] | None = None) -> int:
             result = generate_brandbook(args.brand, args.root, args.output)
         elif args.command == "catalog":
             media_root = brand_directory(args.brand, args.root) if args.brand else args.root
-            result = catalog(media_root, include_metadata=args.probe, limit=args.limit)
+            reviews = (load_media_reviews(args.brand, args.root)
+                       if args.brand else None)
+            result = catalog(media_root, include_metadata=args.probe,
+                             limit=args.limit, reviewed_assets=reviews)
             if args.brand:
                 result["brand"] = args.brand
         elif args.command == "inspect":

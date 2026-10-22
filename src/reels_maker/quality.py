@@ -50,7 +50,11 @@ def review_project(project: Project, *, root: Path | None = None) -> dict:
         title = scene.get("title") or {}
         asset = reviewed.get(scene.get("file"), {})
         if asset.get("type") == "finished_promo":
-            additions = bool(title) or bool(project.brand)
+            # Brand projects inherit their logo unless explicitly disabled.
+            # Reusing an existing promo WITHOUT adding titles or logos is safe
+            # from double-branding (publication rights still need review).
+            logo_enabled = bool(project.branding.get("logo", True))
+            additions = bool(title) or logo_enabled
             if additions:
                 warn(
                     "source_is_prebranded",

@@ -10,7 +10,8 @@ _MEDIA = {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".m4a"}
 _SKIP = {".git", ".cache", ".venv", ".tmp", "output", "render", "renders", "__pycache__", "work"}
 
 
-def catalog(root: Path, *, include_metadata: bool = False, limit: int = 500) -> dict:
+def catalog(root: Path, *, include_metadata: bool = False, limit: int = 500,
+            reviewed_assets: dict[str, dict] | None = None) -> dict:
     """List usable source paths, highlighting missing Git LFS payloads.
 
     By default this performs only filesystem operations, without invoking FFprobe.
@@ -39,6 +40,16 @@ def catalog(root: Path, *, include_metadata: bool = False, limit: int = 500) -> 
                 "available": not pointer,
                 "kind": "audio" if path.suffix.lower() in {".mp3", ".wav", ".m4a"} else "video",
             }
+            if reviewed_assets is not None and item["kind"] == "video":
+                review = reviewed_assets.get(item["file"])
+                if review is None:
+                    item["editorial_state"] = "unreviewed"
+                    item["overlay_ready"] = None
+                else:
+                    item["editorial_state"] = review["type"]
+                    item["burned_in"] = list(review["burned_in"])
+                    item["overlay_ready"] = (not pointer
+                        and review["type"] == "clean_source")
             if include_metadata and not pointer:
                 try:
                     info = probe(path)

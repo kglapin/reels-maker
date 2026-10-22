@@ -23,6 +23,7 @@ jobs:
             /src/
             /tests/
             /brands/*/brand.json
+            /brands/*/media/asset-reviews.json
             /brands/*/projects/
             /pyproject.toml
           lfs: false
@@ -55,6 +56,7 @@ jobs:
             /src/
             /tests/
             /brands/*/brand.json
+            /brands/*/media/asset-reviews.json
             /brands/*/assets/logo.png
             /brands/*/projects/
             /pyproject.toml

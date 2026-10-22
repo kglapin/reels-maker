@@ -9,6 +9,9 @@ Do not merge or write to `main` during refactor; changes belong in the
 1. Read the selected brand's `BRAND.md` and `brand.json`. For ASTA Energy:
    `brands/asta-energy/`.
 2. Query local assets: `reels-maker catalog --brand asta-energy --json`.
+   For each video, inspect `editorial_state` and `overlay_ready`: a finished
+   promo must not receive new titles/logos. An unreviewed file is **unknown**,
+   not automatically clean; inspect actual frames before reuse.
 3. Create/edit a project in `brands/<slug>/projects/`. Manifest paths are
    relative to that brand directory, not to the shell working directory.
 4. Run `reels-maker validate <manifest> --syntax-only --strict-quality --json`; fix or explicitly review design warnings.

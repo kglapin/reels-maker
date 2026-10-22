@@ -30,6 +30,48 @@ class MediaReviewTests(unittest.TestCase):
             self.assertIn("source_is_prebranded",
                 [w["code"] for w in report["warnings"]])
 
+    def test_strict_cli_rejects_prebranded_source_before_encoding(self):
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brand = root / "brands" / "demo"
+            (brand / "media").mkdir(parents=True)
+            (brand / "media" / "asset-reviews.json").write_text(
+                json.dumps({"schema_version":1,
+                  "assets":{"media/finished.mp4":{"type":"finished_promo",
+                            "burned_in":["logo"]}}}))
+            (brand / "brand.json").write_text(
+                json.dumps({"id":"demo","branding":{"logo":"assets/logo.png"}}))
+            manifest = root / "project.json"
+            manifest.write_text(json.dumps({
+                "brand":"demo", "scenes":[{"file":"media/finished.mp4",
+                "duration":3, "title":{"headline":"Energia"}}]
+            }))
+            proc = subprocess.run([sys.executable,"-m","reels_maker",
+                "validate",str(manifest),"--root",str(root),"--syntax-only",
+                "--strict-quality","--json"],capture_output=True,text=True)
+            self.assertEqual(proc.returncode,2,proc.stderr)
+            response = json.loads(proc.stderr)
+            self.assertIn("source_is_prebranded",
+                          [i["code"] for i in response["quality"]["warnings"]])
+
+    def test_text_free_reuse_can_disable_inherited_logo(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            review=root/"brands/demo/media/asset-reviews.json"
+            review.parent.mkdir(parents=True)
+            review.write_text(json.dumps({
+              "schema_version":1,
+              "assets":{"media/finished.mp4":{"type":"finished_promo",
+                                            "burned_in":["logo"]}}}))
+            p=Project(name="reuse",width=720,height=1280,fps=25,
+                scenes=[{"file":"media/finished.mp4","duration":3.5}],
+                music=None,branding={"logo":None},output="out.mp4",brand="demo")
+            report=review_project(p,root=root)
+            self.assertNotIn("source_is_prebranded",
+                [w["code"] for w in report["warnings"]])
+
     def test_unreviewed_media_is_not_falsely_assumed_to_be_prebranded(self):
         with tempfile.TemporaryDirectory() as folder:
             p=Project(name="good",width=720,height=1280,fps=25,

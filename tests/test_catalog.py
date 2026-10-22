@@ -50,6 +50,43 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual([x["file"] for x in response["items"]],
                              ["media/clip.mp4"])
 
+    def test_catalog_surfaces_visual_provenance_to_agents(self):
+        import contextlib
+        import io
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            folder = root / "brands" / "example" / "media"
+            folder.mkdir(parents=True)
+            (folder / "old.mp4").write_bytes(b"already branded reel")
+            (folder / "new.mp4").write_bytes(b"clean master")
+            (folder / "unknown.mp4").write_bytes(b"not yet reviewed")
+            (folder / "asset-reviews.json").write_text(json.dumps({
+                "schema_version": 1,
+                "assets": {
+                    "media/old.mp4": {
+                        "type": "finished_promo",
+                        "burned_in": ["logo", "captions"]},
+                    "media/new.mp4": {
+                        "type": "clean_source",
+                        "burned_in": []}
+                }
+            }))
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["catalog", "--root", str(root),
+                             "--brand", "example", "--json"])
+            self.assertEqual(code, 0)
+            items = {item["file"]: item
+                     for item in json.loads(output.getvalue())["items"]}
+            self.assertEqual(items["media/old.mp4"]["editorial_state"],
+                             "finished_promo")
+            self.assertFalse(items["media/old.mp4"]["overlay_ready"])
+            self.assertEqual(items["media/new.mp4"]["editorial_state"],
+                             "clean_source")
+            self.assertTrue(items["media/new.mp4"]["overlay_ready"])
+            self.assertIsNone(items["media/unknown.mp4"]["overlay_ready"])
+
     def test_listing_does_not_invoke_ffprobe_by_default(self):
         with tempfile.TemporaryDirectory() as temp:
             (Path(temp) / "clip.mp4").write_bytes(b"placeholder")

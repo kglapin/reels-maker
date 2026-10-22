@@ -170,3 +170,17 @@ This `verify` command can be run on an existing MP4 without encoding.
 Export metadata is reported under `export_quality` after a render. These
 checks protect technical delivery but do not judge artistic merit, colour
 grading, speaker intelligibility or source licence compliance.
+
+## Agent-safe media discovery
+
+The `reels-maker catalog --brand asta-energy --json` response now includes
+`editorial_state` and `overlay_ready` for video footage when its status has
+been reviewed. Values are `finished_promo`, `clean_source` or `unreviewed`.
+A file marked `finished_promo` can already carry rendered logos or captions:
+do not add new motion typography over it. `overlay_ready=null` means unknown;
+it is **not** consent to reuse. The categorization is maintained per brand in
+`media/asset-reviews.json` from inspected frames. A strict-quality render
+raises `source_is_prebranded` if new titles or inherited logo are added to
+annotated finished promo footage. When intentionally reusing old video
+without any new overlay, set `branding.logo` to `null` and omit titles;
+publication still requires licence and content review.

@@ -1,36 +1,39 @@
-# Single draft-PR refactor plan
+# Reels Maker — single-PR refactor plan
 
-Development branch: `refactor/modular-render-engine`. All changes belong
-to one draft PR. Do not merge until regression acceptance and a manual review.
+All refactor work is committed only to \`refactor/modular-render-engine\`.
+The \`main\` branch must not be changed before the complete draft PR is reviewed.
 
-## Milestones
+## Architecture principle
 
-- [x] A. Package Python source and pin compatible dependency ranges.
-- [x] B. Introduce portable paths, Unicode normalization and LFS checks.
-- [x] C. Implement a reusable FFmpeg pipeline and isolated scratch work.
-- [x] D. Add cached per-shot encodes and atomic final MP4 outputs.
-- [x] E. Provide versioned JSON CLI for ChatGPT, Pi and OpenCode harnesses.
-- [x] F. Add a sample manifest, basic tests and GitHub workflow.
-- [ ] G. Port Rush/Vamos legacy visual effects and preserve beats/transitions.
-- [ ] H. Convert legacy scripts into configuration-based compatibility commands.
-- [ ] I. Compare audio/video outputs for migrated samples and optimize performance.
-- [ ] J. Review licensed binaries, LFS fetches and final build documentation.
+Optimize for fast, deterministic renders callable by ChatGPT, Pi, OpenCode and
+shell scripts. Module count is *not* a metric. Prefer separate responsibilities
+where useful, but do not duplicate FFmpeg pipelines or build unneeded wrappers.
 
-## Success criteria
+## Ordered milestones
 
-- Cross-platform without absolute macOS paths in new engine.
-- Render API/CLI independent of an interactive terminal.
-- Exact JSON status and output path for each invocation.
-- Hot-cache render does not re-encode unchanged shots.
-- Concurrent jobs use separate temp directories and atomic cache writes.
-- Archive scripts remain available until compatible replacements are verified.
-- `main` remains unchanged until explicit approval of the complete PR.
+- [x] A. Python package, versioned dependencies, portable paths, Unicode/LFS checks.
+- [x] B. Shared FFmpeg renderer with cached scene encodes and stream-copy assembly.
+- [x] C. Noninteractive JSON CLI: validate, render, inspect.
+- [x] D. JSON example for an ASTA music montage.
+- [ ] E. Convert legacy generators to configuration-driven renderers.
+- [ ] F. Add effects, reusable brand presets and safety-zone configurations.
+- [ ] G. Review media licensing, binary storage and deterministic production outputs.
+- [ ] H. Validate real source media in a full-size production export.
 
-## Deliberately excluded from the first working renderer
+## Compatibility criteria
 
-- Beat quantization and complex overlays from the historical montage tools.
-- SFX / voiceover mixing and dynamic keyframed animations.
-- Hardware-specific codec optimizations and distributed render workers.
+1. No fixed \`/Users/...\`, \`/System/Library/...\` or shared \`/tmp\` paths
+   in active rendering paths.
+2. Projects render after \`pip install -e .\` with FFmpeg available.
+3. Git LFS pointers fail with an actionable error before rendering.
+4. Renders are H.264 MP4 with AAC audio when music is configured.
+5. Subsequent identical renders reuse the cached scene videos.
+6. Failure does not overwrite the last successful final output.
+7. The pull request stays draft until source-media validation is complete.
 
-These features must be added only when benchmarked against real use cases,
-not as speculative extra abstraction.
+## Existing Git data
+
+Retain pre-existing renders and intermediate files in the PR for safety.
+Do not rewrite Git history as part of refactoring. Intermediate output
+directories are ignored for *future* changes; previously tracked binaries
+remain present until a separate, approved media migration.

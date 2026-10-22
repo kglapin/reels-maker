@@ -1,0 +1,107 @@
+{
+  "name": "asta-rush-montage",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25
+  },
+  "scenes": [
+    {
+      "file": "2_dron-pv-dla-firm-asta.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "10_tracker-pv.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "1_fotowoltaika-25wp-budzyn.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "11_chodzież-2x39,59kwp-fotowoltaika-asta.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "3_pila-elektronarzedzia-39,6kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "12_pv na bloku.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "14_Piła-pv-39,96-kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "4_Copy of mini max-reels .mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "7_pila-pv-30,50 kWp - przedszkole.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "15_fotowoltaika-spoldzielnia.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "9_ dron-pv-dla-firm-asta-pila-49kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "13_Copy of asta - konstrukcja tracker.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "6_fotowoltaika - poudnie czy wschod zachod.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "8_asta-pila-realizacja-30kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    },
+    {
+      "file": "5_reels-asta-pv-dla-branzy-drzewnej.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "framing": "crop"
+    }
+  ],
+  "music": {
+    "file": "mewwwwwww-rush-433449.mp3",
+    "start": 10.635,
+    "volume": 0.75,
+    "fade_out": 1.2
+  },
+  "output": "output/asta-montage.mp4"
+}

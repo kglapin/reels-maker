@@ -25,3 +25,24 @@ Inspect at normal smartphone size, preferably with muted sound first. Review:
 - Final MP4 must also be played in motion with audio, not judged from stills
 
 This tool is a **visual review aid**, not an automatic creative approval.
+
+## Review actual entrance, hold and exit (motion strip)
+
+The default contact sheet samples one **settled** frame per shot. It can miss
+bad early entrances, brief opacity problems, or an exit that happens before the
+copy is readable. For text-forward ads, also run:
+
+```sh
+reels-maker storyboard brands/asta-energy/projects/asta-typography-editorial-demo.json \
+  --video renders/asta-energy/asta-typography-editorial-demo.mp4 \
+  --output renders/asta-energy/qa/motion-strip.png --motion-strip --json
+```
+
+This adds three real decoded frame samples per shot: `entry`, `settled` and
+`exit`. The timings avoid incoming/outgoing crossfade intervals. Animated
+scene samples prefer the moment after the configured stagger completes for the
+settled checkpoint. The command also verifies codec, dimensions, frame count,
+FPS and audio before trusting the MP4. Still images are diagnostics, not a
+substitute for video playback, rhythm judgement or human creative sign-off.
+
+The motion strip is opt-in because it extracts three times as many images.

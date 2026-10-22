@@ -14,6 +14,35 @@ from reels_maker.storyboard import make_storyboard
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
                      "FFmpeg/FFprobe required")
 class StoryboardTests(unittest.TestCase):
+    def test_motion_strip_samples_three_actual_frames_per_scene(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            execute(["-f", "lavfi", "-i",
+                     "color=c=black:s=160x288:r=12:d=3",
+                     "-an", "-c:v", "libx264", str(root / "source.mp4")])
+            manifest = root / "motion.json"
+            manifest.write_text(json.dumps({
+                "video": {"width":160,"height":288,"fps":12},
+                "scenes": [{
+                    "file":"source.mp4","duration":2,
+                    "title":{"headline":"ENERGY"},
+                    "motion":{"preset":"fade_stagger",
+                              "duration_frames":4,"stagger_frames":1}
+                }], "output":"renders/motion.mp4"
+            }))
+            project=load_project(manifest)
+            result=render(project,root=root)
+            file=root/"qa"/"strip.png"
+            report=make_storyboard(project,Path(result["output"]),file,
+                                   motion_strip=True)
+            self.assertEqual(report["mode"],"motion_strip")
+            self.assertEqual([x["phase"] for x in report["samples"]],
+                             ["entry","settled","exit"])
+            self.assertTrue(all(x["timestamp_seconds"]>=0 for x in report["samples"]))
+            with Image.open(file) as picture:
+                self.assertGreater(picture.width,500)
+
     def test_creates_actual_frame_contact_sheet(self):
         from PIL import Image
         with tempfile.TemporaryDirectory() as tmp:

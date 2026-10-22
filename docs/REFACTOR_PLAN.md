@@ -19,6 +19,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
 - [x] Machine-readable editorial quality warnings for reading speed, over-emphasis and transition density, with CLI strict mode.
 - [x] Real-MP4 storyboard generation for human shot/crop/text inspection.
+- [x] Optional entry/settled/exit motion-strip review from actual decoded frames.
 - [x] Strict render mode and updated Pi/OpenCode/ChatGPT publishing workflow.
 - [x] Post-encode MP4 verification (exact frame count, FPS, codec, audio streams) before atomic publication.
 - [ ] Verify representative production render from each existing project.

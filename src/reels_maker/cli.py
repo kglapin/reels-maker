@@ -58,6 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     storyboard.add_argument("--video", type=Path, required=True)
     storyboard.add_argument("--output", type=Path, required=True)
     storyboard.add_argument("--columns", type=int, default=4)
+    storyboard.add_argument("--motion-strip", action="store_true",
+        help="Show entry/settled/exit frames for every shot")
     storyboard.add_argument("--json", action="store_true")
     discover = commands.add_parser("catalog")
     discover.add_argument("--root", type=Path, default=ROOT)
@@ -153,7 +155,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "storyboard":
             from .storyboard import make_storyboard
             result = make_storyboard(load_project(args.project), args.video,
-                                     args.output, columns=args.columns)
+                                     args.output, columns=args.columns,
+                                     motion_strip=args.motion_strip)
         else:
             project = load_project(args.project)
             if args.command == "validate":

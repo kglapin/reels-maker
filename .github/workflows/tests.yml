@@ -69,6 +69,14 @@ jobs:
       - run: python -m pip install -e ".[brand]"
       # Runner images often already provide FFmpeg: avoid an unnecessary apt
       # update on every commit; install only if either executable is missing.
+      - name: Make APT robust to unavailable optional mirrors
+        run: |
+          # Some hosted runners ship a 3rd-party Microsoft APT feed that
+          # intermittently responds 403. It is unrelated to FFmpeg/fonts.
+          while IFS= read -r source; do
+            sudo mv "$source" "$source.disabled"
+          done < <(sudo grep -lr 'packages.microsoft.com' \
+            /etc/apt/sources.list.d --include='*.list' --include='*.sources' || true)
       - name: Ensure FFmpeg is available
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then

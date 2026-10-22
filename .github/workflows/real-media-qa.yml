@@ -44,6 +44,14 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install engine
         run: python -m pip install -e .
+      - name: Make APT robust to unavailable optional mirrors
+        run: |
+          # Some hosted runners ship a 3rd-party Microsoft APT feed that
+          # intermittently responds 403. It is unrelated to FFmpeg/fonts.
+          while IFS= read -r source; do
+            sudo mv "$source" "$source.disabled"
+          done < <(sudo grep -lr 'packages.microsoft.com' \
+            /etc/apt/sources.list.d --include='*.list' --include='*.sources' || true)
       - name: Verify real media, font and FFmpeg
         run: |
           set -euo pipefail

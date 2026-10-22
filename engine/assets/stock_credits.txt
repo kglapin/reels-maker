@@ -1,0 +1,46 @@
+ASTA Energy — promo video: sources and attribution
+===================================================
+
+Output: ../render/asta_dotacje_magazyny_energii_30s_external.mp4
+Script: scripts/create_subsidy_ad_external.py
+
+Programme facts used in the on-screen copy
+-----------------------------------------
+Source: https://www.asta-energy.pl/finansowanie/przydomowe-magazyny-energii/
+Snapshot: references/asta-financing-page-2026-10-22.html (checked 22 October 2026)
+Before publishing, re-check the current NFOŚiGW "PME 2" rules, amounts and dates.
+
+Footage used (all external, no ASTA archive footage in this edit)
+------------------------------------------------------------------
+1) "Solar triplex home animation" — Wikideas1 — CC0 1.0
+   https://commons.wikimedia.org/wiki/File:Solar_triplex_home_animation.webm
+   Used for the opening and closing shots (home with photovoltaic panels).
+
+2) "Inside the White House- Solar Panels" — The White House / Wikimedia Commons — public domain
+   https://commons.wikimedia.org/wiki/File:Inside_the_White_House-_Solar_Panels.webm
+   Installation footage on a residential roof.
+
+3) "Zonnepanelen op dak basisschool De Wegwijzer in Winssen" — RN7 — CC BY 3.0
+   https://commons.wikimedia.org/wiki/File:Zonnepanelen_op_dak_basisschool_De_Wegwijzer_in_Winssen.webm
+   Photovoltaic panels on a roof.
+
+4) "Agrivoltaics pilot plant at Heggelbach Farm in Germany 01" and "... 05" — Fraunhofer ISE / Wikimedia Commons — CC0 1.0
+   https://commons.wikimedia.org/wiki/File:Agrivoltaics_pilot_plant_at_Heggelbach_Farm_in_Germany_01.webm
+   https://commons.wikimedia.org/wiki/File:Agrivoltaics_pilot_plant_at_Heggelbach_Farm_in_Germany_05.webm
+   Aerial views of a modern photovoltaic plant.
+
+5) "Inside a Lithium Ion Electric Car Battery Cut Open by EV West" — EV West — CC BY 3.0
+   https://commons.wikimedia.org/wiki/File:Inside_a_Lithium_Ion_Electric_Car_Battery_Cut_Open_by_EV_West.webm
+   Battery modules used for the energy-storage shots.
+
+6) "Parc éolien du bois de Montrigaud, 2" — Wikimedia Commons — CC BY 3.0
+   https://commons.wikimedia.org/wiki/File:Parc_%C3%A9olien_du_bois_de_Montrigaud,_2.webm
+   Wind turbine used for the EU bonus card.
+
+Other elements
+--------------
+- Logo: logo-asta-energy.svg supplied by ASTA Energy (rendered to engine/assets/asta_logo.png).
+- Music: "Rush" (mewwwwwww-rush-433449.mp3) supplied in the project folder, trimmed to 29.7 s with a fade-out.
+
+Note: Mixkit 720p downloads were rejected because Mixkit restricts those to personal use only;
+only materials with a commercial or public-domain licence are used here.

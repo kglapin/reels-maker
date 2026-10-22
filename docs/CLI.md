@@ -234,3 +234,11 @@ Warning: `voiceover.offset_seconds` is **global output time**;
 `motion.cue_seconds` refers to the start of the **individual scene**,
 including any scene-overlap implications. Editors must align them on the
 actual timeline and re-check timing when changing transitions.
+
+## Inspect the actual global visual cue timeline
+
+`reels-maker cue-sheet <manifest> --json` yields a scene-by-scene
+timing report with exact frame indices and seconds for every text role.
+Use `--output renders/qa/cues.json` to save an editable-friendly machine
+report. Positions reflect real overlap from `xfade` and the separate global
+voiceover offset; source-transcript timestamps are not guessed.

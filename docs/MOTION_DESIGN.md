@@ -119,3 +119,16 @@ and gradual release. The AAC export uses a 48kHz mix and a peak limiter.
 This is **not** a substitute for a sound engineer's final review: listen for
 ducking artifacts, syllables obscured by music, excessive gain and unnatural
 silence. The engine does not synthesize voices or automatically align speech.
+
+## Generate a timeline cue sheet before the final audio mix
+
+```sh
+reels-maker cue-sheet project.json --json
+reels-maker cue-sheet project.json --output renders/qa/narration-cues.json --json
+```
+
+This reports scene-local and **absolute final-timeline** frame/time positions
+for each text run, accounting for `xfade` overlaps. It includes narrator
+`offset_seconds` and marks reveals partially hidden by incoming/outgoing
+transitions. It never guesses spoken content or rewrites the narration.
+Match the output to the final WAV waveform, then audit in motion on a phone.

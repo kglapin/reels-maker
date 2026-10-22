@@ -45,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
                                  help="Concurrent scene encodes (default: 2)")
             command.add_argument("--strict-quality", action="store_true",
                                  help="Refuse to render when editorial warnings remain")
+    cues = commands.add_parser("cue-sheet",
+        help="List exact local/global cue times including transition overlaps")
+    cues.add_argument("project", type=Path)
+    cues.add_argument("--output", type=Path, help="Optional JSON report destination")
+    cues.add_argument("--json", action="store_true")
+
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
@@ -151,6 +157,16 @@ def main(argv: list[str] | None = None) -> int:
                              limit=args.limit, reviewed_assets=reviews)
             if args.brand:
                 result["brand"] = args.brand
+        elif args.command == "cue-sheet":
+            from .cue_sheet import make_cue_sheet
+            result = make_cue_sheet(load_project(args.project))
+            if args.output is not None:
+                location = args.output.resolve()
+                location.parent.mkdir(parents=True, exist_ok=True)
+                location.write_text(
+                    json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+                result["report"] = str(location)
         elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
         elif args.command == "verify":

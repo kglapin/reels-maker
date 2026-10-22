@@ -1,0 +1,50 @@
+{
+  "name": "manual-cues-typography-demo",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 25
+  },
+  "scenes": [
+    {
+      "file": "source-unbranded.mp4",
+      "duration": 3.4,
+      "title": {
+        "backdrop": "soft",
+        "headline": {
+          "runs": [
+            {
+              "text": "WIĘCEJ ",
+              "scale": 0.8
+            },
+            {
+              "text": "ENERGII",
+              "scale": 1.3,
+              "color": "accent",
+              "break_before": true
+            },
+            {
+              "text": "dla biznesu",
+              "scale": 0.78,
+              "break_before": true
+            }
+          ]
+        },
+        "body": "Fotowoltaika i magazyny energii"
+      },
+      "motion": {
+        "preset": "rise_soft",
+        "duration_frames": 7,
+        "stagger_frames": 2,
+        "distance_px": 18,
+        "cue_seconds": {
+          "headline-0": 0.32,
+          "headline-1": 1,
+          "headline-2": 1.56,
+          "body": 2.04
+        }
+      }
+    }
+  ],
+  "output": "renders/demo/manual-cues-typography-demo.mp4"
+}

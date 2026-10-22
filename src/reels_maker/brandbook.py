@@ -108,17 +108,51 @@ def _fonts_from(profile: dict) -> dict:
 
 
 def _preview_image(profile: dict, root: Path | None) -> Path | None:
+    """Resolve a real logo image; never silently replace a configured brand mark.
+
+    For an accepted brand the paths are relative to that brand directory.
+    Website-scan drafts may refer to separately downloaded candidate images.
+    """
     for downloaded in profile.get("downloaded_logos", []):
         candidate = Path(downloaded.get("path", ""))
         if candidate.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp") and candidate.is_file():
             return candidate
-    if root is not None:
-        logo = profile.get("branding", {}).get("logo")
-        if logo:
-            candidate = Path(root) / str(logo)
-            if candidate.suffix.lower() in (".png", ".jpg", ".jpeg") and candidate.is_file():
-                return candidate
+    identity_logo = profile.get("identity", {}).get("logo", {})
+    if not isinstance(identity_logo, dict):
+        identity_logo = {}
+    logo = (profile.get("branding", {}).get("logo") or
+            identity_logo.get("render_png"))
+    if logo and root is not None:
+        relative = Path(str(logo))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"Brand logo path must stay inside brand directory: {logo}")
+        candidate = (Path(root) / relative).resolve()
+        if not candidate.is_relative_to(Path(root).resolve()):
+            raise ValueError(f"Brand logo escapes brand directory: {logo}")
+        if candidate.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+            raise ValueError(f"PDF logo must be a raster image: {candidate}")
+        if not candidate.is_file():
+            raise ValueError(f"Brand logo is missing: {candidate}. Restore assets before exporting PDF.")
+        return candidate
     return None
+
+
+def _draw_logo(pdf, logo: Path, x: float, y: float,
+               width: float, height: float) -> None:
+    """Place the authentic mark on its intended background without distortion."""
+    try:
+        image = ImageReader(str(logo))
+        iw, ih = image.getSize()
+        if iw <= 0 or ih <= 0:
+            raise ValueError("Logo image has invalid dimensions")
+        scale = min(width / iw, height / ih)
+        draw_w, draw_h = iw * scale, ih * scale
+        pdf.drawImage(image, x + (width - draw_w) / 2,
+                      y + (height - draw_h) / 2,
+                      width=draw_w, height=draw_h,
+                      mask="auto", preserveAspectRatio=True)
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Cannot embed brand logo {logo}: {exc}") from exc
 
 
 def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None = None,
@@ -165,17 +199,7 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     c.setFillColor(_rgb(background))
     c.roundRect(w - 228, h - 197, 180, 110, 10, fill=1, stroke=0)
     if logo_img:
-        try:
-            image = ImageReader(str(logo_img))
-            iw, ih = image.getSize()
-            iw = max(1, iw)
-            ih = max(1, ih)
-            ratio = min(145 / iw, 75 / ih)
-            iw, ih = iw * ratio, ih * ratio
-            c.drawImage(image, w - 138 - iw / 2, h - 139 - ih / 2,
-                        width=iw, height=ih, mask="auto", preserveAspectRatio=True)
-        except Exception:
-            _line(c, w - 209, h - 145, "LOGO", font=bold, size=18, ink=accent)
+        _draw_logo(c, logo_img, w - 210, h - 179, 145, 75)
     else:
         _line(c, w - 207, h - 142, "LOGO", font=bold, size=18, ink=accent)
         _line(c, w - 207, h - 162, "wymaga weryfikacji", font=regular,

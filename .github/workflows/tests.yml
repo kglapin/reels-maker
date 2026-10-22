@@ -16,6 +16,7 @@ jobs:
             /src/
             /tests/
             /brands/*/brand.json
+            /brands/*/assets/logo.png
             /brands/*/projects/
             /pyproject.toml
           lfs: false

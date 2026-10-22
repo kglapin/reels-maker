@@ -56,3 +56,5 @@ reels-maker brandbook --brand asta-energy --json
 ```
 
 Wynik: `renders/asta-energy/brandbook.pdf` (plik generowany, poza Git). Zmiany kolorów, fontów i logo w `brand.json` są widoczne w kolejnym eksporcie. Brandbook nie zawiera rozmiarów wideo ani marginesów platform. PDF nie jest osobnym źródłem ustawień.
+
+Brandbook PDF automatycznie osadza zatwierdzone logo z `branding.logo` (ASTA: `assets/logo.png`). Tło podglądu określa `identity.logo.preview_background`, aby białe logo pozostawało czytelne. Jeśli skonfigurowany plik nie istnieje lub jest uszkodzony, generator zgłasza błąd zamiast wstawiać zastępczy napis.

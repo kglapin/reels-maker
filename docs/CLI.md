@@ -195,3 +195,42 @@ and a minimum 0.55s fully revealed hold. `headline-0` refers to the first
 styled `title.headline.runs` segment; `headline` targets a plain string.
 `logo`, `accent`, `kicker`, `body` and `footer` are supported. Uncued
 elements retain the existing stagger. See `docs/MOTION_DESIGN.md`.
+
+## Separate narration and music tracks
+
+`voiceover` is a first-class, independent audio input; it is **not** part of
+the brandbook and does not have to be embedded in a background-music file.
+An editor can use verified narration timestamps to schedule visual
+`motion.cue_seconds` from the beginning of each scene.
+
+```json
+{
+  "music": {
+    "file": "media/audio/score.wav",
+    "volume": 0.30,
+    "fade_out": 0.4,
+    "ducking": "sidechain"
+  },
+  "voiceover": {
+    "file": "media/audio/narrator.wav",
+    "start": 0,
+    "offset_seconds": 0.20,
+    "volume": 1.0
+  }
+}
+```
+
+`voiceover.start` trims the source recording; `offset_seconds` delays the
+narration relative to the **final video timeline**. A short voice recording
+ends in silence; the engine never loops narration. When both voice and music
+are present, optional `music.ducking = "sidechain"` reduces soundtrack volume
+in response to the narrator. It uses moderate FFmpeg compressor settings, a
+gentle release and a 0.95 peak limiter before 48kHz AAC export. With
+`ducking: "off"` (default) no sidechain compression is applied; a limiter
+still prevents clipped sums. No background soundtrack, timing or AI voice is
+added automatically. Validate listening quality before publishing.
+
+Warning: `voiceover.offset_seconds` is **global output time**;
+`motion.cue_seconds` refers to the start of the **individual scene**,
+including any scene-overlap implications. Editors must align them on the
+actual timeline and re-check timing when changing transitions.

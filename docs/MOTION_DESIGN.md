@@ -108,3 +108,14 @@ narration timestamps or manually spotted musical accents to these cues; then
 inspect the final MP4 with sound. If a dissolve follows, outgoing overlap can
 reduce the true reading window: strict-quality lint accounts for that and the
 storyboard refuses to label an unfinished reveal as a settled frame.
+
+## Narration, mix and music hierarchy
+
+The renderer now separates `voiceover` from `music`. Avoid mixing voice
+into the soundtrack permanently before editing: its natural gaps should
+remain visible to the sidechain envelope. A controlled, optional FFmpeg
+compressor ducks music when the narrator speaks, with moderate ratio/attack
+and gradual release. The AAC export uses a 48kHz mix and a peak limiter.
+This is **not** a substitute for a sound engineer's final review: listen for
+ducking artifacts, syllables obscured by music, excessive gain and unnatural
+silence. The engine does not synthesize voices or automatically align speech.

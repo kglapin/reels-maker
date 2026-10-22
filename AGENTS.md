@@ -20,6 +20,8 @@ Do not merge or write to `main` during refactor; changes belong in the
 7. Require exit code 0 and a successful JSON response. Generate a contact sheet
    with `reels-maker storyboard <manifest> --video <mp4> --output <png> --json`.
    Inspect the real MP4 with audio and the contact sheet before calling it finished.
+   If a voiceover is specified, spot-check the actual spoken words against
+   `motion.cue_seconds`, and listen for sidechain pumping or clipped peaks.
 
 Keep brand media and project manifests separate from reusable Python modules.
 No agent integration may bypass the CLI and quietly inject another rendering

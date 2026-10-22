@@ -30,6 +30,28 @@ class RichTextTests(unittest.TestCase):
         self.assertEqual(entries["ZYSK"][1], "#47A013")
         self.assertEqual(result.lines, 2)
 
+    def test_mixed_sizes_share_baseline_on_same_line(self):
+        draw = ImageDraw.Draw(Image.new("RGBA", (540, 960)))
+        layout = layout_runs(draw, [
+            {"text": "Więcej ", "scale": .70, "weight": "regular"},
+            {"text": "ENERGII", "scale": 1.25, "weight": "bold",
+             "color": "accent"}
+        ], lambda size, bold: _font(size, bold), 36, 500, "#47A013")
+        self.assertEqual(layout.lines, 1)
+        self.assertEqual(len({piece[4] for piece in layout.parts}), 1)
+        self.assertGreater(layout.parts[-1][1].size,
+                           layout.parts[0][1].size)
+
+    def test_backdrop_can_be_explicitly_disabled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = self._project()
+            blank = Path(tmp) / "none.png"
+            self.assertTrue(draw_card(p, {
+                "headline":"Energia",
+                "backdrop":"none"}, None, blank))
+            with Image.open(blank) as rendered:
+                self.assertEqual(rendered.getpixel((2, rendered.height-2))[3], 0)
+
     def test_rich_headline_draws_without_motion_and_with_layers(self):
         with tempfile.TemporaryDirectory() as tmp:
             title = {"kicker": "ASTA", "headline": {"runs": [

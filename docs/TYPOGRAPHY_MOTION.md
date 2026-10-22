@@ -20,3 +20,21 @@ strong type hierarchies at most per composition. The intended hierarchy is
 
 Example: `brands/asta-energy/projects/asta-typography-editorial-demo.json`.
 Test with the real ASTA media before using it as a public campaign asset.
+
+## Precise mixed-size headline alignment
+
+Styled text runs are aligned on a shared **font baseline**, not the top edges
+of each text bitmap. The headline engine measures actual font ascent, descent
+and word advances, then wraps complete words into line boxes. A 130% hero
+word beside a 70% supporting word no longer appears to float vertically.
+
+Supporting title/body sizes were increased so condensed reels retain
+a practical text hierarchy on phone-size playback. This is an **editorial
+default**, not a fixed brandbook resolution; users still select arbitrary
+portrait, landscape and square formats. Oversized/long words fail the safe
+text-area checks rather than being silently shrunk.
+
+Optional per-scene `title.backdrop` choices: `soft` (default, gentle dark
+gradient), `strong` (more contrast on detailed footage), `none` (only after
+checking text contrast against the actual frames). No stock glowing panels,
+colored glass, perpetual zoom or automated flashy masks.

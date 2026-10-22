@@ -56,3 +56,11 @@ sources labelled `finished_promo` as reuse-only, not as clean backgrounds for
 an independent title/logo system. Agent `--strict-quality` checks refuse
 adding titles over confirmed prebranded sources. Do not assume that a clean
 technical export has clean creative footage.
+
+## Baseline and readability checks
+
+The renderer now aligns mixed-size spans to a shared baseline, increases
+the supporting copy size, and can apply a neutral `soft`, `strong` or `none`
+backdrop. Even a strong scrim **cannot** repair an already rendered logo,
+caption or graphic underneath a new title. Provenance classification takes
+precedence: obtain clean masters for professional re-editing.

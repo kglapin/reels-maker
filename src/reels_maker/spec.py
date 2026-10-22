@@ -82,6 +82,9 @@ def load_project(path: str | Path) -> Project:
         title = scene.get("title", {})
         if not isinstance(title, dict):
             raise ProjectError(f"scene {index}: title must be an object")
+        if title.get("backdrop", "soft") not in ("soft", "strong", "none"):
+            raise ProjectError(
+                f"scene {index}: title.backdrop must be soft, strong or none")
         for field in ("kicker", "headline", "body", "footer"):
             value = title.get(field)
             if value is None:

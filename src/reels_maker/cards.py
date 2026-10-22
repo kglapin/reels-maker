@@ -77,15 +77,21 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         layers.append({"file": str(file), "x": bounds[0],
                        "y": bounds[1], "role": role})
 
-    if title:
-        y0 = int(h * 0.38)
+    # The incoming footage may already contain a baked-in grade. Keep the
+    # default subtle, but allow explicit stronger contrast on complex motion.
+    backdrop = title.get("backdrop", "soft")
+    if backdrop not in ("soft", "strong", "none"):
+        raise RenderError("title.backdrop must be soft, strong or none")
+    if title and backdrop != "none":
+        y0 = int(h * .38)
         gradient = Image.new("RGBA", (1, h - y0))
         px = gradient.load()
-        for y in range(h - y0):
-            t = y / max(1, h - y0 - 1)
-            # Neutral cinematographic shadow, not an automatic brand-color wash.
-            # Limit intensity to avoid dark opaque blocks that hide source footage.
-            px[0, y] = (0, 0, 0, int(165 * t ** 1.55))
+        max_alpha, gamma = ((180, .95) if backdrop == "soft"
+                            else (222, .75))
+        for yy in range(h - y0):
+            t = yy / max(1, h - y0 - 1)
+            # Neutral and smooth, with no colored glass or harsh rectangle.
+            px[0, yy] = (0, 0, 0, int(max_alpha * t ** gamma))
         img.alpha_composite(gradient.resize((w, h - y0)), (0, y0))
 
     if logo:
@@ -111,7 +117,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     rich = isinstance(headline_spec, dict)
     fields = [str(title.get(k, "")) if k != "headline" or not rich else ""
               for k in ("kicker", "headline", "body", "footer")]
-    size = [round(v * scale) for v in (29, 69, 37, 25)]
+    # Supporting copy must remain readable on a phone. Scale via the
+    # shorter canvas side rather than assuming a 9:16 output.
+    size = [round(v * scale) for v in (32, 74, 49, 29)]
     faces = [
         _font(max(9, n), i < 2,
               project.branding.get("font_bold" if i < 2 else "font_regular"),
@@ -121,7 +129,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     available = w - 2 * margin - round(22 * scale)
     lines = [_wrap(draw, s.upper() if i == 0 else s, f, available)
              for i, (s, f) in enumerate(zip(fields, faces))]
-    spacing = [round(v * scale) for v in (44, 83, 55, 37)]
+    spacing = [round(v * scale) for v in (46, 93, 64, 41)]
     accent = str(project.branding.get("accent", "#47A013"))
     rich_layout = (layout_runs(
         draw, headline_spec["runs"],
@@ -180,7 +188,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
                 for token, token_face, token_ink, px, py, _ in rich_layout.parts:
                     draw_safe_text(
                         element_draw, (margin + round(25 * scale) + px, y + py),
-                        token, token_face, token_ink, anchor="lt")
+                        token, token_face, token_ink, anchor="ls")
                 store_layer(element, "headline")
             else:
                 # A headline is not one flat bitmap: independent styled runs
@@ -195,7 +203,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
                         if token_run == run_index:
                             draw_safe_text(
                                 run_draw, (margin + round(25 * scale) + px, y + py),
-                                token, token_face, token_ink, anchor="lt")
+                                token, token_face, token_ink, anchor="ls")
                     store_layer(run_layer, f"headline-{run_index}")
             y += rich_layout.height
         else:

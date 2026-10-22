@@ -1,77 +1,50 @@
 # Reels Maker
 
-A Python + FFmpeg rendering engine for vertical video. Usable from normal
-shells, ChatGPT, Pi, OpenCode and other terminal-driven agents.
+One Python/FFmpeg engine for many brands, usable from ChatGPT, Pi, OpenCode
+and any noninteractive terminal harness.
 
-**Current status:** refactoring in progress on the
-`refactor/modular-render-engine` branch and draft [PR #1](https://github.com/kglapin/reels-maker/pull/1).
-Do not merge into `main` until real-media regression and legacy FX parity
-have been verified.
+**Refactor status:** Work stays on branch `refactor/modular-render-engine`,
+within draft [PR #1](https://github.com/kglapin/reels-maker/pull/1).
+`main` is unchanged until explicit approval.
 
-## Install
+## Architecture
 
-Requirements: Python >=3.11, FFmpeg with `libx264` and FFprobe, plus optional
-Git LFS for externally sourced media.
+- `src/reels_maker/` — shared Python/FFmpeg engine; no per-brand copies.
+- `brands/<slug>/brand.json` — machine-readable colors, logo and defaults.
+- `brands/<slug>/BRAND.md` — human/agent-facing visual editorial guidelines.
+- `brands/<slug>/media/` — footage, licensed stock, audio and effects.
+- `brands/<slug>/projects/` — reusable JSON animation manifests.
+- `renders/<slug>/` — new MP4 output (ignored by Git).
+- `renders/<slug>/archive/` — preserved historical reference exports.
+- `archives/` and `legacy/` — previous intermediate media and historical
+  project scripts; not part of the active video pipeline.
+- `.cache/reels-maker/` — reusable encoded segments (ignored by Git).
+
+## Quickstart
+
+Requires Python 3.11+, FFmpeg with FFprobe and `libx264`:
 
 ```sh
 python -m pip install -e .
 reels-maker doctor --json
-reels-maker catalog --root . --json
+reels-maker catalog --brand asta-energy --json
+reels-maker validate brands/asta-energy/projects/asta-rush-demo.json --syntax-only --json
+reels-maker validate brands/asta-energy/projects/asta-rush-demo.json --root . --json
+reels-maker render brands/asta-energy/projects/asta-rush-demo.json --root . --jobs 2 --json
 ```
 
-## Build a video from a manifest
+An agent needs only a brand folder, selected project manifest and source media.
+Renders reuse cached, encoded segments and concatenate without re-encoding.
+FFmpeg is the rendering backend; there is no hosted model dependency.
 
-```sh
-reels-maker validate projects/asta-rush-demo.json --syntax-only --json
-reels-maker validate projects/asta-rush-demo.json --root . --json
-reels-maker render projects/asta-rush-demo.json --root . --jobs 2 --json
-```
+**Read** `AGENTS.md`, `docs/CLI.md`, and
+`brands/asta-energy/BRAND.md` before producing video.
 
-Success prints machine-readable JSON with an absolute `output` path, frame
-dimensions, duration and cache statistics. Failure exits with a nonzero code
-and a structured JSON error on stderr. No interactive input is required.
+Some external stock videos are stored in Git LFS and require `git lfs pull`.
+Synthetic tests run without downloading large footage.
 
-The `catalog` command lists video/audio files without opening their decoders
-unless `--probe` is supplied. It also detects Git LFS pointer files. Use
-`git lfs pull` when the required stock footage is not yet hydrated.
+Old green-flash and film-burn animation variants remain to be migrated. Do not
+assume brand style metadata alone guarantees pixel-perfect design: verify
+rendered typography and platform safe areas visually.
 
-## Internals
-
-- `src/reels_maker/spec.py`: validated JSON project schema.
-- `src/reels_maker/media.py`: single-pass source validation and metadata.
-- `src/reels_maker/cards.py`: safe-area text and PNG brand overlays.
-- `src/reels_maker/renderer.py`: parallel cached scene encoding, cumulative
-  frame-accurate timing, stream-copy assembly and audio multiplexing.
-- `src/reels_maker/cli.py`: stable terminal interface.
-- `src/reels_maker/catalog.py`: fast asset discovery for agents.
-- `projects/`: reusable animation configurations.
-- `tests/`: unit and synthetic-video integration tests.
-- `engine/scripts/`: original legacy scripts retained for compatibility
-  and visual comparison (not migrated yet).
-
-Source clips, reusable assets and finished historical exports remain available
-in the repository for now. New output and cache files are ignored by Git.
-
-## Performance model
-
-Unchanged video scenes are restored from local cache. FFmpeg normalizes only
-cache misses, encodes independent scenes concurrently, concatenates them with
-stream copy and adds audio in the final step without re-encoding the picture.
-Frame counts are calculated from cumulative cut boundaries to avoid beat drift.
-Use distinct output paths for concurrent agent jobs.
-
-The existing large media repository can be cloned selectively using Git
-partial clone/sparse checkout; however, each media blob still needs downloading
-when that specific file is rendered. Avoid unconditional `git lfs pull` for
-stock assets that a given video does not use.
-
-## Known limitations
-
-Historical film-burn and green-flash transition treatments are not yet migrated;
-legacy manifests are **functional baselines**, not pixel-identical replacements.
-Automated synthetic tests do not prove production footage, design or music
-licensing. Validate claims and legal attributions before publication.
-
-Detailed agent contract: [docs/AGENTS.md](docs/AGENTS.md).
-CLI and manifest reference: [docs/CLI.md](docs/CLI.md).
-Implementation tracker: [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md).
+Verify commercial usage rights and current facts before publishing media.

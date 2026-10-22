@@ -1,0 +1,47 @@
+{
+  "id": "asta-energy",
+  "name": "ASTA Energy",
+  "version": 1,
+  "branding": {
+    "accent": "#47A013",
+    "logo": "assets/logo.png"
+  },
+  "identity": {
+    "typography": {
+      "primary": "Open Sans",
+      "fallback": "DejaVu Sans",
+      "status": "Open Sans preferred; renderer falls back until a licensed local font path is configured"
+    },
+    "palette": {
+      "primary": "#47A013",
+      "background": "#FFFFFF",
+      "text": "#FFFFFF",
+      "neutral": "#14221A"
+    },
+    "logo": {
+      "source": "assets/logo.svg",
+      "render_png": "assets/logo.png"
+    },
+    "format": {
+      "default_width": 1080,
+      "default_height": 1920,
+      "default_fps": 25
+    },
+    "safe_areas": {
+      "top_pixels": 190,
+      "bottom_pixels": 290,
+      "horizontal_pixels": 88
+    },
+    "motion": {
+      "style": "minimal, purposeful; no automatic effects",
+      "audio": "music and SFX only when specified per project"
+    }
+  },
+  "catalog": {
+    "footage": "media/footage",
+    "stock": "media/stock",
+    "audio": "media/audio",
+    "effects": "media/fx",
+    "references": "references"
+  }
+}

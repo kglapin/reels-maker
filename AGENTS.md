@@ -1,27 +1,26 @@
-# Reels Maker — harness instructions
+# Instructions for ChatGPT, Pi, OpenCode and other terminal harnesses
 
-This repository contains a local Python/FFmpeg video renderer. These
-instructions apply to ChatGPT, Pi, OpenCode and other coding agents.
+This repository contains a deterministic, local Python/FFmpeg rendering engine.
+Do not merge or write to `main` during refactor; changes belong in the
+`refactor/modular-render-engine` branch and draft PR #1.
 
-**Never write directly to `main`** during the current refactor. Use the
-existing `refactor/modular-render-engine` branch and PR #1, and do not
-merge without explicit approval.
+## Workflow
 
-Before making or editing a video:
-1. Read `docs/AGENTS.md` and `docs/CLI.md`.
-2. Call `reels-maker catalog --root . --json` to discover usable source paths.
-3. Create/edit a JSON manifest in `projects/`.
+1. Read the selected brand's `BRAND.md` and `brand.json`. For ASTA Energy:
+   `brands/asta-energy/`.
+2. Query local assets: `reels-maker catalog --brand asta-energy --json`.
+3. Create/edit a project in `brands/<slug>/projects/`. Manifest paths are
+   relative to that brand directory, not to the shell working directory.
 4. Run `reels-maker validate <manifest> --syntax-only --json`.
 5. Run `reels-maker validate <manifest> --root . --json`.
 6. Run `reels-maker render <manifest> --root . --json`.
-7. Verify successful exit code and inspect the generated MP4 before claiming success.
+7. Require exit code 0 and a successful JSON response. Open/inspect the MP4
+   before reporting it as finished.
 
-Prefer a re-usable manifest and core renderer changes over creating a new
-ad-hoc one-off Python script. Preserve original source media, audio licenses,
-and existing finished renders. Only `output/` and `.cache/` hold new binaries.
-The same JSON CLI contract must work without interactive input or network
-access, including from terminal harnesses.
+Keep brand media and project manifests separate from reusable Python modules.
+No agent integration may bypass the CLI and quietly inject another rendering
+implementation. New renders go to `renders/<slug>/`; cache is local.
+Historical files under `legacy/` and `archives/` are for reference only.
 
-Keep visual safe zones, brand assets and sound in sync with the manifest.
-For video speed, reuse scene cache and use multiple jobs only when resources
-allow. Do not add model API calls or hosted dependencies to the core renderer.
+Check media rights and time-sensitive marketing claims before publication.
+Other details: `docs/AGENTS.md`, `docs/CLI.md`, `docs/REFACTOR_PLAN.md`.

@@ -1,1 +1,1 @@
-engine/assets/commons/*.webm filter=lfs diff=lfs merge=lfs -text
+brands/asta-energy/media/stock/*.webm filter=lfs diff=lfs merge=lfs -text

@@ -12,6 +12,7 @@ output/
 .cache/
 .tmp/
 engine/work/
+renders/
 # Editors / operating systems
 .DS_Store
 .idea/

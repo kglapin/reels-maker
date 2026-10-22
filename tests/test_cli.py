@@ -65,5 +65,39 @@ class TinyRenderTest(unittest.TestCase):
             self.assertTrue(Path(second["output"]).exists())
 
 
+    def test_branded_scene_audio_and_pad(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            Image.new("RGBA", (100, 35), (60, 150, 40, 255)).save(root / "logo.png")
+            subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+                            "-f", "lavfi", "-i", "testsrc2=size=360x640:rate=15",
+                            "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                            str(root / "source.mp4")], check=True)
+            subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+                            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                            str(root / "music.wav")], check=True)
+            manifest = root / "audio.json"
+            manifest.write_text(json.dumps({
+                "name": "branding-and-audio",
+                "video": {"width": 360, "height": 640, "fps": 15},
+                "branding": {"logo": "logo.png", "accent": "#47A013"},
+                "scenes": [
+                    {"file": "source.mp4", "start": 0, "duration": 0.6,
+                     "title": {"kicker": "ASTA", "headline": "Energy"}},
+                    {"file": "source.mp4", "start": 1, "duration": 0.6,
+                     "framing": "pad"}
+                ],
+                "music": {"file": "music.wav", "start": 0.1, "volume": 0.7,
+                          "fade_out": 0.3},
+                "output": "output/audio-demo.mp4"
+            }))
+            first = render(load_project(manifest), root=root)
+            second = render(load_project(manifest), root=root)
+            self.assertTrue(first["audio"])
+            self.assertEqual(second["cache_hits"], 2)
+            self.assertAlmostEqual(second["duration"], 1.2, delta=0.18)
+
+
 if __name__ == "__main__":
     unittest.main()

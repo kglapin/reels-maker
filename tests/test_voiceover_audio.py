@@ -1,6 +1,8 @@
 """Narrator + music technical mixing and independent track validation."""
 import json
 import shutil
+import subprocess
+from array import array
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +10,7 @@ from unittest.mock import patch
 
 from reels_maker.audio_mix import mux_audio
 from reels_maker.brand import apply_brand
-from reels_maker.ffmpeg import RenderError, execute, probe
+from reels_maker.ffmpeg import RenderError, execute, probe, require_tool
 from reels_maker.renderer import render
 from reels_maker.spec import Project, ProjectError, load_project
 
@@ -154,6 +156,22 @@ class VoiceoverRenderTests(unittest.TestCase):
             self.assertFalse(result["audio_mix"]["music"])
             self.assertTrue(result["audio_mix"]["voiceover"])
             self.assertEqual(result["export_quality"]["audio_streams"], 1)
+
+            # Check decoded AAC samples, not merely JSON timestamps: a
+            # voiceover declared 0.25s late must genuinely stay inaudible
+            # until the promised frame. AAC priming/lookahead may introduce
+            # a few milliseconds but cannot shift whole words.
+            decoded = subprocess.run([
+                require_tool("ffmpeg"), "-hide_banner", "-nostdin",
+                "-loglevel", "error", "-i", result["output"],
+                "-map", "0:a:0", "-ac", "1", "-ar", "48000",
+                "-f", "s16le", "-"
+            ], capture_output=True, check=True).stdout
+            samples = array("h")
+            samples.frombytes(decoded)
+            audible = next(i for i, value in enumerate(samples)
+                           if abs(value) > 150)
+            self.assertAlmostEqual(audible / 48000, .25, delta=.04)
 
 
 if __name__ == "__main__":

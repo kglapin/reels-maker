@@ -138,3 +138,17 @@ Deliberate entrance styles: `fade_stagger` (opacity only),
 `slide_left` and `slide_right` (horizontal movement). Motion always
 stops; it is not applied by default. Use one style per scene and prefer short,
 stable reading windows rather than continuous gimmicks.
+
+## Format-independent safe areas and typography
+
+`branding.safe_areas.horizontal_pixels`, `top_pixels` and `bottom_pixels`
+are **literal pixels of the project's output dimensions**. They are not
+interpreted as coordinates relative to a 1080×1920 reference frame and are
+not stored in the brand preset. Missing values default to proportional margins
+(8.5% horizontal/top; 13% bottom) for the project's own canvas; publishing
+platform overlays should be checked before release.
+
+Font and accent spacing use the shorter canvas side as their reference,
+so a 1920×1080 composition does not grow titles to 177% of the portrait size.
+Changing format still requires creative review of line breaks, text placement,
+subject framing and UI overlays; automatic scaling is not a substitute.

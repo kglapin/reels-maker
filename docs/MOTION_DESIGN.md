@@ -55,3 +55,10 @@ rewrites the user's story or inserts effects.
 **Passing these checks does not certify professional quality.** A real final
 review still needs proxy playback on a phone, legible contrast against
 footage, deliberate shot choice, narrated audio timing and licensed content.
+
+## Format-independence safety
+
+Never derive typography exclusively from width or assume 9:16. The standard
+relative typographic scale uses the *shorter* video dimension. Explicit
+project safe areas use exact output pixels; unset margins follow output ratios.
+Actual publishing UI varies by platform and is subject to manual review.

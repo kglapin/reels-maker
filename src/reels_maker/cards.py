@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from .ffmpeg import RenderError
 from .spec import Project
 from .typography import layout_runs
+from .canvas_layout import design_scale, resolve_safe_areas
 
 
 def _font(size: int, bold: bool, custom: str | None = None,
@@ -58,16 +59,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         return False
 
     w, h = project.width, project.height
-    scale = w / 1080
-    safe = project.branding.get("safe_areas", {})
-    if not isinstance(safe, dict):
-        raise RenderError("branding.safe_areas must be an object")
-    margin = round(float(safe.get("horizontal_pixels", 97)) * w / 1080)
-    top_safe = round(float(safe.get("top_pixels", 165)) * h / 1920)
-    bottom_safe = round(float(safe.get("bottom_pixels", 250)) * h / 1920)
-    if not (0 <= margin < w / 3 and 0 <= top_safe < h / 2 and
-            0 <= bottom_safe < h / 2):
-        raise RenderError("Safe-area values are invalid for the selected frame")
+    scale = design_scale(w, h)
+    margin, top_safe, bottom_safe = resolve_safe_areas(
+        w, h, project.branding.get("safe_areas", {}))
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     def store_layer(layer, role: str) -> None:
         """Save only non-transparent pixels to avoid huge full-frame RGBA inputs."""
@@ -97,8 +91,13 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     if logo:
         try:
             source = Image.open(logo).convert("RGBA")
-            lw = round(w * 0.21)
-            lh = round(lw * source.height / source.width)
+            if source.width < 1 or source.height < 1:
+                raise RenderError("Logo image has invalid dimensions")
+            aspect = source.width / source.height
+            # Responsive even on wide cinematic and square canvases:
+            # bound mark width by both canvas width and available height.
+            lw = max(1, round(min(w * 0.21, h * .15 * aspect)))
+            lh = max(1, round(lw / aspect))
             logo_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             logo_layer.alpha_composite(
                 source.resize((lw, lh), Image.Resampling.LANCZOS),
@@ -148,7 +147,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     except ValueError as exc:
         raise RenderError("Invalid branding.accent hex color") from exc
     colors = [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"]
-    stroke = max(1, round(w / 1080))
+    stroke = max(1, round(scale))
     def draw_safe_text(layer_draw, xy, value, font, ink, *,
                        anchor=None) -> None:
         params = {"font": font}

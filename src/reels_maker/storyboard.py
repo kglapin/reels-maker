@@ -17,24 +17,24 @@ from .ffmpeg import RenderError, execute, probe
 from .renderer import _frame_counts
 from .spec import Project
 from .transitions import timeline_frames, transition_plan
+from .motion_timing import build_cue_schedule, scripted_text_roles
 
 
 def _settled_frame(scene: dict, fps: int, scene_start: int,
-                   clean_start: int, clean_end: int) -> int:
-    """Prefer a fully revealed frame after the last animated text element."""
+                   clean_start: int, clean_end: int,
+                   scene_frames: int) -> int:
+    """Choose a truly settled frame using the same explicit cues as rendering."""
     choice = clean_start + (clean_end - clean_start) // 2
     motion = scene.get("motion") or {}
     if motion:
         title = scene.get("title") or {}
-        active = sum(
-            len(value.get("runs", [])) if isinstance(value, dict) else bool(value)
-            for field in ("kicker", "headline", "body", "footer")
-            for value in (title.get(field),)
-        )
-        duration = motion.get("duration_frames", max(2, round(fps * .24)))
-        stagger = motion.get("stagger_frames", max(1, round(fps * .07)))
-        reveal_end = scene_start + duration + stagger * max(0, active - 1)
-        choice = max(choice, reveal_end + 1)
+        roles = ["logo", "accent"] + [
+            role for role, _ in scripted_text_roles(title)]
+        try:
+            schedule = build_cue_schedule(motion, roles, fps, scene_frames)
+        except ValueError as exc:
+            raise RenderError(f"Invalid storyboard motion cues: {exc}") from exc
+        choice = max(choice, scene_start + schedule.last_settled_frame + 1)
     return min(clean_end - 1, choice)
 
 
@@ -46,7 +46,8 @@ def _sample_frames(scene: dict, fps: int, beginning: int, length: int,
     clean = clean_end - clean_start
     if clean <= 0:
         raise RenderError("Scene does not contain any unmixed inspection frames")
-    settled = _settled_frame(scene, fps, beginning, clean_start, clean_end)
+    settled = _settled_frame(
+        scene, fps, beginning, clean_start, clean_end, length)
     if not motion_strip:
         return [("settled", settled)]
     entry = min(clean_end - 1, clean_start + max(0, round(fps * .06)))

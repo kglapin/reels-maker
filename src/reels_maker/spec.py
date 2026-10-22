@@ -3,6 +3,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from .motion_timing import build_cue_schedule, scripted_text_roles
+
 
 class ProjectError(ValueError):
     pass
@@ -123,7 +125,8 @@ def load_project(path: str | Path) -> Project:
                     "slide_left", "slide_right"):
                 raise ProjectError(f"scene {index}: unsupported motion preset")
             if not set(motion).issubset(
-                    {"preset", "duration_frames", "stagger_frames", "distance_px"}):
+                    {"preset", "duration_frames", "stagger_frames",
+                     "distance_px", "cue_frames", "cue_seconds"}):
                 raise ProjectError(f"scene {index}: unknown motion setting")
             for field, default, minimum, maximum in (
                     ("duration_frames", max(2, round(fps * .24)), 2, max(2, round(fps * .45))),
@@ -134,6 +137,15 @@ def load_project(path: str | Path) -> Project:
                     raise ProjectError(f"scene {index}: invalid motion.{field}")
             if motion["preset"] == "fade_stagger" and motion.get("distance_px", 0):
                 raise ProjectError("fade_stagger does not accept nonzero distance_px")
+            # Reject ambiguous/mistimed narration cues at manifest parse time,
+            # long before allocating any video encoders.
+            roles = (["logo", "accent"] +
+                     [role for role, _ in scripted_text_roles(title)])
+            try:
+                build_cue_schedule(
+                    motion, roles, fps, round(scene["duration"] * fps))
+            except ValueError as exc:
+                raise ProjectError(f"scene {index}: {exc}") from exc
 
     music = data.get("music")
     if music is not None:

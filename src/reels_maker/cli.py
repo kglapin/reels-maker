@@ -45,6 +45,13 @@ def main(argv: list[str] | None = None) -> int:
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
+    storyboard = commands.add_parser("storyboard",
+        help="Extract a contact sheet from real MP4 scene frames for visual QC")
+    storyboard.add_argument("project", type=Path)
+    storyboard.add_argument("--video", type=Path, required=True)
+    storyboard.add_argument("--output", type=Path, required=True)
+    storyboard.add_argument("--columns", type=int, default=4)
+    storyboard.add_argument("--json", action="store_true")
     discover = commands.add_parser("catalog")
     discover.add_argument("--root", type=Path, default=ROOT)
     discover.add_argument("--brand", help="Limit media catalog to a brand slug")
@@ -133,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
                 result["brand"] = args.brand
         elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
+        elif args.command == "storyboard":
+            from .storyboard import make_storyboard
+            result = make_storyboard(load_project(args.project), args.video,
+                                     args.output, columns=args.columns)
         else:
             project = load_project(args.project)
             if args.command == "validate":

@@ -20,8 +20,24 @@ from .media import preflight as inspect_media
 from .paths import ROOT
 from .spec import Project
 
-CACHE_SCHEMA = 2
+CACHE_SCHEMA = 3
 SUPPORTED_ENCODER = "libx264"
+
+
+def _frame_counts(project: Project) -> list[int]:
+    """Quantize cumulative cut times, avoiding per-scene rounding drift."""
+    elapsed = 0.0
+    previous = 0
+    counts = []
+    for index, scene in enumerate(project.scenes):
+        elapsed += float(scene["duration"])
+        end_frame = round(elapsed * project.fps)
+        count = end_frame - previous
+        if count < 1:
+            raise RenderError(f"Scene {index} is too short at {project.fps} FPS")
+        counts.append(count)
+        previous = end_frame
+    return counts
 
 
 def _scene_key(source: Path, scene: dict, project: Project,
@@ -72,7 +88,11 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     pad = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1")
     vf = crop if scene.get("framing", "crop") == "crop" else pad
-    vf += f",fps={fps},format=yuv420p"
+    frames = int(scene["_frames"])
+    # Pad a trailing frame if the source has VFR/end-of-file rounding gaps.
+    # PTS are regenerated at the target FPS for deterministic concat timing.
+    vf += (f",fps={fps},tpad=stop_mode=clone:stop_duration=1,"
+           f"trim=end_frame={frames},setpts=N/({fps}*TB),format=yuv420p")
     card = scratch / "card.png"
     show_card = draw_card(project, scene.get("title") or {}, logo, card)
     args = ["-ss", str(scene.get("start", 0)), "-i", str(source)]
@@ -84,7 +104,7 @@ def _encode_scene(source: Path, scene: dict, project: Project,
                  "format=yuv420p[v]", "-map", "[v]"]
     else:
         args += ["-vf", vf, "-map", "0:v:0"]
-    args += ["-t", str(scene["duration"]), "-an", "-c:v", SUPPORTED_ENCODER,
+    args += ["-frames:v", str(frames), "-an", "-c:v", SUPPORTED_ENCODER,
              "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
              "-movflags", "+faststart", str(dest)]
     execute(args)
@@ -106,6 +126,8 @@ def render(project: Project, *, root: Path = ROOT,
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
     root = Path(root).resolve()
     inputs = preflight(project, root)
+    frames = _frame_counts(project)
+    quantized_duration = sum(frames) / project.fps
     dest = (Path(output) if output is not None else root / project.output).resolve()
     if dest.suffix.lower() != ".mp4":
         raise RenderError("Output must be an .mp4 file")
@@ -120,7 +142,8 @@ def render(project: Project, *, root: Path = ROOT,
         parts = [None] * len(project.scenes)
         pending = {}
         hits = 0
-        for i, (source, scene) in enumerate(zip(inputs["sources"], project.scenes)):
+        for i, (source, original_scene) in enumerate(zip(inputs["sources"], project.scenes)):
+            scene = {**original_scene, "_frames": frames[i]}
             key = _scene_key(source, scene, project, inputs["branding_files"])
             cached = cache_root / f"{key}.mp4"
             if cache and cached.is_file() and cached.stat().st_size > 0:
@@ -159,17 +182,17 @@ def render(project: Project, *, root: Path = ROOT,
             music = project.music
             volume = float(music.get("volume", 1.0))
             fade = float(music.get("fade_out", 0))
-            audio_filter = (f"[1:a]atrim=duration={project.duration:.4f},"
+            audio_filter = (f"[1:a]atrim=duration={quantized_duration:.4f},"
                             f"asetpts=PTS-STARTPTS,volume={volume:.4f}")
             if fade > 0:
-                audio_filter += (f",afade=t=out:st={project.duration-fade:.4f}:"
+                audio_filter += (f",afade=t=out:st={quantized_duration-fade:.4f}:"
                                  f"d={fade:.4f}")
             audio_filter += "[aout]"
             execute(["-i", str(silent), "-ss", str(music.get("start", 0)),
                      "-i", str(inputs["music"]), "-filter_complex", audio_filter,
                      "-map", "0:v:0", "-map", "[aout]",
                      "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                     "-t", str(project.duration), "-movflags", "+faststart",
+                     "-t", str(quantized_duration), "-movflags", "+faststart",
                      str(final)])
         else:
             shutil.copyfile(silent, final)
@@ -185,6 +208,7 @@ def render(project: Project, *, root: Path = ROOT,
         "ok": True,
         "output": str(dest),
         "duration_requested": project.duration,
+        "duration_quantized": quantized_duration,
         "duration_actual": float(metadata.get("format", {}).get("duration", 0)),
         "duration": float(metadata.get("format", {}).get("duration", 0)),
         "status": "ok",

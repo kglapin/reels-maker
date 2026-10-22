@@ -28,8 +28,9 @@ where useful, but do not duplicate FFmpeg pipelines or build unneeded wrappers.
 3. Git LFS pointers fail with an actionable error before rendering.
 4. Renders are H.264 MP4 with AAC audio when music is configured.
 5. Subsequent identical renders reuse the cached scene videos.
-6. Failure does not overwrite the last successful final output.
-7. The pull request stays draft until source-media validation is complete.
+6. Cut boundaries are quantized cumulatively to avoid beat drift on long montages.
+7. Failure does not overwrite the last successful final output.
+8. The pull request stays draft until source-media validation is complete.
 
 ## Existing Git data
 

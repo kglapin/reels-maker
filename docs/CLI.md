@@ -103,3 +103,7 @@ These are configuration-driven **baselines**, not frame-identical exports of the
 scripts. Legacy green-flash transition overlays, exact source in-points, and original
 compositing treatments are pending migration. The subsidy edit requires Git LFS
 footage (`git lfs pull`) and a fresh check of programme claims and licences.
+
+## Frame-accurate montage timing
+
+Shot durations are quantized at **cumulative** cut boundaries, not independently. This keeps 22+ short clips synchronized to their source beat grid without progressive rounding drift. The output reports `duration_requested`, `duration_quantized` and `duration_actual`; deviations from the requested duration are at most half a frame for the planned sequence. Cached scene keys include the exact frame count.

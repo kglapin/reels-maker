@@ -6,9 +6,33 @@ import unittest
 from pathlib import Path
 
 from reels_maker.ffmpeg import execute, probe
-from reels_maker.renderer import render
+from reels_maker.renderer import render, _frame_counts
 from reels_maker.spec import load_project
 from reels_maker.cli import main
+
+
+class FrameTimingTests(unittest.TestCase):
+    def test_fractional_scene_durations_have_no_accumulated_drift(self):
+        from reels_maker.spec import Project
+        project = Project(
+            name="beat", width=256, height=448, fps=25,
+            scenes=[{"file": "unused.mp4", "duration": 1.2771}] * 22,
+            music=None, branding={}, output="output/timing.mp4",
+        )
+        frames = _frame_counts(project)
+        self.assertEqual(sum(frames), round(project.duration * project.fps))
+        self.assertLess(abs(sum(frames) / project.fps - project.duration), 1 / project.fps)
+
+    def test_too_short_scene_is_rejected(self):
+        from reels_maker.spec import Project
+        from reels_maker.ffmpeg import RenderError
+        project = Project(
+            name="invalid", width=256, height=448, fps=25,
+            scenes=[{"file": "unused.mp4", "duration": 0.001}],
+            music=None, branding={}, output="output/invalid.mp4",
+        )
+        with self.assertRaises(RenderError):
+            _frame_counts(project)
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),

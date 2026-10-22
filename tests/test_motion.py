@@ -52,6 +52,20 @@ class MotionUnitTests(unittest.TestCase):
                 with self.assertRaises(ProjectError):
                     load_project(path)
 
+    def test_role_schedule_does_not_delay_headline_for_branding(self):
+        args = compose_motion("scale=256:448", 25, 60, "bg.png", [
+            {"file": "logo.png", "x": 0, "y": 0, "role": "logo"},
+            {"file": "accent.png", "x": 5, "y": 5, "role": "accent"},
+            {"file": "kicker.png", "x": 10, "y": 10, "role": "kicker"},
+            {"file": "headline.png", "x": 12, "y": 20, "role": "headline"},
+            {"file": "body.png", "x": 12, "y": 30, "role": "body"},
+        ], {"preset": "fade_stagger", "duration_frames": 6,
+            "stagger_frames": 3}, 256)
+        graph = args[args.index("-filter_complex") + 1]
+        self.assertEqual(graph.count("st=0.00000000"), 3)
+        self.assertIn("st=0.12000000", graph)
+        self.assertIn("st=0.24000000", graph)
+
     def test_entrance_must_fit_shot(self):
         with self.assertRaises(RenderError):
             compose_motion("scale=256:448", 25, 5, "bg.png", [

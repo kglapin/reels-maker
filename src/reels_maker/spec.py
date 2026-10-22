@@ -89,6 +89,9 @@ def load_project(path: str | Path) -> Project:
             if field == "headline" and isinstance(value, dict):
                 if set(value) != {"runs"} or not isinstance(value["runs"], list):
                     raise ProjectError(f"scene {index}: headline requires runs array")
+                if scene.get("motion") is not None and len(value["runs"]) > 8:
+                    raise ProjectError(
+                        f"scene {index}: animated headline supports <=8 runs")
                 if not 1 <= len(value["runs"]) <= 16:
                     raise ProjectError(f"scene {index}: headline requires 1..16 runs")
                 for run in value["runs"]:
@@ -113,7 +116,8 @@ def load_project(path: str | Path) -> Project:
         motion = scene.get("motion")
         if motion is not None:
             if not isinstance(motion, dict) or motion.get("preset") not in (
-                    "editorial_reveal", "fade_stagger"):
+                    "editorial_reveal", "fade_stagger", "rise_soft",
+                    "slide_left", "slide_right"):
                 raise ProjectError(f"scene {index}: unsupported motion preset")
             if not set(motion).issubset(
                     {"preset", "duration_frames", "stagger_frames", "distance_px"}):

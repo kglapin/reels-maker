@@ -41,6 +41,8 @@ def _wrap(draw, value: str, face, width: int) -> list[str]:
             if draw.textlength(trial, font=face) <= width:
                 current = trial
             elif current:
+                if draw.textlength(word, font=face) > width:
+                    raise RenderError(f"Single word too wide for frame: {word}")
                 result.append(current)
                 current = word
             else:

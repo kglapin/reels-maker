@@ -50,7 +50,8 @@ def _wrap(draw, value: str, face, width: int) -> list[str]:
     return result
 
 
-def draw_card(project: Project, title: dict, logo: Path | None, target: Path,\n              layers: list[dict] | None = None) -> bool:
+def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
+              layers: list[dict] | None = None) -> bool:
     if not any(title.get(k) for k in ("kicker", "headline", "body", "footer")) and logo is None:
         return False
 

@@ -57,6 +57,28 @@ def load_project(path: str | Path) -> Project:
                 raise ProjectError(f"scene {index}: invalid {field}")
         if scene.get("framing", "crop") not in ("crop", "pad"):
             raise ProjectError(f"scene {index}: framing must be crop or pad")
+        transition = scene.get("transition_in")
+        if transition is not None:
+            if index == 0:
+                raise ProjectError("First scene cannot have transition_in")
+            if not isinstance(transition, dict):
+                raise ProjectError(f"scene {index}: transition_in must be an object")
+            kind = transition.get("type")
+            allowed = ("cut", "dissolve", "dip_to_black",
+                       "motion_wipe_left", "motion_wipe_right")
+            if kind not in allowed:
+                raise ProjectError(f"scene {index}: unsupported transition {kind!r}")
+            if kind == "cut":
+                if set(transition) != {"type"}:
+                    raise ProjectError(f"scene {index}: cut has no other settings")
+            else:
+                count = transition.get("frames")
+                if (set(transition) != {"type", "frames"} or isinstance(count, bool)
+                        or not isinstance(count, int)):
+                    raise ProjectError(f"scene {index}: transition requires integer frames")
+                if count < 2 or count > max(2, int(fps * .35)):
+                    raise ProjectError(f"scene {index}: effect longer than 0.35s")
+
         title = scene.get("title", {})
         if not isinstance(title, dict):
             raise ProjectError(f"scene {index}: title must be an object")

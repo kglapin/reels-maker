@@ -21,6 +21,7 @@ from .ffmpeg import RenderError, execute, probe
 from .media import preflight as inspect_media
 from .paths import ROOT
 from .spec import Project
+from .transitions import assemble, timeline_frames, transition_plan
 
 CACHE_SCHEMA = 3
 SUPPORTED_ENCODER = "libx264"
@@ -134,7 +135,8 @@ def render(project: Project, *, root: Path = ROOT,
     preflight_seconds = round(perf_counter() - started_at, 4)
     project = inputs["resolved_project"]
     frames = _frame_counts(project)
-    quantized_duration = sum(frames) / project.fps
+    transitions = transition_plan(project, frames)
+    quantized_duration = timeline_frames(frames, transitions) / project.fps
     dest = (Path(output) if output is not None else root / project.output).resolve()
     if dest.suffix.lower() != ".mp4":
         raise RenderError("Output must be an .mp4 file")
@@ -186,7 +188,10 @@ def render(project: Project, *, root: Path = ROOT,
         hits = len(parts) - encoded
         silent = scratch / "silent.mp4"
         mux_started = perf_counter()
-        _join(parts, silent, scratch)
+        if any(t["type"] != "cut" for t in transitions):
+            assemble(parts, frames, project.fps, transitions, silent)
+        else:
+            _join(parts, silent, scratch)
         final = scratch / "final.mp4"
         if inputs["music"]:
             music = project.music
@@ -235,6 +240,10 @@ def render(project: Project, *, root: Path = ROOT,
         "scenes_encoded": encoded,
         "cache_hits": hits,
         "cache_hit_rate": round(hits / len(parts), 4),
+        "transitions": transitions,
+        "transition_overlaps_frames": sum(t["frames"] for t in transitions),
+        "assembly_mode": ("xfade" if any(t["type"] != "cut" for t in transitions)
+                          else "stream_copy"),
         "timings_seconds": {
             "preflight": preflight_seconds,
             "scene_encoding": encode_seconds,

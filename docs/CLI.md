@@ -60,3 +60,26 @@ the renderer uses a locally installed compatible fallback.
 The renderer uses optional `branding.safe_areas` from the individual project to position its logo and text. The brand preset never imposes resolution, aspect ratio, frame rate or platform-specific margins. `branding.font_family` chooses an installed Open Sans family when available, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
 
 Each render reports `timings_seconds.preflight`, `scene_encoding`, `assembly_audio_validation`, and `total` plus `cache_hit_rate`. Compare a cold render to a repeated warm render before choosing a concurrency level. These are measurements, not promised speed-ups.
+
+## Curated transitions (FFmpeg xfade)
+
+All transitions are **opt-in**, and ordinary cuts are the default. To apply a
+short, considered edit on a following shot:
+
+```json
+{"file":"media/footage/next.mp4","duration":2,
+ "transition_in":{"type":"dissolve","frames":5}}
+```
+
+Types: `cut`, `dissolve`, `dip_to_black`, `motion_wipe_left`,
+`motion_wipe_right`. An effect lasts at most 0.35 seconds and at most a third
+of either adjacent shot, with a minimum of two frames. Movement wipes require
+corresponding camera motion; avoid indiscriminate zooms, flashes, and presets.
+
+The FFmpeg `xfade` transition **overlaps** N frames: final duration is the
+frame-quantized scene sum *minus* all overlap frames. Therefore it alters cut
+positions; avoid dissolves on beat-locked projects unless the soundtrack and
+timing are re-planned. Projects with only cuts retain the cached segments and
+fast stream-copy assembly. Any xfade incurs an assembly encode, but the cached
+individual scenes remain reusable. The JSON render result reports `transitions`,
+`transition_overlaps_frames` and `assembly_mode`.

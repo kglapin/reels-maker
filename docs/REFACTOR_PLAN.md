@@ -13,7 +13,8 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] FFmpeg scene cache, stream-copy assembly, frame-accurate montage cuts.
 - [x] Agent/terminal documentation and synthetically generated integration tests.
 - [x] Brand-scoped synthetic render tests, including brand change cache invalidation.
-- [ ] Migrate old transition effects / music edits to declarative configuration.
+- [x] Curated opt-in xfade presets, frame-accurate overlap, validation and synthetic tests.
+- [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
 - [ ] Verify representative production render from each existing project.
 - [ ] Compare cold/warm performance and visual regressions for legacy footage.
 - [ ] Validate third-party source licences, programme facts and publish rights.

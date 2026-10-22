@@ -7,6 +7,8 @@ from __future__ import annotations
 from .spec import Project
 from pathlib import Path
 from .asset_reviews import load_media_reviews
+from .motion_timing import (build_cue_schedule, scripted_text_roles,
+                            MIN_SETTLED_SECONDS)
 
 MAX_CHARS_PER_SECOND = 19.0
 HOLD_SECONDS = 0.55
@@ -77,34 +79,56 @@ def review_project(project: Project, *, root: Path | None = None) -> dict:
             if len(rich) > 6:
                 warn("fragmented_typography",
                      "Headline has many style changes; consolidate runs.", index)
-        duration = float(scene["duration"])
+        scene_frames = round(scene["duration"] * project.fps)
         motion = scene.get("motion") or {}
-        entrance = 0.0
+        roles = scripted_text_roles(title)
+        outgoing = 0
+        if index + 1 < len(project.scenes):
+            next_fx = project.scenes[index + 1].get("transition_in") or {}
+            outgoing = next_fx.get("frames", 0)
+        usable_frames = scene_frames - outgoing
+
         if motion:
-            active = 0
-            for field in ("kicker", "headline", "body", "footer"):
-                value = title.get(field)
-                if isinstance(value, dict):
-                    active += len(value.get("runs", []))
-                elif value:
-                    active += 1
-            frames = motion.get("duration_frames", max(2, round(project.fps * .24)))
-            stagger = motion.get("stagger_frames", max(1, round(project.fps * .07)))
-            entrance = (frames + stagger * max(0, active - 1)) / project.fps
-        hold = duration - entrance
-        if hold < HOLD_SECONDS:
-            warn("no_reading_hold",
-                 "Reveal leaves less than 0.55s of settled text. Shorten animation.",
-                 index)
-        if len(message) / MAX_CHARS_PER_SECOND > hold:
-            warn("reading_speed",
-                 "Text exceeds a conservative reading-time budget. "
-                 "Shorten copy or extend the shot.", index)
+            try:
+                schedule = build_cue_schedule(
+                    motion, ["logo", "accent"] + [role for role, _ in roles],
+                    project.fps, scene_frames)
+            except ValueError as exc:
+                warn("invalid_motion_timing", str(exc), index)
+                continue
+            duration_frames = schedule.duration_frames
+            text_end = max(
+                (schedule.starts[role] + duration_frames for role, _ in roles),
+                default=0)
+            hold = (usable_frames - text_end) / project.fps
+            if hold < MIN_SETTLED_SECONDS:
+                warn("no_reading_hold",
+                     "Final text settles less than 0.55s before the cut or "
+                     "outgoing transition. Re-time the last cue.", index)
+            for role, content in roles:
+                # A staggered headline should be judged by each phrase's
+                # actual available reading time, not as one late static card.
+                reading_window = (usable_frames
+                    - schedule.starts[role] - duration_frames) / project.fps
+                if len(content.strip()) / MAX_CHARS_PER_SECOND > reading_window:
+                    warn("reading_speed",
+                         f"{role} has insufficient screen time after its cue. "
+                         "Shorten copy or reveal it earlier.", index)
+        else:
+            hold = usable_frames / project.fps
+            if hold < MIN_SETTLED_SECONDS:
+                warn("no_reading_hold",
+                     "Text is visible less than 0.55s before the outgoing "
+                     "cut or transition.", index)
+            if len(message) / MAX_CHARS_PER_SECOND > hold:
+                warn("reading_speed",
+                     "Text exceeds a conservative reading-time budget. "
+                     "Shorten copy or extend the shot.", index)
         if len(message) > 125:
             warn("text_density", "Scene carries too much on-screen copy.", index)
 
     return {
-        "standard": "editorial-v2",
+        "standard": "editorial-v3",
         "status": "review" if warnings else "pass",
         "warning_count": len(warnings),
         "warnings": warnings,

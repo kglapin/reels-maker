@@ -34,7 +34,11 @@ def _settled_frame(scene: dict, fps: int, scene_start: int,
             schedule = build_cue_schedule(motion, roles, fps, scene_frames)
         except ValueError as exc:
             raise RenderError(f"Invalid storyboard motion cues: {exc}") from exc
-        choice = max(choice, scene_start + schedule.last_settled_frame + 1)
+        fully_settled = scene_start + schedule.last_settled_frame + 1
+        if fully_settled >= clean_end:
+            raise RenderError(
+                "No fully settled motion frame before outgoing transition")
+        choice = max(choice, fully_settled)
     return min(clean_end - 1, choice)
 
 

@@ -62,3 +62,49 @@ Never derive typography exclusively from width or assume 9:16. The standard
 relative typographic scale uses the *shorter* video dimension. Explicit
 project safe areas use exact output pixels; unset margins follow output ratios.
 Actual publishing UI varies by platform and is subject to manual review.
+
+## Aligning caption entrances with verified narration times
+
+Animators can now override the default sequential staggering per element using
+**scene-local timecodes** in the `motion` object. Two equivalent forms are
+supported, but cannot be combined in one scene:
+
+```json
+{
+  "title": {
+    "headline": {"runs": [
+      {"text": "WIĘCEJ ", "scale": 0.80},
+      {"text": "ENERGII", "scale": 1.30, "color": "accent"},
+      {"text": " dla biznesu", "scale": 0.78, "break_before": true}
+    ]},
+    "body": "Fotowoltaika i magazyny energii"
+  },
+  "motion": {
+    "preset": "rise_soft",
+    "duration_frames": 7,
+    "stagger_frames": 2,
+    "distance_px": 18,
+    "cue_seconds": {
+      "headline-0": 0.40,
+      "headline-1": 1.04,
+      "headline-2": 1.60,
+      "body": 2.04
+    }
+  }
+}
+```
+
+`cue_seconds` uses **seconds from the beginning of that source scene in the
+output edit**, snapped to the nearest actual output frame at the video's FPS.
+`cue_frames` accepts integer frame offsets instead. Valid semantic roles are
+`logo`, `accent`, `kicker`, `headline` (plain title),
+`headline-0`, `headline-1` etc. (rich runs), `body`, `footer`. Keys
+must target an existing layer; stale/unknown cues, mixed time bases, negative
+or nonfinite timestamps, and cues which leave less than 0.55s of settled text
+are rejected **before** encoding. Omitted roles retain editorial staggering.
+
+The engine does **not** claim to transcribe speech or detect beats. Map verified
+narration timestamps or manually spotted musical accents to these cues; then
+inspect the final MP4 with sound. If a dissolve follows, outgoing overlap can
+reduce the true reading window: strict-quality lint accounts for that and the
+storyboard refuses to label an unfinished reveal as a settled frame.

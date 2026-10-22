@@ -16,6 +16,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Curated opt-in xfade presets, frame-accurate overlap, validation and synthetic tests.
 - [x] Independent opt-in title/logo animation layers with stagger, easing, validation and FFmpeg test coverage.
 - [x] Mixed-size highlighted words and curated directional typography entrance presets.
+- [x] Explicit narration-time / beat cue scheduling for each semantic text run, deterministic FPS quantization and preflight checks.
 - [ ] Migrate historical film-burn/green-flash assets as an optional separate layer, if approved.
 - [x] Machine-readable editorial quality warnings for reading speed, over-emphasis and transition density, with CLI strict mode.
 - [x] Real-MP4 storyboard generation for human shot/crop/text inspection.

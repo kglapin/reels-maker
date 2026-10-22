@@ -184,3 +184,14 @@ raises `source_is_prebranded` if new titles or inherited logo are added to
 annotated finished promo footage. When intentionally reusing old video
 without any new overlay, set `branding.logo` to `null` and omit titles;
 publication still requires licence and content review.
+
+## Precise narration-aligned animation cues
+
+Use `motion.cue_seconds` with scene-local timestamp values, or
+`motion.cue_frames` with integer frame offsets; choose exactly one.
+These are explicit cues, not AI-estimated transcript timestamps. The engine
+quantizes seconds to the output FPS and validates layer names, fade duration
+and a minimum 0.55s fully revealed hold. `headline-0` refers to the first
+styled `title.headline.runs` segment; `headline` targets a plain string.
+`logo`, `accent`, `kicker`, `body` and `footer` are supported. Uncued
+elements retain the existing stagger. See `docs/MOTION_DESIGN.md`.

@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -244,7 +245,7 @@ def _join(parts: list[Path], destination: Path, scratch: Path) -> None:
 
 def render(project: Project, *, root: Path = ROOT,
            output: Path | None = None, cache_dir: Path | None = None,
-           cache: bool = True) -> dict:
+           cache: bool = True, jobs: int = 2) -> dict:
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
     root = Path(root).resolve()
     inputs = preflight(project, root)
@@ -255,29 +256,45 @@ def render(project: Project, *, root: Path = ROOT,
     cache_root = (Path(cache_dir) if cache_dir else root / ".cache" / "reels-maker").resolve()
     cache_root.mkdir(parents=True, exist_ok=True)
 
-    hits = 0
-    encoded = 0
+    if isinstance(jobs, bool) or not isinstance(jobs, int) or jobs < 1 or jobs > 16:
+        raise RenderError("jobs must be an integer between 1 and 16")
     with tempfile.TemporaryDirectory(prefix="reels-", dir=dest.parent) as work:
         scratch = Path(work)
-        parts = []
+        parts = [None] * len(project.scenes)
+        pending = {}
+        hits = 0
         for i, (source, scene) in enumerate(zip(inputs["sources"], project.scenes)):
-            scene_key = _scene_key(source, scene, project, inputs["branding_files"])
-            cached_path = cache_root / f"{scene_key}.mp4"
-            if cache and cached_path.is_file() and cached_path.stat().st_size > 0:
+            key = _scene_key(source, scene, project, inputs["branding_files"])
+            cached = cache_root / f"{key}.mp4"
+            if cache and cached.is_file() and cached.stat().st_size > 0:
+                parts[i] = cached
                 hits += 1
-                parts.append(cached_path)
                 continue
-            scene_dir = scratch / f"scene-{i}"
-            scene_dir.mkdir()
-            temp_part = scene_dir / "scene.mp4"
-            _encode_scene(source, scene, project, root, temp_part, scene_dir)
-            encoded += 1
-            if cache:
-                # Each render writes to its private workspace, then atomically publishes.
-                os.replace(temp_part, cached_path)
-                parts.append(cached_path)
-            else:
-                parts.append(temp_part)
+            if key not in pending:
+                scratch_scene = scratch / f"scene-{i}"
+                scratch_scene.mkdir()
+                pending[key] = (source, scene, scratch_scene, cached, [])
+            pending[key][-1].append(i)
+
+        def encode_task(task):
+            source, scene, scene_dir, cached, indices = task
+            part = scene_dir / "scene.mp4"
+            _encode_scene(source, scene, project, root, part, scene_dir)
+            return part, cached, indices
+
+        # Independent scenes encode concurrently. Duplicate shots are encoded once.
+        with ThreadPoolExecutor(max_workers=min(jobs, max(1, len(pending)))) as pool:
+            futures = [pool.submit(encode_task, item) for item in pending.values()]
+            for future in as_completed(futures):
+                part, cached, indices = future.result()
+                if cache:
+                    # Atomic publication avoids half-written cache objects.
+                    os.replace(part, cached)
+                    part = cached
+                for i in indices:
+                    parts[i] = part
+        encoded = len(pending)
+        hits = len(parts) - encoded
         silent = scratch / "silent.mp4"
         _join(parts, silent, scratch)
         final = scratch / "final.mp4"
@@ -312,6 +329,12 @@ def render(project: Project, *, root: Path = ROOT,
         "output": str(dest),
         "duration_requested": project.duration,
         "duration_actual": float(metadata.get("format", {}).get("duration", 0)),
+        "duration": float(metadata.get("format", {}).get("duration", 0)),
+        "status": "ok",
+        "schema_version": 1,
+        "cache_misses": encoded,
+        "workers": jobs,
+        "audio": bool(inputs["music"]),
         "width": project.width,
         "height": project.height,
         "fps": project.fps,

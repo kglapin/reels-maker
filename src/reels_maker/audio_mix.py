@@ -71,15 +71,17 @@ def mux_audio(project: Project, silent_video: Path, destination: Path,
     mode = (project.music or {}).get("ducking", "off")
     if music_label and voice_label:
         if mode == "sidechain":
-            # Deliberately moderate gain reduction, with a gradual release to
-            # avoid soundtrack pumping. No high-gain artificial FX.
+            # One audio stream cannot feed two filters directly in FFmpeg.
+            # Split the narrator into the control/monitor path and audible mix.
+            filters.append("[voice]asplit=2[voice_sc][voice_mix]")
             filters.append(
-                "[music][voice]sidechaincompress="
+                "[music][voice_sc]sidechaincompress="
                 "threshold=0.08:ratio=3:attack=30:release=380[ducked]"
             )
             music_label = "ducked"
+            voice_label = "voice_mix"
         filters.append(
-            f"[{music_label}][voice]"
+            f"[{music_label}][{voice_label}]"
             "amix=inputs=2:duration=first:dropout_transition=0:normalize=0,"
             "alimiter=limit=0.95[aout]")
     elif music_label:

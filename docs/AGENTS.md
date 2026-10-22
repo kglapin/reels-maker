@@ -29,3 +29,13 @@ not guarantee that video bytes are available to the renderer.
 
 Note: original scripts in `legacy/asta-energy/scripts/` are archived and contain
 Mac-only paths. Do not execute them without explicit porting.
+
+## Website-derived draft brandbook
+
+Scan public websites with `reels-maker brand-scan URL --brand slug --json`
+(install `pip install -e ".[brand]"`). The report under `brands/slug/imports/`
+contains CSS evidence, font families, proposed palette and ranked logo
+candidates. Preview the generated `renders/slug/brandbook-proposal.pdf`.
+This is **not** an accepted identity: verify visually and review licence
+terms before deliberately updating `brand.json`. Do not commit unreviewed
+logo candidate downloads into the canonical `assets/` folder.

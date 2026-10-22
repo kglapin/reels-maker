@@ -25,7 +25,7 @@ class RichTextTests(unittest.TestCase):
             {"text": " z energii", "scale": 0.75, "break_before": True},
         ], lambda size, bold: _font(size, bold),
            35, 480, "#47A013")
-        entries = {token: (face, ink) for token, face, ink, _, _ in result.parts}
+        entries = {token: (face, ink) for token, face, ink, _, _, _ in result.parts}
         self.assertGreater(entries["ZYSK"][0].size, entries["Zwiększ"][0].size)
         self.assertEqual(entries["ZYSK"][1], "#47A013")
         self.assertEqual(result.lines, 2)
@@ -43,7 +43,8 @@ class RichTextTests(unittest.TestCase):
             layers = []
             self.assertTrue(draw_card(self._project(), title, None,
                                       folder / "layered.png", layers))
-            self.assertIn("headline", [l["role"] for l in layers])
+            self.assertIn("headline-0", [l["role"] for l in layers])
+            self.assertIn("headline-1", [l["role"] for l in layers])
             self.assertTrue(all(Path(l["file"]).is_file() for l in layers))
 
     def test_rejects_unsafe_or_unreadable_styling(self):

@@ -7,7 +7,7 @@ from .ffmpeg import RenderError
 
 @dataclass(frozen=True)
 class RichLayout:
-    parts: list[tuple[str, object, str, int, int]]
+    parts: list[tuple[str, object, str, int, int, int]]
     height: int
     lines: int
 
@@ -26,7 +26,7 @@ def layout_runs(draw: ImageDraw.ImageDraw, runs: list[dict], font_loader,
         current, x = [], 0.0
         height = max(13, round(base_size * 1.23))
 
-    for item in runs:
+    for run_index, item in enumerate(runs):
         if item.get("break_before"):
             flush()
         size = max(9, round(base_size * item.get("scale", 1.0)))
@@ -45,7 +45,7 @@ def layout_runs(draw: ImageDraw.ImageDraw, runs: list[dict], font_loader,
             if token.isspace() and x + text_width > max_width:
                 flush()
                 continue
-            current.append((token, face, ink, round(x)))
+            current.append((token, face, ink, round(x), run_index))
             x += text_width
             height = max(height, round(size * 1.24))
     flush()
@@ -54,8 +54,8 @@ def layout_runs(draw: ImageDraw.ImageDraw, runs: list[dict], font_loader,
     y = 0
     placed = []
     for pieces, line_height in lines:
-        for token, face, ink, px in pieces:
+        for token, face, ink, px, index in pieces:
             if not token.isspace():
-                placed.append((token, face, ink, px, y))
+                placed.append((token, face, ink, px, y, index))
         y += line_height
     return RichLayout(parts=placed, height=y, lines=len(lines))

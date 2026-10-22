@@ -157,17 +157,34 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         element = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         element_draw = ImageDraw.Draw(element)
         if i == 1 and rich_layout:
-            for token, token_face, token_ink, px, py in rich_layout.parts:
-                element_draw.text(
-                    (margin + round(25 * scale) + px, y + py),
-                    token, fill=token_ink, font=token_face, anchor="lt")
+            if layers is None:
+                for token, token_face, token_ink, px, py, _ in rich_layout.parts:
+                    element_draw.text(
+                        (margin + round(25 * scale) + px, y + py),
+                        token, fill=token_ink, font=token_face, anchor="lt")
+                store_layer(element, "headline")
+            else:
+                # A headline is not one flat bitmap: independent styled runs
+                # can enter sequentially, but tokens in the same run stay together.
+                runs = headline_spec["runs"]
+                if len(runs) > 8:
+                    raise RenderError("Animated headline supports at most eight runs")
+                for run_index, run in enumerate(runs):
+                    run_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+                    run_draw = ImageDraw.Draw(run_layer)
+                    for token, token_face, token_ink, px, py, token_run in rich_layout.parts:
+                        if token_run == run_index:
+                            run_draw.text(
+                                (margin + round(25 * scale) + px, y + py),
+                                token, fill=token_ink, font=token_face, anchor="lt")
+                    store_layer(run_layer, f"headline-{run_index}")
             y += rich_layout.height
         else:
             for line in group:
                 element_draw.text((margin + round(25 * scale), y),
                                   line, fill=ink, font=face)
                 y += step
-        store_layer(element, ("kicker", "headline", "body", "footer")[i])
+            store_layer(element, ("kicker", "headline", "body", "footer")[i])
 
     target.parent.mkdir(parents=True, exist_ok=True)
     img.save(target)

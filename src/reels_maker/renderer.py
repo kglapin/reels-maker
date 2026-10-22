@@ -23,7 +23,7 @@ from .paths import ROOT
 from .spec import Project
 from .transitions import assemble, timeline_frames, transition_plan
 
-CACHE_SCHEMA = 3
+CACHE_SCHEMA = 4
 SUPPORTED_ENCODER = "libx264"
 
 
@@ -99,9 +99,16 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     vf += (f",fps={fps},tpad=stop_mode=clone:stop_duration=1,"
            f"trim=end_frame={frames},setpts=N/({fps}*TB),format=yuv420p")
     card = scratch / "card.png"
-    show_card = draw_card(project, scene.get("title") or {}, logo, card)
+    motion = scene.get("motion")
+    layers = [] if motion else None
+    show_card = draw_card(project, scene.get("title") or {}, logo, card,
+                          layers=layers)
     args = ["-ss", str(scene.get("start", 0)), "-i", str(source)]
-    if show_card:
+    if show_card and motion and layers:
+        from .motion import compose_motion
+        args += compose_motion(vf, fps, frames, card, layers, motion,
+                               project.width)
+    elif show_card:
         args += ["-loop", "1", "-framerate", str(fps), "-i", str(card)]
         args += ["-filter_complex",
                  f"[0:v]{vf}[base];[1:v]format=rgba[txt];"

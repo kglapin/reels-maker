@@ -49,7 +49,7 @@ def _wrap(draw, value: str, face, width: int) -> list[str]:
     return result
 
 
-def draw_card(project: Project, title: dict, logo: Path | None, target: Path) -> bool:
+def draw_card(project: Project, title: dict, logo: Path | None, target: Path,\n              layers: list[dict] | None = None) -> bool:
     if not any(title.get(k) for k in ("kicker", "headline", "body", "footer")) and logo is None:
         return False
 
@@ -65,6 +65,20 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
             0 <= bottom_safe < h / 2):
         raise RenderError("Safe-area values are invalid for the selected frame")
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    def store_layer(layer, role: str) -> None:
+        """Save only non-transparent pixels to avoid huge full-frame RGBA inputs."""
+        if layers is None:
+            img.alpha_composite(layer)
+            return
+        bounds = layer.getbbox()
+        if bounds is None:
+            return
+        file = target.parent / f"layer-{len(layers):02d}-{role}.png"
+        file.parent.mkdir(parents=True, exist_ok=True)
+        layer.crop(bounds).save(file)
+        layers.append({"file": str(file), "x": bounds[0],
+                       "y": bounds[1], "role": role})
+
     if title:
         y0 = int(h * 0.38)
         gradient = Image.new("RGBA", (1, h - y0))
@@ -79,8 +93,11 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
             source = Image.open(logo).convert("RGBA")
             lw = round(w * 0.21)
             lh = round(lw * source.height / source.width)
-            img.alpha_composite(source.resize((lw, lh), Image.Resampling.LANCZOS),
-                                (margin, max(round(h * 0.075), top_safe)))
+            logo_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            logo_layer.alpha_composite(
+                source.resize((lw, lh), Image.Resampling.LANCZOS),
+                (margin, max(round(h * 0.075), top_safe)))
+            store_layer(logo_layer, "logo")
         except (OSError, ValueError, ZeroDivisionError) as exc:
             raise RenderError(f"Could not load PNG logo: {logo}") from exc
 
@@ -111,13 +128,21 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path) ->
         raise RenderError("Invalid branding.accent hex color") from exc
     colors = [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"]
     if any(lines):
-        draw.rectangle((margin, y, margin + round(6 * scale), bottom), fill=accent)
+        accent_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        ImageDraw.Draw(accent_layer).rectangle(
+            (margin, y, margin + round(6 * scale), bottom), fill=accent)
+        store_layer(accent_layer, "accent")
     for i, (group, face, step, ink) in enumerate(zip(lines, faces, spacing, colors)):
         if i and group:
             y += round(22 * scale)
+        if not group:
+            continue
+        element = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        element_draw = ImageDraw.Draw(element)
         for line in group:
-            draw.text((margin + round(25 * scale), y), line, fill=ink, font=face)
+            element_draw.text((margin + round(25 * scale), y), line, fill=ink, font=face)
             y += step
+        store_layer(element, ("kicker", "headline", "body", "footer")[i])
 
     target.parent.mkdir(parents=True, exist_ok=True)
     img.save(target)

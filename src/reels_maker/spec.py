@@ -82,6 +82,24 @@ def load_project(path: str | Path) -> Project:
         title = scene.get("title", {})
         if not isinstance(title, dict):
             raise ProjectError(f"scene {index}: title must be an object")
+        motion = scene.get("motion")
+        if motion is not None:
+            if not isinstance(motion, dict) or motion.get("preset") not in (
+                    "editorial_reveal", "fade_stagger"):
+                raise ProjectError(f"scene {index}: unsupported motion preset")
+            if not set(motion).issubset(
+                    {"preset", "duration_frames", "stagger_frames", "distance_px"}):
+                raise ProjectError(f"scene {index}: unknown motion setting")
+            for field, default, minimum, maximum in (
+                    ("duration_frames", max(2, round(fps * .24)), 2, max(2, round(fps * .45))),
+                    ("stagger_frames", max(1, round(fps * .07)), 0, max(1, round(fps * .15))),
+                    ("distance_px", 28, 0, 64)):
+                value = motion.get(field, default)
+                if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+                    raise ProjectError(f"scene {index}: invalid motion.{field}")
+            if motion["preset"] == "fade_stagger" and motion.get("distance_px", 0):
+                raise ProjectError("fade_stagger does not accept nonzero distance_px")
+
     music = data.get("music")
     if music is not None:
         if not isinstance(music, dict) or not isinstance(music.get("file"), str):

@@ -83,3 +83,26 @@ timing are re-planned. Projects with only cuts retain the cached segments and
 fast stream-copy assembly. Any xfade incurs an assembly encode, but the cached
 individual scenes remain reusable. The JSON render result reports `transitions`,
 `transition_overlaps_frames` and `assembly_mode`.
+
+## Editorial per-element motion (not a transition)
+
+An optional `motion` object animates **individual elements of an existing title
+card**: logo, accent, kicker, headline, body and footer. Each part is isolated
+as its own transparent layer and introduced through a brief alpha fade with a
+small ease-out movement. No random effects, bounce, typing, 3D rotation or
+letter-by-letter animation.
+
+```json
+{"file":"media/footage/clip.mp4","duration":2.4,
+ "title":{"kicker":"ASTA ENERGY","headline":"Energia dla firm",
+          "body":"Projekt. Montaż. Serwis."},
+ "motion":{"preset":"editorial_reveal","duration_frames":7,
+           "stagger_frames":2,"distance_px":24}}
+```
+
+`fade_stagger` offers the same separate opacity ramps without movement and
+requires no distance parameter. Timing is frame-based for consistent playback.
+Safe ranges: reveal 2–0.45 s, stagger 0–0.15 s, distance 0–64 px at 1080px
+reference width. The renderer refuses an entrance that cannot complete within
+the scene. Motion is **off by default** and leaves existing static cards intact.
+The media, branding and project files remain format-independent.

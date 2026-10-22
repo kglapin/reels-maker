@@ -1,0 +1,48 @@
+"""Non-gimmicky per-element animation using FFmpeg alpha and overlay filters.
+
+Each title field and logo is a separate cropped transparent layer. The scene
+background is rendered once; layers gain opacity independently and slide a few
+pixels into their final positions with ease-out, without any bounce or zoom.
+"""
+from __future__ import annotations
+
+from .ffmpeg import RenderError
+
+
+def compose_motion(vf: str, fps: int, scene_frames: int, background,
+                   layers: list[dict], settings: dict, width: int) -> list[str]:
+    """Return FFmpeg input and filter arguments for an editorial reveal."""
+    duration = settings.get("duration_frames", max(2, round(fps * .24)))
+    stagger = settings.get("stagger_frames", max(1, round(fps * .07)))
+    movement = (settings.get("distance_px", 28) if
+                settings["preset"] == "editorial_reveal" else 0)
+    movement = round(movement * width / 1080)
+    if duration + stagger * (len(layers) - 1) >= scene_frames:
+        raise RenderError("Motion reveal exceeds scene duration; reduce stagger or shorten text")
+    args = ["-loop", "1", "-framerate", str(fps), "-i", str(background)]
+    graph = [f"[0:v]{vf}[base]",
+             "[1:v]format=rgba[background]",
+             "[base][background]overlay=x=0:y=0:shortest=1[step0]"]
+    for index, layer in enumerate(layers):
+        args += ["-loop", "1", "-framerate", str(fps), "-i", layer["file"]]
+        # Alpha fade and a modest vertical translation, both opt-in.
+        delay = index * stagger / fps
+        seconds = duration / fps
+        # FFmpeg overlay evaluates y on each frame. Escape commas in expressions.
+        if movement:
+            eased = (
+                f"{layer['y']}+{movement}*"
+                f"pow(max(0\\,1-min(1\\,(t-{delay:.8f})/{seconds:.8f}))\\,3)"
+            )
+        else:
+            eased = str(layer["y"])
+        graph.append(
+            f"[{index+2}:v]format=rgba,"
+            f"fade=t=in:st={delay:.8f}:d={seconds:.8f}:alpha=1[layer{index}]")
+        graph.append(
+            f"[step{index}][layer{index}]"
+            f"overlay=x={layer['x']}:y='{eased}':"
+            f"shortest=1:format=auto[step{index+1}]")
+    graph.append(f"[step{len(layers)}]format=yuv420p[v]")
+    args += ["-filter_complex", ";".join(graph), "-map", "[v]"]
+    return args

@@ -28,10 +28,35 @@ jobs:
       - run: python -m pip install -e ".[brand]"
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: python -m unittest discover -s tests -v
-      - name: Generate ASTA Energy PDF brandbook
+
+
+  brandbook:
+    name: Export brandbook (without FFmpeg)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/test_brandbook.py
+            /brands/asta-energy/brand.json
+            /brands/asta-energy/assets/logo.png
+            /pyproject.toml
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install PDF-only dependency
+        run: python -m pip install -e ".[pdf]"
+      - name: Test brandbook generation with real logo
+        run: python -m unittest discover -s tests -p test_brandbook.py -v
+      - name: Generate ASTA Energy brandbook
         run: reels-maker brandbook --brand asta-energy --root . --json
-      - name: Publish PDF brandbook preview
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: asta-energy-brandbook
           path: renders/asta-energy/brandbook.pdf

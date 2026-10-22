@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 from .brand import brand_directory
-from .brandbook import generate_brandbook
 from .catalog import catalog
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
@@ -75,6 +74,10 @@ def main(argv: list[str] | None = None) -> int:
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
         if args.command == "brandbook":
+            try:
+                from .brandbook import generate_brandbook
+            except ImportError as exc:
+                raise ProjectError("PDF support requires: pip install -e \".[pdf]\"") from exc
             result = generate_brandbook(args.brand, args.root, args.output)
         elif args.command == "catalog":
             media_root = brand_directory(args.brand, args.root) if args.brand else args.root

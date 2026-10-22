@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from reels_maker.brandbook import generate_brandbook
 
 
 class BrandbookTests(unittest.TestCase):
@@ -12,6 +11,7 @@ class BrandbookTests(unittest.TestCase):
             import reportlab
         except ImportError:
             self.skipTest("Optional PDF dependency not installed")
+        from reels_maker.brandbook import generate_brandbook
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             brand = root / "brands" / "demo"
@@ -29,7 +29,7 @@ class BrandbookTests(unittest.TestCase):
             }))
             result = generate_brandbook("demo", root)
             file = Path(result["output"])
-            self.assertEqual(result["pages"], 1)
+            self.assertEqual(result["pages"], 2)
             self.assertTrue(file.read_bytes().startswith(b"%PDF"))
             self.assertGreater(file.stat().st_size, 1000)
 

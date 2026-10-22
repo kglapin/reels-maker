@@ -20,7 +20,8 @@
     },
     "logo": {
       "source": "assets/logo.svg",
-      "render_png": "assets/logo.png"
+      "render_png": "assets/logo.png",
+      "preview_background": "#14221A"
     },
     "format": {
       "default_width": 1080,

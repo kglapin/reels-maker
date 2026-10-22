@@ -16,13 +16,14 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 
-def _fonts() -> tuple[str, str]:
-    regular = [
+def _fonts(preferred: str = "") -> tuple[str, str]:
+    open_sans = str(preferred).lower().replace(" ", "") == "opensans"
+    regular = (["/usr/share/fonts/truetype/open-sans/OpenSans-Regular.ttf"] if open_sans else []) + [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/Library/Fonts/Arial Unicode.ttf",
         "C:/Windows/Fonts/arial.ttf",
     ]
-    bold = [
+    bold = (["/usr/share/fonts/truetype/open-sans/OpenSans-Bold.ttf"] if open_sans else []) + [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/Library/Fonts/Arial Bold.ttf",
         "C:/Windows/Fonts/arialbd.ttf",
@@ -120,10 +121,10 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     """Draw a compact printable PDF without requiring hosted services."""
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    regular, bold = _fonts()
     name = str(profile.get("name") or profile.get("id") or "Nowa marka")
     palette = _palette_from(profile)
     typography = _fonts_from(profile)
+    regular, bold = _fonts(str(typography.get("primary", "")))
     accent = str(palette.get("primary", "#47A013"))
     body_font = str(typography.get("primary", "Do potwierdzenia"))
     fallback_font = str(typography.get("fallback", "DejaVu Sans"))
@@ -150,8 +151,10 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
           "AUTOMATYCZNY SZKIC - SPRAWDŹ PRZED UŻYCIEM" if draft
           else "KONFIGURACJA MARKI", font=bold, size=9, ink="#E4F1EB")
 
-    # Logo card.
-    c.setFillColor(colors.white)
+    # Logo preview background can be chosen per brand for proper contrast.
+    logo_settings = profile.get("identity", {}).get("logo", {})
+    background = logo_settings.get("preview_background", "#FFFFFF") if isinstance(logo_settings, dict) else "#FFFFFF"
+    c.setFillColor(_rgb(background))
     c.roundRect(w - 228, h - 197, 180, 110, 10, fill=1, stroke=0)
     if logo_img:
         try:
@@ -277,3 +280,30 @@ def saved_brandbook_data(brand_dir: Path) -> dict:
     if not isinstance(data, dict):
         raise ValueError("Brand configuration must be an object")
     return data
+
+
+def generate_brandbook(slug: str, root: Path, output: Path | None = None) -> dict:
+    """Stable CLI adapter for the printable two-page brandbook implementation."""
+    from .brand import brand_directory
+    from .spec import ProjectError
+
+    directory = brand_directory(slug, root)
+    try:
+        profile = saved_brandbook_data(directory)
+    except ValueError as exc:
+        raise ProjectError(str(exc)) from exc
+    if profile.get("id") != slug:
+        raise ProjectError(f"brand.json must declare id={slug!r}")
+    filename = (Path(output) if output else
+                Path(root).resolve() / "renders" / slug / "brandbook.pdf")
+    if filename.suffix.lower() != ".pdf":
+        raise ProjectError("Brandbook output must end with .pdf")
+    output_path = make_brandbook(profile, filename, assets_root=directory)
+    return {
+        "brand": slug,
+        "output": str(output_path.resolve()),
+        "source": str(directory / "brand.json"),
+        "pages": 2,
+        "logo_included": _preview_image(profile, directory) is not None,
+        "preferred_font": str(_fonts_from(profile).get("primary", "")),
+    }

@@ -92,6 +92,7 @@ jobs:
               handle.write(str(Path(ffmpeg).parent) + "\n")
           print("Portable FFmpeg/FFprobe loaded:", ffmpeg, ffprobe)
           PY
+            export PATH="$(python -c 'from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise as r; from pathlib import Path; print(Path(r()[0]).parent)'):$PATH"
           fi
           # FFmpeg binary and source version must remain visible in the logs.
           ffmpeg -version | head -n 1

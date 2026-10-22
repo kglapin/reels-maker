@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .brand import brand_directory
+from .brandbook import generate_brandbook
 from .catalog import catalog
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
@@ -49,6 +50,11 @@ def main(argv: list[str] | None = None) -> int:
                           help="Inspect each available media file (slower)")
     discover.add_argument("--limit", type=int, default=500)
     discover.add_argument("--json", action="store_true")
+    brandbook = commands.add_parser("brandbook")
+    brandbook.add_argument("--brand", required=True)
+    brandbook.add_argument("--root", type=Path, default=ROOT)
+    brandbook.add_argument("--output", type=Path)
+    brandbook.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -68,7 +74,9 @@ def main(argv: list[str] | None = None) -> int:
             _emit({"status": "ok" if valid else "error",
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
-        if args.command == "catalog":
+        if args.command == "brandbook":
+            result = generate_brandbook(args.brand, args.root, args.output)
+        elif args.command == "catalog":
             media_root = brand_directory(args.brand, args.root) if args.brand else args.root
             result = catalog(media_root, include_metadata=args.probe, limit=args.limit)
             if args.brand:

@@ -45,3 +45,14 @@ editorial rules before generating an ASTA Energy Reel.
 Create `brands/<brand-slug>/brand.json`, `BRAND.md`, optional `assets/`,
 `media/`, and `projects/`. The Python engine should never be forked or
 copied per brand.
+
+## Podgląd PDF
+
+Wygeneruj jednostronicowy brandbook z aktualnego `brand.json`:
+
+```sh
+python -m pip install -e '.[pdf]'
+reels-maker brandbook --brand asta-energy --json
+```
+
+Wynik: `renders/asta-energy/brandbook.pdf` (plik generowany, poza Git). Zmiany kolorów, fontów i bezpiecznych stref w `brand.json` są widoczne w kolejnym eksporcie. PDF nie jest osobnym źródłem ustawień.

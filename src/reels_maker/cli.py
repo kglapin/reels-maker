@@ -47,6 +47,11 @@ def main(argv: list[str] | None = None) -> int:
     inspect = commands.add_parser("inspect")
     inspect.add_argument("file", type=Path)
     inspect.add_argument("--json", action="store_true")
+    verify = commands.add_parser("verify",
+        help="Reject incorrect exported MP4 dimensions, frames, codecs or audio")
+    verify.add_argument("project", type=Path)
+    verify.add_argument("--video", type=Path, required=True)
+    verify.add_argument("--json", action="store_true")
     storyboard = commands.add_parser("storyboard",
         help="Extract a contact sheet from real MP4 scene frames for visual QC")
     storyboard.add_argument("project", type=Path)
@@ -142,6 +147,9 @@ def main(argv: list[str] | None = None) -> int:
                 result["brand"] = args.brand
         elif args.command == "inspect":
             result = {"file": str(args.file.resolve()), "metadata": probe(args.file)}
+        elif args.command == "verify":
+            from .export_quality import verify_export
+            result = verify_export(load_project(args.project), args.video)
         elif args.command == "storyboard":
             from .storyboard import make_storyboard
             result = make_storyboard(load_project(args.project), args.video,

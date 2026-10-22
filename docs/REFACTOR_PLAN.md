@@ -20,6 +20,7 @@ All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
 - [x] Machine-readable editorial quality warnings for reading speed, over-emphasis and transition density, with CLI strict mode.
 - [x] Real-MP4 storyboard generation for human shot/crop/text inspection.
 - [x] Strict render mode and updated Pi/OpenCode/ChatGPT publishing workflow.
+- [x] Post-encode MP4 verification (exact frame count, FPS, codec, audio streams) before atomic publication.
 - [ ] Verify representative production render from each existing project.
 - [ ] Compare cold/warm performance and visual regressions for legacy footage.
 - [ ] Validate third-party source licences, programme facts and publish rights.

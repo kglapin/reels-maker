@@ -152,3 +152,21 @@ Font and accent spacing use the shorter canvas side as their reference,
 so a 1920×1080 composition does not grow titles to 177% of the portrait size.
 Changing format still requires creative review of line breaks, text placement,
 subject framing and UI overlays; automatic scaling is not a substitute.
+
+## Technical export verification
+
+The renderer verifies the **actual encoded H.264 MP4** before moving it into
+the public output path: video codec `h264`, pixel format `yuv420p`,
+resolution, average FPS, exact video frame count, video track duration, and
+presence/absence of a single AAC audio track according to the project manifest.
+If any check fails, the previous successfully exported MP4 is retained.
+
+```sh
+reels-maker verify brands/asta-energy/projects/example.json \
+  --video renders/asta-energy/example.mp4 --json
+```
+
+This `verify` command can be run on an existing MP4 without encoding.
+Export metadata is reported under `export_quality` after a render. These
+checks protect technical delivery but do not judge artistic merit, colour
+grading, speaker intelligibility or source licence compliance.

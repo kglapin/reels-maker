@@ -23,6 +23,7 @@ from .paths import ROOT
 from .spec import Project
 from .quality import review_project
 from .transitions import assemble, timeline_frames, transition_plan
+from .export_quality import verify_metadata
 
 CACHE_SCHEMA = 4
 SUPPORTED_ENCODER = "libx264"
@@ -220,9 +221,9 @@ def render(project: Project, *, root: Path = ROOT,
         else:
             shutil.copyfile(silent, final)
         metadata = probe(final)
-        video = next((s for s in metadata["streams"] if s["codec_type"] == "video"), {})
-        if video.get("width") != project.width or video.get("height") != project.height:
-            raise RenderError("Export dimension verification failed")
+        delivery_check = verify_metadata(
+            metadata, project, expected_frames=sum(frames)
+            - sum(t["frames"] for t in transitions))
         if not final.stat().st_size:
             raise RenderError("Empty output video")
         # Atomic final delivery; errors never overwrite an existing successful render.
@@ -235,6 +236,7 @@ def render(project: Project, *, root: Path = ROOT,
         "duration_requested": project.duration,
         "duration_quantized": quantized_duration,
         "duration_actual": float(metadata.get("format", {}).get("duration", 0)),
+        "export_quality": delivery_check,
         "duration": float(metadata.get("format", {}).get("duration", 0)),
         "status": "ok",
         "schema_version": 1,

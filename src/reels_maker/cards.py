@@ -89,7 +89,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         px = gradient.load()
         for y in range(h - y0):
             t = y / max(1, h - y0 - 1)
-            px[0, y] = (5, 20, 13, int(225 * t * t))
+            # Neutral cinematographic shadow, not an automatic brand-color wash.
+            # Limit intensity to avoid dark opaque blocks that hide source footage.
+            px[0, y] = (0, 0, 0, int(165 * t ** 1.55))
         img.alpha_composite(gradient.resize((w, h - y0)), (0, y0))
 
     if logo:
@@ -146,6 +148,22 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     except ValueError as exc:
         raise RenderError("Invalid branding.accent hex color") from exc
     colors = [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"]
+    stroke = max(1, round(w / 1080))
+    def draw_safe_text(layer_draw, xy, value, font, ink, *,
+                       anchor=None) -> None:
+        params = {"font": font}
+        if anchor:
+            params["anchor"] = anchor
+        bounds = layer_draw.textbbox(xy, value, **params)
+        # Pixel-accurate guard: no ascender, diacritic or long word may leave
+        # the editorial safe area unnoticed.
+        if (bounds[0] < margin - 2 or bounds[2] > w - margin + 2 or
+                bounds[1] < top_safe - 2 or bounds[3] > bottom + 2):
+            raise RenderError(
+                f"Text exceeds safe zone: {str(value)[:48]!r}; "
+                "shorten copy, reduce emphasis or adjust project safe areas")
+        layer_draw.text(xy, value, fill=ink, stroke_width=stroke,
+                        stroke_fill="#07110D", **params)
     if any(lines):
         accent_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         ImageDraw.Draw(accent_layer).rectangle(
@@ -161,9 +179,9 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         if i == 1 and rich_layout:
             if layers is None:
                 for token, token_face, token_ink, px, py, _ in rich_layout.parts:
-                    element_draw.text(
-                        (margin + round(25 * scale) + px, y + py),
-                        token, fill=token_ink, font=token_face, anchor="lt")
+                    draw_safe_text(
+                        element_draw, (margin + round(25 * scale) + px, y + py),
+                        token, token_face, token_ink, anchor="lt")
                 store_layer(element, "headline")
             else:
                 # A headline is not one flat bitmap: independent styled runs
@@ -176,15 +194,15 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
                     run_draw = ImageDraw.Draw(run_layer)
                     for token, token_face, token_ink, px, py, token_run in rich_layout.parts:
                         if token_run == run_index:
-                            run_draw.text(
-                                (margin + round(25 * scale) + px, y + py),
-                                token, fill=token_ink, font=token_face, anchor="lt")
+                            draw_safe_text(
+                                run_draw, (margin + round(25 * scale) + px, y + py),
+                                token, token_face, token_ink, anchor="lt")
                     store_layer(run_layer, f"headline-{run_index}")
             y += rich_layout.height
         else:
             for line in group:
-                element_draw.text((margin + round(25 * scale), y),
-                                  line, fill=ink, font=face)
+                draw_safe_text(element_draw, (margin + round(25 * scale), y),
+                               line, face, ink)
                 y += step
             store_layer(element, ("kicker", "headline", "body", "footer")[i])
 

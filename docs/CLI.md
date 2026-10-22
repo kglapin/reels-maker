@@ -81,3 +81,5 @@ Tell Pi / OpenCode / ChatGPT to:
 
 The CLI does not require an interactive shell, elevated credentials, access to
 a model API or any persistent network connection.
+
+Parallel scene encoding: `--jobs 1..8` (default: 2). `doctor --json` checks FFmpeg. `validate --syntax-only --json` verifies manifests without requiring media.

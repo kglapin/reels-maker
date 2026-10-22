@@ -189,20 +189,27 @@ def preflight(project: Project, root: Path = ROOT) -> dict:
             else:
                 branding_files.append(Path(project.branding[key]))
     sources = []
+    inspected = {}
     for index, scene in enumerate(project.scenes):
         source = resolve_asset(scene["file"], root)
-        src_duration = _media_video_duration(source)
+        if source not in inspected:
+            inspected[source] = probe(source)
+        meta = inspected[source]
+        if not any(s.get("codec_type") == "video" for s in meta.get("streams", [])):
+            raise RenderError(f"No video stream in {source}")
+        try:
+            src_duration = float(meta["format"]["duration"])
+        except (KeyError, ValueError, TypeError) as exc:
+            raise RenderError(f"Source has no readable duration: {source}") from exc
         if scene.get("start", 0) + scene["duration"] > src_duration + 0.05:
             raise RenderError(f"Scene {index} exceeds source duration: {source.name}")
-        if not any(s.get("codec_type") == "video" for s in probe(source).get("streams", [])):
-            raise RenderError(f"No video stream in {source}")
         sources.append(source)
     music = resolve_asset(project.music["file"], root) if project.music else None
     if music:
-        meta = probe(music)
+        meta = inspected.get(music) or probe(music)
         if not any(s.get("codec_type") == "audio" for s in meta.get("streams", [])):
             raise RenderError("Music file contains no audio stream")
-        if float(project.music.get("start", 0)) + project.duration > _media_video_duration(music) + 0.1:
+        if float(project.music.get("start", 0)) + project.duration > float(meta.get("format", {}).get("duration", 0)) + 0.1:
             raise RenderError("Music is shorter than requested segment")
     return {"sources": sources, "music": music, "branding_files": branding_files}
 
@@ -256,8 +263,8 @@ def render(project: Project, *, root: Path = ROOT,
     cache_root = (Path(cache_dir) if cache_dir else root / ".cache" / "reels-maker").resolve()
     cache_root.mkdir(parents=True, exist_ok=True)
 
-    if isinstance(jobs, bool) or not isinstance(jobs, int) or jobs < 1 or jobs > 16:
-        raise RenderError("jobs must be an integer between 1 and 16")
+    if isinstance(jobs, bool) or not isinstance(jobs, int) or jobs < 1 or jobs > 8:
+        raise RenderError("jobs must be an integer between 1 and 8")
     with tempfile.TemporaryDirectory(prefix="reels-", dir=dest.parent) as work:
         scratch = Path(work)
         parts = [None] * len(project.scenes)

@@ -7,6 +7,7 @@ from __future__ import annotations
 from .spec import Project
 from pathlib import Path
 from .asset_reviews import load_media_reviews
+from .ffmpeg import RenderError
 from .motion_timing import (build_cue_schedule, scripted_text_roles,
                             MIN_SETTLED_SECONDS)
 
@@ -143,8 +144,27 @@ def review_project(project: Project, *, root: Path | None = None) -> dict:
         if len(message) > 125:
             warn("text_density", "Scene carries too much on-screen copy.", index)
 
+    # Optional manual word markers can catch real A/V drift that a plain
+    # scene-local cue may miss after trimming narration or adding crossfades.
+    if (project.voiceover or {}).get("sync_marks"):
+        # Local import avoids a module cycle: cue_sheet uses renderer frame
+        # quantization and renderer itself imports this quality module.
+        from .cue_sheet import make_cue_sheet
+        try:
+            sync_sheet = make_cue_sheet(project)
+        except (ValueError, RenderError) as exc:
+            warn("invalid_narration_sync", str(exc))
+        else:
+            for issue in sync_sheet["warnings"]:
+                if issue["code"] in (
+                        "narration_cue_drift",
+                        "narration_marker_out_of_timeline",
+                        "cue_begins_inside_crossfade",
+                        "cue_ends_inside_outgoing_transition"):
+                    warn(issue["code"], issue["message"], issue.get("scene"))
+
     return {
-        "standard": "editorial-v3",
+        "standard": "editorial-v4",
         "status": "review" if warnings else "pass",
         "warning_count": len(warnings),
         "warnings": warnings,

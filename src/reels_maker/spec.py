@@ -57,7 +57,8 @@ def load_project(path: str | Path) -> Project:
             number = scene.get(field, 0 if field == "start" else None)
             if isinstance(number, bool) or not isinstance(number, (int, float)):
                 raise ProjectError(f"scene {index}: {field} must be numeric")
-            if (field == "duration" and number <= 0) or number < 0:
+            if (not math.isfinite(number) or
+                    (field == "duration" and number <= 0) or number < 0):
                 raise ProjectError(f"scene {index}: invalid {field}")
         if scene.get("framing", "crop") not in ("crop", "pad"):
             raise ProjectError(f"scene {index}: framing must be crop or pad")
@@ -155,8 +156,9 @@ def load_project(path: str | Path) -> Project:
             raise ProjectError("music.file is required")
         for field in ("start", "volume", "fade_out"):
             val = music.get(field, 0 if field != "volume" else 1)
-            if isinstance(val, bool) or not isinstance(val, (int, float)) or val < 0:
-                raise ProjectError(f"music.{field} must be nonnegative")
+            if (isinstance(val, bool) or not isinstance(val, (int, float))
+                    or not math.isfinite(val) or val < 0):
+                raise ProjectError(f"music.{field} must be finite and nonnegative")
         if music.get("volume", 1) > 4:
             raise ProjectError("music.volume must be <=4")
         if music.get("fade_out", 0) > sum(s["duration"] for s in scenes):
@@ -168,7 +170,8 @@ def load_project(path: str | Path) -> Project:
                 not isinstance(voiceover.get("file"), str) or
                 not voiceover["file"].strip()):
             raise ProjectError("voiceover.file must be a nonempty file path")
-        if set(voiceover) - {"file", "start", "offset_seconds", "volume"}:
+        if set(voiceover) - {"file", "start", "offset_seconds", "volume",
+                             "sync_marks"}:
             raise ProjectError("voiceover has unsupported settings")
         for key, default, max_val in (
                 ("start", 0, 36000), ("offset_seconds", 0, 36000),
@@ -180,6 +183,39 @@ def load_project(path: str | Path) -> Project:
                 raise ProjectError(f"voiceover.{key} must be a finite nonnegative number")
         if voiceover.get("offset_seconds", 0) >= sum(s["duration"] for s in scenes):
             raise ProjectError("voiceover.offset_seconds must precede the end of the video")
+        # Word timestamps are intentionally editor-provided, never inferred
+        # from the spoken recording or generated from the corresponding text.
+        marks = voiceover.get("sync_marks", [])
+        if not isinstance(marks, list) or len(marks) > 128:
+            raise ProjectError("voiceover.sync_marks must be a list (max 128)")
+        seen_marks = set()
+        for mark in marks:
+            if (not isinstance(mark, dict) or
+                    set(mark) - {"scene", "role", "source_seconds", "tolerance_frames"} or
+                    not {"scene", "role", "source_seconds"} <= set(mark)):
+                raise ProjectError("Invalid voiceover sync mark")
+            scene_no = mark["scene"]
+            role = mark["role"]
+            seconds = mark["source_seconds"]
+            tolerance = mark.get("tolerance_frames", 2)
+            if type(scene_no) is not int or not 1 <= scene_no <= len(scenes):
+                raise ProjectError("voiceover sync mark scene must be 1-based")
+            if (not isinstance(role, str) or
+                    role not in dict(scripted_text_roles(
+                        scenes[scene_no - 1].get("title") or {}))):
+                raise ProjectError(f"voiceover sync mark refers to missing text role {role!r}")
+            if not scenes[scene_no - 1].get("motion"):
+                raise ProjectError("voiceover sync marks require animated text motion")
+            if (isinstance(seconds, bool) or
+                    not isinstance(seconds, (int, float)) or
+                    not math.isfinite(seconds) or
+                    not voiceover.get("start", 0) <= seconds <= 36000):
+                raise ProjectError("voiceover sync source_seconds must be an absolute source timestamp after trim")
+            if type(tolerance) is not int or not 0 <= tolerance <= 6:
+                raise ProjectError("voiceover sync tolerance_frames must be 0..6")
+            if (scene_no, role) in seen_marks:
+                raise ProjectError(f"Duplicate sync mark for scene {scene_no} role {role}")
+            seen_marks.add((scene_no, role))
 
     # When both tracks are supplied, artists may explicitly opt into
     # moderate narration-driven music ducking; nothing is enabled randomly.

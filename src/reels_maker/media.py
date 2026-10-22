@@ -72,6 +72,10 @@ def preflight(project: Project, root: Path) -> Inputs:
             raise RenderError(f"Missing voiceover duration: {voiceover}") from exc
         if project.voiceover.get("start", 0) >= source_duration:
             raise RenderError("voiceover.start exceeds source audio duration")
+        for mark in project.voiceover.get("sync_marks", []):
+            if mark["source_seconds"] > source_duration + 0.002:
+                raise RenderError(
+                    "Voiceover sync mark is past the end of the source recording")
         # Voiceovers may naturally end before the last visual scene. In that
         # case the channel is padded with silence, not loops or fake speech.
 

@@ -77,6 +77,51 @@ def make_cue_sheet(project: Project) -> dict:
         })
     total = timeline_frames(lengths, transitions)
     voice = project.voiceover or None
+    marker_comparisons = []
+    if voice and voice.get("sync_marks"):
+        for mark in voice["sync_marks"]:
+            scene_entry = entries[mark["scene"] - 1]
+            actual = next((cue for cue in scene_entry["cues"]
+                           if cue["role"] == mark["role"]), None)
+            if actual is None:
+                raise ValueError(
+                    "Sync mark references text that does not exist in scene")
+            # Source positions reference the *original* audio recording.
+            # The rendered narration first trims .start and then inserts
+            # .offset_seconds of timeline silence. Keep these separate.
+            audible_seconds = (
+                float(mark["source_seconds"])
+                - float(voice.get("start", 0))
+                + float(voice.get("offset_seconds", 0)))
+            visual_frames = int(actual["timeline_frame"])
+            narration_frames = round(audible_seconds * fps)
+            delta_frames = visual_frames - narration_frames
+            tolerance = mark.get("tolerance_frames", 2)
+            comparison = {
+                "scene": mark["scene"], "role": mark["role"],
+                "source_seconds": mark["source_seconds"],
+                "expected_narration_seconds": round(audible_seconds, 5),
+                "visual_frame": visual_frames,
+                "narration_frame": narration_frames,
+                "delta_frames": delta_frames,
+                "delta_seconds": round(delta_frames / fps, 5),
+                "tolerance_frames": tolerance,
+                "status": "pass" if abs(delta_frames) <= tolerance else "drift",
+            }
+            marker_comparisons.append(comparison)
+            if not 0 <= narration_frames < total:
+                warnings.append({
+                    "scene": mark["scene"], "role": mark["role"],
+                    "code": "narration_marker_out_of_timeline",
+                    "message": "Spoken-word timestamp falls outside the final video"})
+            elif abs(delta_frames) > tolerance:
+                warnings.append({
+                    "scene": mark["scene"], "role": mark["role"],
+                    "code": "narration_cue_drift",
+                    "delta_frames": delta_frames,
+                    "tolerance_frames": tolerance,
+                    "message": "Animated text does not enter with the verified narration marker"})
+
     return {
         "name": project.name,
         "fps": fps,
@@ -89,6 +134,7 @@ def make_cue_sheet(project: Project) -> dict:
             if voice else None
         ),
         "scenes": entries,
+        "sync_marks": marker_comparisons,
         "warnings": warnings,
         "manual_audio_review_required": bool(voice),
     }

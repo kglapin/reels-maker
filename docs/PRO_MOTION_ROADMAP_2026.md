@@ -89,11 +89,11 @@ These are evaluation rules, not automatic aesthetic certifications.
 - 2.5D depth-aware z-layers, parallax and occlusion, with camera collision/blur protection.
 - Optional Blender/3D renderer for genuine spatial shots, products, lighting and reflections; never fake 3D with arbitrary spins as default.
 
-### 3.5 Transitions, editing and data visualisation (P1)
+### 3.5 Transitions and editing (P1)
 - Hard cuts, audio J/L cuts, motivated wipes and reveals.
 - Whip pans, camera carryover, match move, zoom-through, photo-to-type shared element, mask takeover.
 - Subject- and motion-vector-aware matching across clips; avoid random pixel dissolve as default.
-- Animated bars, line/pie/comparison/counters, maps and data callouts with numeric validation and clear units.
+- Animated data visualization is a **first-class Data Motion & Infographics Engine** and an explicit **P0 workstream**, not a small transition preset. See [DATA_MOTION_DESIGN.md](DATA_MOTION_DESIGN.md). Start with accurate chart/table primitives, mobile readability and exact data lineage; then extend to line/bar/donut/waterfall, heatmaps, rankings, Sankey, table sorting, chart-to-table morphs, progressive disclosure and beat-aware data storytelling.
 - Optical interpolation optional; do not invent motion frames on product photos or introduce distortions silently.
 
 ## 4. Style system / art direction catalog (P0)
@@ -312,6 +312,18 @@ MD-306 Polish typography regression, cross-aspect ratio checks and multi-family 
 
 DONE: visual director signs off on photo, video, text and icon demo scenes, not only technical tests.
 
+### P0-DATA — animated charts, tables and reliable data storytelling
+
+See the dedicated [Data Motion & Infographics Engine specification](DATA_MOTION_DESIGN.md), which defines **DM-001–008 P0**, **DM-101–108 P1** and **DM-201–204 P2** with acceptance and regression tests.
+
+- DM-001–003: ingest real CSV/JSON/XLSX data, verify numeric integrity and semantics, choose visualization by data relationship.
+- DM-004–006: create native vector bars, time series, ranking, counters, stacked proportions **and first-class tables**; animate row/column reveal, sorting, callouts and truthful value changes.
+- DM-007: guarantee data labels, units, zero/reference axes, color contrast and mobile/camera-safe typography.
+- DM-008: create approved real-data social video examples (marketing, PV/energy, finance), with complete data traceability.
+- P1: waterfall, heatmap, funnel, Sankey, table-to-chart morph, responsive data storytelling and audio sync.
+
+**Acceptance gate:** verified source-to-frame numerical identity; no misleading scales, invented values, cropped labels or unreadable multi-column tables; visible story insight and tested mobile playback.
+
 ### P0-E — audio, social, final QA
 MD-401 Autoselect legal cross-platform audio; music and SFX compatibility filtering.
 MD-402 Beat/onset/cue model for animation/VO/SFX, bus mixing, ducking, loudness QC.
@@ -374,6 +386,8 @@ Metrics to track (calibrate from baseline): pipeline success rate, per-asset sea
 10. Only then expand optional 3D and generative effects.
 
 Do NOT undertake P2 flashy effects before safe high-quality P0 photo/video/type/audio clips pass reviewed references.
+
+For data motion and chart/table animation: Financial Times Visual Vocabulary, Datawrapper responsive charts, Heer–Robertson animated statistical transitions and WCAG 2.2 non-text contrast. Detailed links in [DATA_MOTION_DESIGN.md](DATA_MOTION_DESIGN.md).
 
 ## 16. Verified public references (checked 2026-10-23)
 

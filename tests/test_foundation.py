@@ -14,7 +14,9 @@ class FoundationTest(unittest.TestCase):
             root = Path(tmp)
             path = root / "chodzież.mp4"
             path.write_bytes(b"mock")
-            self.assertEqual(resolve_asset("chodziez\u0307.mp4", root), path)
+            resolved = resolve_asset("chodziez\u0307.mp4", root)
+            # Use resolved() to normalize macOS /var -> /private/var symlinks.
+            self.assertEqual(resolved.resolve(), path.resolve())
 
     def test_prevents_path_traversal(self):
         with tempfile.TemporaryDirectory() as tmp:

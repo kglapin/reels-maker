@@ -12,6 +12,8 @@ def resolve_asset(name: str, root: Path = ROOT) -> Path:
     """Resolve a project-relative asset, tolerating macOS decomposed accents.
 
     Reject absolute paths and attempts to escape the repository.
+    Returns an NFC-normalized path so callers receive a stable, canonical
+    representation regardless of the underlying filesystem's storage form.
     """
     if not isinstance(name, str) or not name.strip():
         raise AssetError("Asset path must be a nonempty string")
@@ -44,4 +46,6 @@ def resolve_asset(name: str, root: Path = ROOT) -> Path:
         with cursor.open("rb") as handle:
             if handle.read(64).startswith(b"version https://git-lfs.github.com/spec/v1"):
                 raise AssetError(f"Git LFS content missing; run git lfs pull: {name}")
-    return cursor
+    # Normalize returned path to NFC so callers receive a canonical form
+    # independent of whether the filesystem stored components in NFD (macOS).
+    return Path(unicodedata.normalize("NFC", str(cursor)))

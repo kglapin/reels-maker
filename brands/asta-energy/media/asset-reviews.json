@@ -5,13 +5,84 @@
   "assets": {
     "media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4": {
       "type": "finished_promo",
-      "burned_in": ["logo"],
+      "burned_in": [
+        "logo"
+      ],
       "notes": "Visible ASTA logo/wordmark at the top of actual decoded video frames; must not receive a second logo by default."
     },
     "media/footage/8_asta-pila-realizacja-30kwp.mp4": {
       "type": "finished_promo",
-      "burned_in": ["logo", "captions", "metric"],
-      "notes": "Logo and location/capacity labels (Piła 30.02 kWp) visible in decoded shots; new lower-third text overlaps them."
+      "burned_in": [
+        "logo",
+        "captions",
+        "metric"
+      ],
+      "notes": "Logo and location/capacity labels (Pi\u0142a 30.02 kWp) visible in decoded shots; new lower-third text overlaps them."
+    },
+    "media/footage/1_fotowoltaika-25wp-budzyn.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/2_dron-pv-dla-firm-asta.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/3_pila-elektronarzedzia-39,6kwp.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/4_Copy of mini max-reels .mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/6_fotowoltaika - poudnie czy wschod zachod.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/7_pila-pv-30,50 kWp - przedszkole.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/9_ dron-pv-dla-firm-asta-pila-49kwp.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/10_tracker-pv.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/11_chodzie\u017c-2x39,59kwp-fotowoltaika-asta.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/12_pv na bloku.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/13_Copy of asta - konstrukcja tracker.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/14_Pi\u0142a-pv-39,96-kwp.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/footage/15_fotowoltaika-spoldzielnia.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
     }
   }
 }

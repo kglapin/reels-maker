@@ -61,7 +61,8 @@ def edit_creative_spec(spec,patches):
         target=new
         for part in parts[:-1]:
             key=_resolve(target,part,path)
-            if (isinstance(target,list) and (key>=len(target) or key<0)) or key not in target:
+            missing=(key<0 or key>=len(target)) if isinstance(target,list) else key not in target
+            if missing:
                 raise CreativeEditError(f"{path}: intermediate node missing")
             target=target[key]
         key=_resolve(target,parts[-1],path)

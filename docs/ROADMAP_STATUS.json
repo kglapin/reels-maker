@@ -1,59 +1,59 @@
 {
-  "current_milestone": "M11 - Flagship demos and v1.0 delivery",
-  "status": "Complete - All P0 gates achieved; two flagship demos rendered and validated; awaiting human creative review before merge request",
-  "next_action": "REL-07/09/12: Phone-size playback verification; owner approval; operator manual; request merge",
+  "current_milestone": "M11 - Flagship demos, formal approval and v1.0 delivery",
+  "status": "READY FOR OWNER REVIEW - All P0 gates G0-G10 satisfied; G11 pending human creative review and merge approval",
+  "next_action": "Owner: Review docs/REVIEW_RECORD.md, approve flagships, check account billing for Actions runner (OPS-11), authorize PR merge and v1.0 tag",
   "current_branch": "refactor/modular-render-engine",
-  "latest_commit": "e6f57b2 feat: M08/M09/M10/M11 - complete QA, perf, storage, and flagship demos",
-  "draft_pr_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
-  "last_successful_main_test": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
-  "current_ci_status": "Private runner unavailable - account billing quota check needed (OPS-11 blocker)",
+  "latest_commit": "520b610 test: fix audio_qc macOS path resolution; add final review record",
+  "branch_up_to_date": true,
+  "draft_pr_state": "OPEN",
+  "ci_status": "OPS-11 BLOCKER: GitHub Actions jobs QUEUED, not provisioning (account billing/quota check needed)",
+  "local_tests": "125 passed in 43.19s",
   "completed_gates": {
     "G0": "SEC-01/03/05/07 - Private visibility confirmed, no secrets found, collaborators verified",
-    "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo",
-    "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests all green",
-    "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar and reference annotations",
-    "G4": "EDIT-01/02/03/04/05/06/08/09 - Transition presets, cut/xfade matrix, frame-aware timing",
-    "G5": "TYPE-01 through TYPE-14 - Rich text, baselines, cue timing, contrast testing",
-    "G6": "AUD-01 through AUD-11 - Independent voiceover/music, sidechain ducking, AAC output",
-    "G8": "QA-01 through QA-15 - Full QA suite, golden frames, regression matrix, scorecard",
-    "G9": "PERF-01 through PERF-09 - Benchmarks, cache invalidation, failure recovery",
-    "G10": "OPS-01 through OPS-11 - Private repo, storage strategy, creator runbook"
+    "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
+    "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests, caching, atomic publish, path safety, Unicode NFC normalization",
+    "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar, reference annotations, rejection examples, minimum read times",
+    "G4": "EDIT-01/02/03/04/05/06/08/09 - Hard cut default, dissolve/dip-to-black/motion_wipe, transition presets, shot boundary metadata",
+    "G5": "TYPE-01/02/03/09/10/11/12/13 - Rich text runs, baselines, cue timing, diacritics, contrast testing, collision resolution",
+    "G6": "AUD-01/02/03/05/07/08 - Independent voiceover/music, sidechain ducking, sync marks, AAC output validated via render",
+    "G8": "QA-01/02/03/05/09/10/11 - All QA checks: storyboard, motion strip, golden frames, format matrix, edge cases, review rubric",
+    "G9": "PERF-01/03/05/06 - Benchmarks (cold/warm), cache invalidation, failure recovery, atomic replacement",
+    "G10": "OPS-01/02/06/07/08/10 - Private repo, storage strategy, provenance, creator runbook, roadmap status"
   },
-  "pending_approval": [
-    "OPS-11: GitHub Actions private runner blocked (account billing/quota check needed)",
+  "pending_g11": [
     "REL-07: Phone-size playback verification (human review required)",
     "REL-09: Human approval of creative content, brand usage, media/audio licensing",
-    "REL-12: Publish operator manual",
-    "REL-13: Final CI green on reviewed commit",
+    "REL-10: Approve final flagship MP4 and archive reproducible bundle",
+    "REL-13: Final CI green on reviewed commit (blocked by OPS-11)",
     "REL-14: Owner approval to mark PR ready and merge",
     "REL-15: Tag version 1.0 after merge authorization"
+  ],
+  "blockers": [
+    "OPS-11: Private GitHub Actions runner provisioning (account billing/quota check needed)",
+    "REL-09: Human creative review and approval"
   ],
   "flagship_deliveries": [
     {
       "name": "asta-flagship-editorial-benefit",
-      "manifest": "brands/asta-energy/projects/asta-flagship-01-editorial.json",
       "output": "renders/asta-energy/flagship-editorial-benefit.mp4",
       "scenes": 5,
       "duration_s": 17.68,
-      "all_clean_source": true,
       "quality": "pass",
       "warnings": 0,
-      "provenance": "renders/asta-energy/qa/flagship-editorial-provenance.json"
+      "all_clean_source": true
     },
     {
       "name": "asta-flagship-fast-montage",
-      "manifest": "brands/asta-energy/projects/asta-flagship-02-montage.json",
       "output": "renders/asta-energy/flagship-fast-montage.mp4",
       "scenes": 14,
       "duration_s": 27.72,
-      "all_clean_source": true,
       "quality": "pass",
       "warnings": 0,
-      "provenance": "renders/asta-energy/qa/flagship-montage-provenance.json"
+      "all_clean_source": true
     }
   ],
-  "test_count": 120,
-  "test_status": "ALL PASSING",
+  "test_count": 125,
+  "files_added": 12,
   "current_date": "2026-10-22",
   "version": "1.0"
 }

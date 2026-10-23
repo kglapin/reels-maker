@@ -1,3 +1,5 @@
+> **UWAGA — DOKUMENT HISTORYCZNY.** Aktualny, kompletny i jedyny obowiązujący backlog wraz z całym zakresem motion design, SVG, banków mediów, audio, tabel i wykresów znajduje się w **[MASTER PLAN 2.0](MASTER_PLAN.md)**. Poniższa treść pozostaje wyłącznie archiwum poprzedniego etapu planowania; nie traktować jej jako osobnego harmonogramu ani listy aktualnych statusów.
+
 # Data Motion & Infographics Engine — Professional Specification
 
 **Status: PLANNED expansion, not implemented in full.** Date: 2026-10-23. Companion to [PRO_MOTION_ROADMAP_2026.md](PRO_MOTION_ROADMAP_2026.md).

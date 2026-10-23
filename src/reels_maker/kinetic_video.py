@@ -163,7 +163,7 @@ def render_kinetic(manifest, *, root=None, output=None):
             pop(t,.9,.4,360,587,lambda:text(s.get("subtitle","NA MAGAZYN ENERGII"),0,0,35))
             pop(t,.65,.55,360,921,lambda:battery(t))
         elif kind=="breakdown":
-            pop(t,.08,.4,360,341,lambda:text(scene.get("headline","ŁĄCZNIE NAWET"),0,0,42))
+            pop(t,.08,.4,360,341,lambda:text(s.get("headline","ŁĄCZNIE NAWET"),0,0,42))
             v=counter_value(int(s.get("value",19000)),int(t*fps),int(.25*fps),int(1.1*fps))
             pop(t,.25,.48,360,452,lambda:text(format_pln(v),0,0,118,GREEN))
             for j,(title,val) in enumerate((("MAGAZYN ENERGII","16 000 zł"),
@@ -176,18 +176,18 @@ def render_kinetic(manifest, *, root=None, output=None):
         elif kind=="announcement":
             pop(t,.09,.45,360,370,lambda:text("NABÓR",0,0,112))
             pop(t,.3,.45,360,496,lambda:text("OTWARTY",0,0,103,GREEN))
-            pop(t,.62,.44,360,621,lambda:text(scene.get("subtitle","INFORMACJE O PROGRAMIE"),0,0,34))
+            pop(t,.62,.44,360,621,lambda:text(s.get("subtitle","INFORMACJE O PROGRAMIE"),0,0,34))
             def calendar():
                 rounded(-250,-137,500,275,30,WHITE)
                 text("20",0,-111,147,GREEN)
-                text(scene.get("calendar_label","PAŹDZIERNIKA 2026"),0,58,35)
+                text(s.get("calendar_label","PAŹDZIERNIKA 2026"),0,58,35)
             pop(t,.9,.55,360,903,calendar)
         elif kind=="donut":
             pop(t,.1,.45,360,356,lambda:text("MAGAZYN ENERGII",0,0,56))
             pop(t,.4,.52,360,804,lambda:chart(t),.96)
-            pop(t,1.5,.45,360,1125,lambda:text(scene.get("subtitle","DO 30% KOSZTÓW"),0,0,34))
+            pop(t,1.5,.45,360,1125,lambda:text(s.get("subtitle","DO 30% KOSZTÓW"),0,0,34))
         elif kind=="comparison":
-            pop(t,.08,.45,360,329,lambda:text(scene.get("headline","PORÓWNANIE"),0,0,40))
+            pop(t,.08,.45,360,329,lambda:text(s.get("headline","PORÓWNANIE"),0,0,40))
             for j,(name,value) in enumerate((("NET-BILLING",16000),("NET-METERING",8000))):
                 def card(name=name,value=value,j=j):
                     rounded(-308,-127,616,254,28,WHITE)
@@ -222,7 +222,7 @@ def render_kinetic(manifest, *, root=None, output=None):
         elif kind=="deadline":
             pop(t,.1,.4,360,358,lambda:text("NABÓR DO",0,0,66))
             pop(t,.36,.5,360,511,lambda:text("1.10.2027",0,0,116,GREEN))
-            pop(t,.92,.45,360,681,lambda:text(scene.get("subtitle","LUB DO WYCZERPANIA BUDŻETU"),0,0,35))
+            pop(t,.92,.45,360,681,lambda:text(s.get("subtitle","LUB DO WYCZERPANIA BUDŻETU"),0,0,35))
             text("BUDŻET PROGRAMU",360,855,29,GRAY)
             rounded(88,930,544,56,28,BORDER)
             p=ease_out_cubic((t-1.13)/1.8)
@@ -240,7 +240,7 @@ def render_kinetic(manifest, *, root=None, output=None):
                     c.new_path();c.move_to(0,0);c.line_to(rad*math.cos(ang),rad*math.sin(ang))
                     rgb(DARK);c.set_line_width(10);c.stroke()
             pop(t,.38,.55,360,805,clock)
-            pop(t,1.03,.48,360,1110,lambda:text(scene.get("subtitle","SPRAWDŹ SZCZEGÓŁY"),0,0,49,GREEN))
+            pop(t,1.03,.48,360,1110,lambda:text(s.get("subtitle","SPRAWDŹ SZCZEGÓŁY"),0,0,49,GREEN))
         elif kind=="cta":
             pop(t,.1,.44,360,355,lambda:text("ZADZWOŃ LUB NAPISZ",0,0,57))
             def phone():
@@ -248,8 +248,8 @@ def render_kinetic(manifest, *, root=None, output=None):
                 text(s.get("phone","CONTACT"),0,-53,79,WHITE)
                 text("SPRAWDŹ DOTACJĘ",0,46,35,WHITE)
             pop(t,.38,.5,360,639,phone)
-            pop(t,.99,.4,360,917,lambda:text(scene.get("line_one","POROZMAWIAJMY O OFERCIE"),0,0,31))
-            pop(t,1.45,.4,360,1002,lambda:text(scene.get("line_two","POMOŻEMY W CAŁYM PROCESIE"),0,0,31))
+            pop(t,.99,.4,360,917,lambda:text(s.get("line_one","POROZMAWIAJMY O OFERCIE"),0,0,31))
+            pop(t,1.45,.4,360,1002,lambda:text(s.get("line_two","POMOŻEMY W CAŁYM PROCESIE"),0,0,31))
             pop(t,1.9,.4,360,1122,lambda:text(str(s.get("website","example.com")),0,0,62,GREEN))
         header(index)
         remain=s["duration"]-t

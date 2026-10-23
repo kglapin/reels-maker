@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "name": "editorial-rotation-integrated",
+  "style": "kinetic-advertising",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 24
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 20,
+    "preset": "veryfast"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#F4F2ED",
+      "surface": "#FFFFFF",
+      "ink": "#1C2022",
+      "muted": "#5D6364",
+      "accent": "#AFCA48"
+    }
+  },
+  "audio": {},
+  "scenes": [
+    {
+      "id": "01-tilt",
+      "composition": "statement",
+      "duration": 2,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F2ED"
+      },
+      "headline": "DESIGN IN MOTION",
+      "subtitle": "Frames that find their place.",
+      "editorial_rotation": {
+        "headline": {
+          "family": "tilt-settle",
+          "angle": -6,
+          "duration": 0.75,
+          "reason": "opening motion"
+        }
+      },
+      "editorial_media": [
+        {
+          "asset": "tests/fixtures/studio-golden/scene-00-strip.png",
+          "x": 0.16,
+          "y": 0.48,
+          "w": 0.68,
+          "h": 0.36,
+          "rotation": {
+            "family": "tilt-settle",
+            "angle": 8,
+            "duration": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "02-counter",
+      "composition": "statement",
+      "duration": 2,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F2ED"
+      },
+      "headline": "CHANGE THE PERSPECTIVE",
+      "subtitle": "Opposing motions, one visual language.",
+      "editorial_rotation": {
+        "headline": {
+          "family": "counter-rotation",
+          "angle": 5,
+          "duration": 0.8,
+          "reason": "balance and contrast"
+        }
+      },
+      "editorial_media": [
+        {
+          "asset": "tests/fixtures/studio-golden/scene-01-strip.png",
+          "x": 0.12,
+          "y": 0.5,
+          "w": 0.78,
+          "h": 0.33,
+          "rotation": {
+            "family": "counter-rotation",
+            "angle": -8,
+            "duration": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "03-diagonal",
+      "composition": "statement",
+      "duration": 2,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F2ED"
+      },
+      "headline": "A DIFFERENT ANGLE",
+      "subtitle": "Diagonal frame / stable typography.",
+      "editorial_media": [
+        {
+          "asset": "tests/fixtures/studio-golden/scene-02-strip.png",
+          "x": 0.11,
+          "y": 0.44,
+          "w": 0.75,
+          "h": 0.42,
+          "rotation": {
+            "family": "diagonal-hold",
+            "angle": -5,
+            "settle_angle": -5,
+            "duration": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "id": "04-layout",
+      "composition": "statement",
+      "duration": 2,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F2ED"
+      },
+      "headline": "REFRAME THE STORY",
+      "subtitle": "One movement changes the composition.",
+      "editorial_rotation": {
+        "headline": {
+          "family": "tilt-settle",
+          "angle": -4,
+          "duration": 0.8
+        }
+      },
+      "editorial_media": [
+        {
+          "asset": "tests/fixtures/studio-golden/scene-08-strip.png",
+          "x": 0.16,
+          "y": 0.47,
+          "w": 0.72,
+          "h": 0.37,
+          "rotation": {
+            "family": "rotation-to-layout",
+            "angle": -7,
+            "settle_angle": 0,
+            "duration": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -63,12 +63,14 @@ jobs:
           reels-maker studio-qa examples/lorem-ipsum-showcase.json --profile final --samples 3 --json > renders/studio/qa-summary.json
       - name: Render full HD MP4 with native studio renderer
         run: |
+          set -o pipefail
           reels-maker studio-render examples/lorem-ipsum-showcase.json \
             --profile final --supersample 1 \
             --output renders/studio/lorem-ipsum-motion-showcase.mp4 \
             --json | tee renders/studio/render-result.json
       - name: Verify MP4 and produce contact-sheet
         run: |
+          set -o pipefail
           reels-maker storyboard examples/lorem-ipsum-showcase.json \
             --profile final --video renders/studio/lorem-ipsum-motion-showcase.mp4 \
             --output renders/studio/lorem-ipsum-storyboard.png \

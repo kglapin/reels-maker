@@ -45,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
                                  help="Concurrent scene encodes (default: 2)")
             command.add_argument("--strict-quality", action="store_true",
                                  help="Refuse to render when editorial warnings remain")
+    kinetic = commands.add_parser("kinetic-render",
+        help="Render animated numbers, charts, EU graphics and photo motion from JSON")
+    kinetic.add_argument("manifest", type=Path)
+    kinetic.add_argument("--root", type=Path)
+    kinetic.add_argument("--output", type=Path)
+    kinetic.add_argument("--json", action="store_true")
     cues = commands.add_parser("cue-sheet",
         help="List exact local/global cue times including transition overlaps")
     cues.add_argument("project", type=Path)
@@ -150,6 +156,9 @@ def main(argv: list[str] | None = None) -> int:
                 "downloaded_logos": audit.get("downloaded_logos", []),
                 "warnings": audit["warnings"], "applied": False,
             }
+        elif args.command == "kinetic-render":
+            from .kinetic_video import render_kinetic
+            result = render_kinetic(args.manifest, root=args.root, output=args.output)
         elif args.command == "brandbook":
             try:
                 from .brandbook import generate_brandbook

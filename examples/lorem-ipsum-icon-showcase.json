@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "name": "lorem-ipsum-icon-libraries-showcase",
+  "style": "kinetic-advertising",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "profile": "final",
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#10101B",
+      "surface": "#FFFFFF",
+      "ink": "#FFFFFF",
+      "muted": "#C5C1D2",
+      "accent": "#B598FF"
+    }
+  },
+  "audio": {
+    "music": {
+      "file": "media/showcase-score.wav",
+      "volume": 0.78,
+      "fade_out": 1.3
+    },
+    "sfx": [
+      {
+        "file": "media/soft-hit.wav",
+        "time": 0,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 2.4,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 5.1,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 7.9,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 10.7,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 13.7,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 16.3,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 18.9,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 21.7,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 24.7,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 27.3,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 30.2,
+        "volume": 0.3
+      },
+      {
+        "file": "media/soft-hit.wav",
+        "time": 32.7,
+        "volume": 0.3
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "id": "01-opening",
+      "composition": "statement",
+      "duration": 2.4,
+      "transition_in": "cut",
+      "background": {
+        "kind": "gradient",
+        "from": "#0C0B16",
+        "to": "#231A3C"
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "LOREM",
+            "scale": 0.95,
+            "color": "white"
+          },
+          {
+            "text": "IPSUM",
+            "scale": 1.02,
+            "color": "accent",
+            "break_before": true,
+            "weight": "bold"
+          }
+        ]
+      },
+      "subtitle": "A STUDY IN MOTION / 001"
+    },
+    {
+      "id": "02-photo",
+      "composition": "spotlight",
+      "duration": 2.7,
+      "transition_in": "wipe-left",
+      "transition_seconds": 0.21,
+      "photo": "media/abstract-orbit.png",
+      "background": {
+        "scrim": 0.58,
+        "tint": "#110D23",
+        "tint_amount": 0.22,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.08
+        }
+      },
+      "kicker": "01 / TYPOGRAPHY",
+      "headline": {
+        "runs": [
+          {
+            "text": "DOLOR",
+            "scale": 0.94,
+            "color": "white"
+          },
+          {
+            "text": "SIT AMET",
+            "scale": 1.08,
+            "color": "white",
+            "weight": "bold",
+            "break_before": true
+          }
+        ]
+      },
+      "subtitle": "CONSECTETUR ADIPISCING ELIT"
+    },
+    {
+      "id": "03-counter",
+      "composition": "amount",
+      "duration": 2.8,
+      "transition_in": "dip",
+      "transition_seconds": 0.18,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F1EA"
+      },
+      "kicker": "02 / KINETIC NUMBERS",
+      "value": 98765,
+      "format": {
+        "suffix": "+",
+        "decimals": 0,
+        "thousands": " "
+      },
+      "subtitle": "LOREM IPSUM / DOLOR SIT",
+      "visual": "battery",
+      "icon_library": "lucide",
+      "icon_style": "outline",
+      "icon_assets": [
+        {
+          "library": "lucide",
+          "name": "sparkles",
+          "x": 0.79,
+          "y": 0.3,
+          "size": 0.095,
+          "color": "accent"
+        }
+      ]
+    },
+    {
+      "id": "04-bars",
+      "composition": "bars",
+      "duration": 2.8,
+      "transition_in": "wipe-up",
+      "transition_seconds": 0.22,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "headline": "ADIPISCING ELIT",
+      "bars": [
+        {
+          "label": "LOREM",
+          "value": 38,
+          "suffix": "%"
+        },
+        {
+          "label": "IPSUM",
+          "value": 72,
+          "suffix": "%"
+        },
+        {
+          "label": "DOLOR",
+          "value": 96,
+          "suffix": "%"
+        }
+      ],
+      "subtitle": "SYNTHETIC DEMO DATA"
+    },
+    {
+      "id": "05-breakdown",
+      "composition": "breakdown",
+      "duration": 3,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#181228"
+      },
+      "kicker": "03 / DATA IN MOTION",
+      "total": 100,
+      "format": {
+        "suffix": "%",
+        "decimals": 0,
+        "thousands": ""
+      },
+      "items": [
+        {
+          "label": "LOREM",
+          "value": 47
+        },
+        {
+          "label": "IPSUM",
+          "value": 33
+        },
+        {
+          "label": "DOLOR",
+          "value": 20
+        }
+      ],
+      "subtitle": "QUIS NOSTRUD EXERCITATION"
+    },
+    {
+      "id": "06-ring",
+      "composition": "donut",
+      "duration": 2.6,
+      "transition_in": "wipe-left",
+      "transition_seconds": 0.2,
+      "background": {
+        "kind": "solid",
+        "color": "#100F19"
+      },
+      "headline": "TEMPOR INCIDIDUNT",
+      "value": 84,
+      "label": "IPSUM",
+      "subtitle": "UT LABORE ET DOLORE"
+    },
+    {
+      "id": "07-photo",
+      "composition": "spotlight",
+      "duration": 2.6,
+      "transition_in": "dip",
+      "transition_seconds": 0.25,
+      "photo": "media/abstract-ribbon.png",
+      "background": {
+        "scrim": 0.54,
+        "tint": "#0D0B18",
+        "tint_amount": 0.18,
+        "camera": {
+          "direction": "pan-left",
+          "intensity": 0.1
+        }
+      },
+      "kicker": "04 / CINEMATIC DEPTH",
+      "headline": {
+        "runs": [
+          {
+            "text": "MAGNA",
+            "scale": 0.82,
+            "color": "white"
+          },
+          {
+            "text": "SIT",
+            "scale": 1.2,
+            "color": "white",
+            "weight": "bold",
+            "break_before": true,
+            "effect": "negative"
+          }
+        ]
+      },
+      "subtitle": "MOTION WITH PURPOSE"
+    },
+    {
+      "id": "08-comparison",
+      "composition": "comparison",
+      "duration": 2.8,
+      "transition_in": "wipe-up",
+      "transition_seconds": 0.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F1F0EA"
+      },
+      "headline": "DUIS AUTE IRURE",
+      "columns": [
+        {
+          "label": "DOLOR",
+          "value": 32,
+          "suffix": "%"
+        },
+        {
+          "label": "IPSUM",
+          "value": 89,
+          "suffix": "%"
+        }
+      ],
+      "subtitle": "A VISUAL CONTRAST / DEMO"
+    },
+    {
+      "id": "09-stats",
+      "composition": "stats",
+      "duration": 3,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#19142C"
+      },
+      "headline": "METRICS IN MOTION",
+      "stats": [
+        {
+          "label": "LOREM",
+          "value": 24,
+          "suffix": "K"
+        },
+        {
+          "label": "IPSUM",
+          "value": 78,
+          "suffix": "%"
+        },
+        {
+          "label": "DOLOR",
+          "value": 12,
+          "suffix": "X"
+        },
+        {
+          "label": "AMET",
+          "value": 360,
+          "suffix": "°"
+        }
+      ]
+    },
+    {
+      "id": "10-energy",
+      "composition": "energy",
+      "duration": 2.6,
+      "transition_in": "wipe-left",
+      "transition_seconds": 0.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F5F2ED"
+      },
+      "headline": "CONSECTETUR ELIT",
+      "subtitle": "SEQUENCES / CONNECTION / FLOW",
+      "icon_library": "lucide",
+      "icon_style": "outline",
+      "icon_names": {
+        "sun": "sun",
+        "house": "house",
+        "battery": "battery-charging",
+        "arrow": "arrow-right"
+      }
+    },
+    {
+      "id": "11-checklist",
+      "composition": "checklist",
+      "duration": 2.9,
+      "transition_in": "dip",
+      "transition_seconds": 0.18,
+      "background": {
+        "kind": "solid",
+        "color": "#161122"
+      },
+      "headline": "BUILT TO MOVE",
+      "items": [
+        "LOREM IPSUM DOLOR",
+        "SIT AMET CONSECTETUR",
+        "ADIPISCING TEMPOR",
+        "MAGNA ALIQUA"
+      ],
+      "icon_library": "heroicons",
+      "icon_style": "outline",
+      "icon_names": {
+        "check": "check-circle"
+      }
+    },
+    {
+      "id": "12-quote",
+      "composition": "quote",
+      "duration": 2.5,
+      "transition_in": "cut",
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F6F4ED"
+      },
+      "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "subtitle": "A MOTION DESIGN EXERCISE"
+    },
+    {
+      "id": "13-final",
+      "composition": "cta",
+      "duration": 3.3,
+      "transition_in": "wipe-up",
+      "transition_seconds": 0.2,
+      "background": {
+        "kind": "gradient",
+        "from": "#100E20",
+        "to": "#261A3F"
+      },
+      "headline": "ENDLESS POSSIBILITIES",
+      "phone": "LOREM IPSUM",
+      "line_one": "MOTION DESIGN / 2026",
+      "line_two": "ENGINE SHOWCASE • NO BRAND"
+    }
+  ]
+}

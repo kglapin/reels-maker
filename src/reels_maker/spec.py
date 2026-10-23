@@ -137,7 +137,7 @@ def load_project(path: str | Path) -> Project:
         if motion is not None:
             if not isinstance(motion, dict) or motion.get("preset") not in (
                     "editorial_reveal", "fade_stagger", "rise_soft",
-                    "slide_left", "slide_right"):
+                    "slide_left", "slide_right", "kinetic_rise"):
                 raise ProjectError(f"scene {index}: unsupported motion preset")
             if not set(motion).issubset(
                     {"preset", "duration_frames", "stagger_frames",

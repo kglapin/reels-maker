@@ -3,6 +3,7 @@ name: Advanced transitions demo
 on:
   push:
     branches:
+      - main
       - feat/object-driven-transitions-20261023
   workflow_dispatch:
 
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,11 +32,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dependencies
+      - name: Verify runner prerequisites
+        timeout-minutes: 2
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg libcairo2
-          python -m pip install -e '.[icons]'
+          command -v ffmpeg
+          command -v ffprobe
+          python -c 'import ctypes.util; assert ctypes.util.find_library("cairo"), "libcairo missing"'
+      - name: Install Python dependencies
+        timeout-minutes: 5
+        run: python -m pip --disable-pip-version-check install --retries 2 --timeout 15 -e '.[icons]'
       - name: Validate editorial and transition regression tests
         run: python -m unittest discover -s tests -p 'test_editorial_quality.py' && python -m unittest discover -s tests -p 'test_transition_engine.py'
       - name: Test stock API adapters and editorial crop planner

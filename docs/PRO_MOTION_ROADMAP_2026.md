@@ -269,7 +269,7 @@ Golden set: at least 24 deliberately varied example reels, spanning 6 styles, di
 - Preserve source media outside Git for larger libraries; encrypted and backed-up object storage with rights/retention policy.
 - Resolve repo visibility policy (public currently) before adding confidential client data.
 - CI matrix for tests, 1080x1920 renders, CPU portability, Polish fonts, video/audio licenses, visual regressions and provider mocks.
-- Current 2010-style older roadmap entries must be reconciled to truthful status; don't report completed features from local/unmerged prototypes.
+- Older roadmap entries must be reconciled to truthful status; don't report completed features from local/unmerged prototypes.
 
 ## 13. Execution program and dependencies
 

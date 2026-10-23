@@ -35,7 +35,7 @@ class RotationalTypographyTests(unittest.TestCase):
 
     def test_rotated_bounds_are_larger_than_unrotated(self):
         node = Node(kind="panel", props={"x": 100, "y": 100, "w": 400, "h": 100})
-        original = node.bounds()
+        original = node.world_bounds()
         node.rotation = 30
         rotated = node.bounds()
         self.assertIsNotNone(original)

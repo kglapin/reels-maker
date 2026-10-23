@@ -24,6 +24,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /src/
+            /tests/
             /examples/advanced-transition-demo.json
             /pyproject.toml
       - uses: actions/setup-python@v5

@@ -104,6 +104,7 @@ def _cache_signature(project: StudioProject, profile: str | None,
         "brand": project.brand, "name": project.name,
         "tokens": project.tokens.to_dict(),
         "fonts": _font_signature(project.fonts),
+        "transition_engine_version": 1,
         "scenes": [
             {"scene": scene, "frames": timing.frames,
              "transition_in": item.meta.get("transition_in"),
@@ -119,7 +120,8 @@ def _cache_signature(project: StudioProject, profile: str | None,
 def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                          dest: Path, *, codec: str, crf: int, preset: str,
                          frames_done: int, total_frames: int,
-                         progress: Callable[[dict], None] | None) -> int:
+                         progress: Callable[[dict], None] | None,
+                         next_scene=None, transition: dict | None = None) -> int:
     """Encode one scene's frames into a standalone stream-copyable MP4."""
     command = [
         require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y",
@@ -137,6 +139,23 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
             for frame in range(timing.frames):
                 time = frame / project.fps
                 image = renderer.render(built, min(time, built.duration))
+                if next_scene is not None and transition is not None:
+                    from .transition_engine import transition_frame
+                    transition_frames = max(2, round(
+                        float(transition.get("duration", .55)) * project.fps))
+                    transition_frames = min(transition_frames, timing.frames)
+                    start = timing.frames - transition_frames
+                    if frame >= start:
+                        progress_t = (frame - start) / max(1, transition_frames - 1)
+                        # Render the adjacent scene at its actual opening time.
+                        # The final transition frame equals scene B at t=0.
+                        incoming = renderer.render(next_scene, 0.0)
+                        image = transition_frame(
+                            image, incoming, progress_t,
+                            effect=transition.get("type", "color-takeover"),
+                            color=transition.get("color", "#47A013"),
+                            anchor=tuple(transition.get("anchor", (.5, .5))),
+                            direction=transition.get("direction", "left"))
                 try:
                     process.stdin.write(
                         image.convert("RGBA").tobytes("raw", "BGRA"))
@@ -227,7 +246,8 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         frames_done = 0
         cache_hits = 0
         encodes = 0
-        for scene, timing, item in zip(project.scenes, timeline.scenes, built):
+        for index, (scene, timing, item) in enumerate(
+                zip(project.scenes, timeline.scenes, built)):
             part = scratch / f"scene-{item.index}.mp4"
             key = f"{cache_signature}-{item.index}"
             cached = cache_root / f"{key}.mp4" if cache_root else None
@@ -241,7 +261,9 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     codec=codec, crf=crf, preset=preset,
                     frames_done=frames_done,
                     total_frames=timeline.total_frames,
-                    progress=progress)
+                    progress=progress,
+                    next_scene=built[index + 1] if index + 1 < len(built) else None,
+                    transition=scene.get("transition_out"))
                 encodes += 1
                 if encoded != timing.frames:  # defensive; encoder raises first
                     raise RenderError(

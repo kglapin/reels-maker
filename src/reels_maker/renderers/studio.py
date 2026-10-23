@@ -218,9 +218,13 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     built = project.build(timeline)
     if supersample is None:
         supersample = 2 if project.height >= 1600 else 1
-    renderer = SceneRenderer(
-        project.width, project.height, project.tokens, project.fonts,
-        options=RenderOptions(supersample=supersample))
+    if any("camera_canvas" in scene for scene in project.scenes):
+        from .camera_canvas import CameraCanvasRenderer
+        renderer = CameraCanvasRenderer(project)
+    else:
+        renderer = SceneRenderer(
+            project.width, project.height, project.tokens, project.fonts,
+            options=RenderOptions(supersample=supersample))
     destination = _output_path(project, effective_profile, output)
     destination.parent.mkdir(parents=True, exist_ok=True)
     require_tool("ffmpeg")

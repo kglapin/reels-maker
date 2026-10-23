@@ -4,7 +4,41 @@
   "version": 1,
   "branding": {
     "accent": "#47A013",
-    "logo": "assets/logo.png"
+    "logo": "assets/logo.png",
+    "editorial_profiles": {
+      "light-information": {
+        "theme": "light",
+        "position": "upper",
+        "headline_style": "hero",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": false
+      },
+      "light-detail": {
+        "theme": "light",
+        "position": "middle",
+        "headline_style": "standard",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": false
+      },
+      "dark-hero": {
+        "theme": "dark",
+        "position": "upper",
+        "headline_style": "hero",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": false
+      },
+      "dark-cta": {
+        "theme": "dark",
+        "position": "middle",
+        "headline_style": "standard",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": false
+      }
+    }
   },
   "identity": {
     "typography": {

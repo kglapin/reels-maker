@@ -5,6 +5,7 @@ import copy
 import contextlib
 import io
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -16,6 +17,7 @@ from PIL import Image, ImageChops
 from reels_maker.audiokit.cues import load_transcript, plan_cues
 from reels_maker.components.base import SceneContext
 from reels_maker.components.scenes import build_scene
+from reels_maker.components.title_overlay import build_title_overlay
 from reels_maker.core.scene_graph import collect_qa_elements
 from reels_maker.design.color import contrast_ratio, ensure_contrast
 from reels_maker.design.tokens import resolve_tokens
@@ -23,6 +25,7 @@ from reels_maker.ffmpeg import RenderError
 from reels_maker.qa.report import _audio_report, audit
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.renderers.studio import probe_output, render_studio
+from reels_maker.spec import Project
 from reels_maker.studio import StudioError, load_kinetic_studio, load_studio
 from reels_maker.textkit.typesetter import FontBook, Run
 
@@ -452,6 +455,133 @@ class StudioRenderIntegrationTests(unittest.TestCase):
             self.assertEqual(outputs[0]["cache_misses"], 1)
             self.assertEqual(outputs[1]["cache_misses"], 1)
             self.assertEqual(outputs[2]["cache_hits"], 1)
+
+    def test_classic_audio_mix_matches_across_title_engines(self):
+        """Same manifest, both title engines: identical, valid audio output."""
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source.mp4"
+            music = base / "tone.wav"
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i",
+                "color=c=0x335577:s=320x240:r=20:d=2",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(source),
+            ], check=True, capture_output=True)
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i", "sine=frequency=330:duration=2",
+                "-ac", "2", "-ar", "48000", str(music),
+            ], check=True, capture_output=True)
+            manifest = base / "audio-parity.json"
+            manifest.write_text(json.dumps({
+                "name": "audio-parity-across-engines",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "music": {"file": "tone.wav", "volume": .4,
+                          "fade_out": .4, "ducking": "off"},
+                "scenes": [{
+                    "file": "source.mp4", "start": 0, "duration": 1.8,
+                    "framing": "crop",
+                    "title": {"theme": "dark", "backdrop": "soft",
+                              "logo": False, "headline": "PARITY"},
+                }],
+            }), encoding="utf-8")
+            executable = str(ROOT / ".venv/bin/reels-maker")
+            outputs = []
+            for engine in ("legacy", "studio"):
+                output = base / f"audio-parity-{engine}.mp4"
+                command = [executable, "render", str(manifest), "--root",
+                           str(base), "--output", str(output), "--jobs", "1",
+                           "--no-cache", "--json"]
+                if engine != "legacy":
+                    command += ["--title-engine", engine]
+                completed = subprocess.run(command, text=True,
+                                           capture_output=True, check=False)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                outputs.append(output)
+            legacy_meta, studio_meta = (probe_output(path)
+                                        for path in outputs)
+            self.assertEqual(legacy_meta["audio_codec"], "aac")
+            self.assertEqual(studio_meta["audio_codec"], "aac")
+            self.assertLessEqual(
+                abs(float(legacy_meta["duration"])
+                    - float(studio_meta["duration"])), .05)
+            loudness = {}
+            for engine, path in (("legacy", outputs[0]),
+                                 ("studio", outputs[1])):
+                probe = subprocess.run([
+                    shutil.which("ffmpeg"), "-hide_banner", "-i", str(path),
+                    "-map", "0:a:0", "-af", "volumedetect", "-f", "null", "-",
+                ], text=True, capture_output=True, check=True)
+                match = re.search(r"mean_volume:\s*(-?[\d.]+) dB",
+                                  probe.stderr)
+                self.assertIsNotNone(match, probe.stderr)
+                loudness[engine] = float(match.group(1))
+            self.assertLessEqual(abs(loudness["legacy"]
+                                     - loudness["studio"]), .4)
+
+    def test_brand_tokens_drive_studio_title_overlay_visuals(self):
+        """Classic-title bridge consumes branding accent, not a fixed palette."""
+        scene = {"duration": 2.0,
+                 "title": {"theme": "dark", "backdrop": "soft",
+                           "headline": "TOKENS", "accent_rule": True}}
+        fills = []
+        for accent in ("#47A013", "#2864DC"):
+            project = Project(
+                "brand-isolation", 360, 640, 20, [dict(scene)], None,
+                {"accent": accent,
+                 "motion_style": "editorial-premium"}, "isolation.mp4")
+            built = build_title_overlay(
+                project, scene, index=0, duration=2.0, logo=None)
+            fills.append((
+                built.elements["accent-rule"].props["fill"],
+                built.context.tokens.palette.as_hex()["accent"]))
+        self.assertNotEqual(fills[0][0], fills[1][0])
+        self.assertNotEqual(fills[0][1], fills[1][1])
+        self.assertEqual(fills[0][1], fills[0][0]
+                         if isinstance(fills[0][0], str) else fills[0][1])
+
+    def test_studio_title_route_reports_cold_warm_cache_benchmark(self):
+        """Second studio render must reuse cached scene parts and be faster."""
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source.mp4"
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i",
+                "color=c=0x506070:s=640x360:r=20:d=3",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(source),
+            ], check=True, capture_output=True)
+            manifest = base / "bench.json"
+            manifest.write_text(json.dumps({
+                "name": "studio-cache-bench",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [{
+                    "file": "source.mp4", "start": 0, "duration": 2.6,
+                    "framing": "crop",
+                    "title": {"theme": "dark", "backdrop": "strong",
+                              "logo": False, "kicker": "BENCH",
+                              "headline": "COLD TO WARM"},
+                }],
+            }), encoding="utf-8")
+            cache = base / "cache"
+            executable = str(ROOT / ".venv/bin/reels-maker")
+            timings = []
+            for attempt, expect in ((0, "cold"), (1, "warm")):
+                output = base / f"bench-{expect}.mp4"
+                completed = subprocess.run([
+                    executable, "render", str(manifest), "--root", str(base),
+                    "--output", str(output), "--cache-dir", str(cache),
+                    "--jobs", "1", "--title-engine", "studio", "--json",
+                ], text=True, capture_output=True, check=False)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                result = json.loads(completed.stdout)
+                timings.append(result["timings_seconds"]["scene_encoding"])
+                self.assertEqual(result["cache_hits"],
+                                 1 if expect == "warm" else 0)
+                self.assertEqual(probe_output(output)["frames"], 52)
+            self.assertLess(timings[1], timings[0])
+            self.assertLess(timings[1], 1.0)
 
 
 if __name__ == "__main__":

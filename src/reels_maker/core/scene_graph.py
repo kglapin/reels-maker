@@ -88,7 +88,7 @@ class Node:
     def base_bounds(self) -> BBox | None:
         props = self.props
         kind = self.kind
-        if kind in ("rect", "round", "panel", "image", "block"):
+        if kind in ("rect", "round", "panel", "image", "icon", "block"):
             x, y = float(props.get("x", 0)), float(props.get("y", 0))
             w, h = float(props.get("w", 0)), float(props.get("h", 0))
             if w < 0 or h < 0:

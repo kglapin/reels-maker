@@ -33,16 +33,18 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install missing system dependencies
-        timeout-minutes: 6
+        timeout-minutes: 4
         run: |
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! python -c 'import ctypes.util; assert ctypes.util.find_library("cairo")' >/dev/null 2>&1; then
-            echo "Missing system tools; installing with bounded network and lock timeouts"
-            timeout 150s sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o DPkg::Lock::Timeout=45 update -qq
-            timeout 150s sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o DPkg::Lock::Timeout=45 install -y -qq ffmpeg libcairo2
+          echo "ffmpeg=$(command -v ffmpeg || echo missing)"
+          echo "ffprobe=$(command -v ffprobe || echo missing)"
+          ldconfig -p | grep -E 'libcairo.so' || true
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! ldconfig -p | grep -q 'libcairo.so'; then
+            echo "Installing required system packages using runner package indexes (skip slow apt-get update)"
+            timeout 100s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=0 -o Acquire::http::Timeout=10 -o DPkg::Lock::Timeout=15 install -y --no-install-recommends ffmpeg libcairo2
           fi
           command -v ffmpeg
           command -v ffprobe
-          python -c 'import ctypes.util; assert ctypes.util.find_library("cairo"), "libcairo missing"'
+          ldconfig -p | grep -E 'libcairo.so'
       - name: Install Python dependencies
         timeout-minutes: 5
         run: python -m pip --disable-pip-version-check install --retries 2 --timeout 15 -e '.[icons]'

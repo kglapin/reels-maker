@@ -1,0 +1,81 @@
+name: Lorem Ipsum / Studio Motion Showcase
+
+on:
+  push:
+    branches:
+      - feat/lorem-ipsum-showcase-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-showcase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout current reels-maker
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual repository renderer and asset dependencies
+        run: python -m pip install -e . 'numpy>=1.26,<3'
+      - name: Check FFmpeg availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            python -m pip install 'static-ffmpeg==3.0'
+            python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as handle:
+              handle.write(str(Path(ffmpeg).parent)+"\n")
+          PY
+          fi
+          ffmpeg -version | head -n 1
+      - name: Generate original abstract visuals and audio sources
+        run: python examples/generate_lorem_assets.py
+      - name: Validate manifest and render scene QA
+        run: |
+          mkdir -p renders/studio
+          reels-maker studio-inspect examples/lorem-ipsum-showcase.json --profile final --json > renders/studio/inspect.json
+          reels-maker studio-qa examples/lorem-ipsum-showcase.json --profile final --samples 3 --json > renders/studio/qa-summary.json
+      - name: Render full HD MP4 with native studio renderer
+        run: |
+          reels-maker studio-render examples/lorem-ipsum-showcase.json \
+            --profile final --supersample 1 \
+            --output renders/studio/lorem-ipsum-motion-showcase.mp4 \
+            --json | tee renders/studio/render-result.json
+      - name: Verify MP4 and produce contact-sheet
+        run: |
+          reels-maker storyboard examples/lorem-ipsum-showcase.json \
+            --profile final --video renders/studio/lorem-ipsum-motion-showcase.mp4 \
+            --output renders/studio/lorem-ipsum-storyboard.png \
+            --motion-strip --json | tee renders/studio/storyboard-result.json
+          ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,avg_frame_rate \
+            -of json renders/studio/lorem-ipsum-motion-showcase.mp4 \
+            > renders/studio/ffprobe.json
+      - name: Upload demonstrator (MP4 + preview + QA)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lorem-ipsum-motion-showcase-mp4
+          path: |
+            renders/studio/lorem-ipsum-motion-showcase.mp4
+            renders/studio/lorem-ipsum-storyboard.png
+            renders/studio/*motion-strip*.png
+            renders/studio/inspect.json
+            renders/studio/qa-summary.json
+            renders/studio/render-result.json
+            renders/studio/storyboard-result.json
+            renders/studio/ffprobe.json
+            renders/studio/qa/
+          if-no-files-found: warn
+          retention-days: 14

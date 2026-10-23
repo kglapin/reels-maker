@@ -18,6 +18,7 @@ jobs:
           sparse-checkout: |
             /src/
             /pyproject.toml
+            /brands/asta-energy/assets/logo.png
           lfs: false
       - uses: actions/setup-python@v5
         with:
@@ -126,3 +127,9 @@ jobs:
             lorem-ipsum.json
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: asta-energy-original-logo
+          path: brands/asta-energy/assets/logo.png
+          if-no-files-found: error
+          retention-days: 2

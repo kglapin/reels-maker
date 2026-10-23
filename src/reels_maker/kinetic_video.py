@@ -50,6 +50,19 @@ def render_kinetic(manifest, *, root=None, output=None):
     voice = asset(data["voiceover"]) if data.get("voiceover") else None
     music = asset(data["music"]) if data.get("music") else None
     logo = asset(data["logo"]) if data.get("logo") else None
+    identity = data.get("identity", {})
+    if not isinstance(identity, dict):
+        raise RenderError("identity must be an object")
+    brand_name = identity.get("name", "REELS MAKER")
+    if not isinstance(brand_name, str) or not 1 <= len(brand_name) <= 50:
+        raise RenderError("identity.name must be a short string")
+    accent = identity.get("accent", "#47A013")
+    if not isinstance(accent, str) or len(accent) != 7 or accent[0] != "#":
+        raise RenderError("identity.accent must be #RRGGBB")
+    try:
+        accent_rgb = tuple(bytes.fromhex(accent[1:]))
+    except ValueError as exc:
+        raise RenderError("Invalid identity.accent hex") from exc
     photos = {s["photo"]: asset(s["photo"]) for s in scenes if s.get("photo")}
     result = Path(output or data.get("output") or root / "kinetic.mp4").resolve()
     result.parent.mkdir(parents=True, exist_ok=True)
@@ -62,7 +75,7 @@ def render_kinetic(manifest, *, root=None, output=None):
         frame_counts.append(next_frame-last)
         last = next_frame
     W,H=720,1280
-    GREEN=(71,160,19); DARK=(22,44,30); PALE=(239,247,234)
+    GREEN=accent_rgb; DARK=(22,44,30); PALE=(239,247,234)
     WHITE=(255,255,255); GRAY=(98,112,101); BORDER=(215,230,209)
     surf=cairo.ImageSurface(cairo.FORMAT_ARGB32,width,height)
     c=cairo.Context(surf)
@@ -85,11 +98,11 @@ def render_kinetic(manifest, *, root=None, output=None):
         while size>16:
             c.set_font_size(size)
             e=c.text_extents(str(value))
-            if e.width<=620: break
+            if e[2]<=620: break
             size-=2
         e=c.text_extents(str(value))
         rgb(col)
-        c.move_to(x-e.x_bearing-e.width/2,y-e.y_bearing)
+        c.move_to(x-e[0]-e[2]/2,y-e[1])
         c.show_text(str(value))
     def pop(t,onset,duration,x,y,fn,scale=.88):
         if t<onset:return
@@ -135,7 +148,7 @@ def render_kinetic(manifest, *, root=None, output=None):
             im,w,h=image_surface(logo); scale=260/w
             c.save();c.translate(360-130,58-h*scale/2);c.scale(scale,scale)
             c.set_source_surface(im,0,0);c.paint();c.restore()
-        else:text("ASTA ENERGY",360,43,42,WHITE)
+        else:text(brand_name,360,43,42,WHITE)
         text(f"{index+1:02d} / {len(scenes):02d}",360,122,22,(216,230,208),False)
     def scene_frame(s,index,t):
         kind=s["type"]
@@ -232,12 +245,12 @@ def render_kinetic(manifest, *, root=None, output=None):
             pop(t,.1,.44,360,355,lambda:text("ZADZWOŃ LUB NAPISZ",0,0,57))
             def phone():
                 rounded(-305,-104,610,207,36,GREEN)
-                text(s.get("phone","67 350 90 90"),0,-53,79,WHITE)
+                text(s.get("phone","CONTACT"),0,-53,79,WHITE)
                 text("SPRAWDŹ DOTACJĘ",0,46,35,WHITE)
             pop(t,.38,.5,360,639,phone)
             pop(t,.99,.4,360,917,lambda:text("SPRAWDZIMY ILE MOŻESZ ZYSKAĆ",0,0,31))
             pop(t,1.45,.4,360,1002,lambda:text("POMOŻEMY W CAŁYM PROCESIE",0,0,31))
-            pop(t,1.9,.4,360,1122,lambda:text("asta-energy.pl",0,0,62,GREEN))
+            pop(t,1.9,.4,360,1122,lambda:text(str(s.get("website","example.com")),0,0,62,GREEN))
         header(index)
         remain=s["duration"]-t
         if index<len(scenes)-1 and remain <.17:

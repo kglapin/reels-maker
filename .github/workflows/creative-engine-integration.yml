@@ -95,7 +95,7 @@ jobs:
               shot["layout"]="auto"
               shot["typography"]={"family":"mask-rise"}
           Path("examples/creative-engine-studio-qa.json").write_text(
-              json.dumps(d,indent=2)+"\\n",encoding="utf-8")
+              json.dumps(d,indent=2),encoding="utf-8")
           PY
           reels-maker creative-render examples/creative-engine-studio-qa.json --output creative-studio-demo.mp4 --json > creative-studio-render.json
           python - <<'PY'

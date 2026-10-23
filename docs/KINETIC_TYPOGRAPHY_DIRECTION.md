@@ -18,7 +18,7 @@ The approved editorial kinetic typography v4 demo is a **directional reference**
 6. **Contrast movement with stillness**: give each key phrase a readable hold. Avoid constant letter motion, multiple simultaneous attention targets and gratuitous camera movements.
 7. **Never reuse the same trick mechanically across consecutive scenes**. When two adjacent scenes use the same mechanism, require an explicit intentional repetition (e.g. build-up, list, rhythm).
 8. **Prefer meaningful interactions**: text should influence or be influenced by a photo, icon, camera or next scene where the concept calls for it. Do not overlay unrelated movement.
-9. **Avoid AI-slop defaults**: no side rails, arbitrary underlines, bouncing every word, rotating individual letters for novelty, glow/gradient clutter, meaningless kinetic separators or every-word colored emphasis.
+9. **Avoid AI-slop defaults**: no side rails, arbitrary underlines, bouncing every word, rotating individual letters without semantic purpose, glow/gradient clutter, meaningless kinetic separators or every-word colored emphasis.
 10. **Protect legibility** at the start, during maximum movement and on the settling frame. Verify line breaks, kerning, masking/descender clipping and safe zones across aspect ratios.
 11. **Motion needs variation in intensity**: alternate emphatic beats with composed/quiet beats. Do not make every line as animated as the headline.
 12. **Typography motion should be deterministic** given scene metadata and seed. Explain which rule selected an effect, to allow creative overrides.
@@ -41,6 +41,43 @@ The approved editorial kinetic typography v4 demo is a **directional reference**
 | Shared-element type morph | Letter/word geometry continues into next scene | Connected sequence | Frame discontinuity |
 
 The renderer must support or gracefully downgrade unavailable primitives. **Never silently claim a sophisticated animation when only a fade or simple slide was rendered.**
+
+## Rotation as an editorial motion tool
+
+**Use rotation of photographic frames, crops, typography groups and occasionally individual words to create a more dynamic, art-directed rhythm.** Rotation must have a visual or narrative purpose and must harmonize with the rest of the film; it is not a random preset.
+
+### Recommended mechanics
+- **Tilt-and-settle:** an image enters at a slight angle, translates and settles into a precise grid alignment. Preserve subject/framing and avoid overly elastic easing.
+- **Editorial diagonal composition:** a photo may remain deliberately tilted during a beat while the main headline stays horizontal and readable. The diagonal should create a directional relationship with the subject or photographic edge.
+- **Rotating type block:** a short, large headline rotates as one group around an intentional pivot while entering or exiting; use an upright hold for reading.
+- **Counter-rotation:** a moving or rotating photo and a headline can rotate in opposite directions with different timing so the overall composition balances. Do not create mirrored motion mechanically.
+- **Rotation-to-layout transition:** a tilted crop straightens and expands into the next scene or becomes a new image mask, preserving continuity of its corners and pivot.
+- **Controlled character rotation:** rotate an individual letter only if it reinforces a word's meaning or a specific choreography; never rotate every character merely for variation.
+- **Depth-motivated perspective:** subtle rotations and parallax can suggest a card moving in 2.5D, but avoid fake 3D spinning cards with no depth/lighting consistency.
+
+### Default art-direction ranges (suggestions, not hard limits)
+- For ordinary editorial photo tilts, explore roughly 2–8 degrees. Larger angles need a clear reason and enough overscan.
+- For headline groups, explore approximately 2–6 degrees during motion, then return to 0 degrees for longer text or information-heavy scenes.
+- Bold one- or two-word display statements can use stronger rotation if the text remains legible and the move fits the audio/narrative.
+- Alternate rotational accents with stable, precisely aligned scenes. **Do not rotate every scene** or repeat the same left-right tilt pattern.
+
+### Geometry and rendering requirements
+- Pick pivot deliberately: visual subject, meaningful word center, compositional corner or shared transition anchor; default center should not be assumed optimal.
+- Compute rotated bounds at all animation extrema, including easing overshoot. Add image overscan before rotation so black/transparent corners never enter the viewport accidentally.
+- Preserve text baseline spacing, glyph visibility and safe-zone clearance during motion; do not clip rotated ascenders/descenders with rectangular masks.
+- Use appropriate spatially coherent motion blur where supported; the absence of motion blur must not be disguised as simulated camera realism.
+- Keep text hierarchy readable in the hold frame and ensure motion does not obscure photo focal subjects.
+- Coordinate translation, scale and rotation as a single trajectory with a clear visual mass. Never animate each property with unrelated easing curves.
+- Do not use constant spins, frequent 180/360-degree text rotations, excessive oscillation, arbitrary bouncing, or tilted everything.
+- For every rotation plan, store `pivot`, `angle_curve`, `overscan`, `reason` and `settle_angle` in the motion plan; verify actual rendered output supports these features.
+
+### Variation planning
+Count `rotating_group`, `frame_tilt`, `counter_rotation` and `rotation_to_layout` as related but distinct mechanisms **only when their choreography and compositional effect really differ**. Rotating the same card left instead of right does not count as diversity.
+
+In a typical 4–6-scene reel, consider introducing rotation in one or two strategically chosen beats rather than all scenes. This is a discretionary creative starting point, not a quota.
+
+### Acceptance checks
+Review entry, maximum angle, readable hold and transition frames; assert no accidental clipping, no unsafe text placement, no unexpected matte corners and no conflicting simultaneous movement. A rotated result should look intentional when paused and coherent when played with sound.
 
 ## Selection algorithm: director-level criteria
 

@@ -50,9 +50,12 @@ class CameraCanvasRenderer:
             tile=self._tile(s,photo=True)
             self._paste(base,tile,self.stops[i])
         self.stages=[base.copy()]
+        self.local_typography=[]
         for i,s in enumerate(self.scenes):
+            tile=self._tile(s,photo=False)
+            self.local_typography.append(tile)
             new=self.stages[-1].copy()
-            self._paste(new,self._tile(s,photo=False),self.stops[i])
+            self._paste(new,tile,self.stops[i])
             self.stages.append(new)
 
     def _font(self,size,bold):
@@ -117,13 +120,49 @@ class CameraCanvasRenderer:
                                resample=Image.Resampling.BILINEAR).convert("RGBA")
 
     def render(self,built,time):
+        """Travel across preexisting canvas; reveal shot-local type only on arrival."""
+        from PIL import ImageChops
         i=built.index; cfg=self.scenes[i]["camera_canvas"]
         move=0 if i==0 else float(cfg.get("move_duration",.8))
         delay=float(cfg.get("reveal_delay",.18))
         duration=float(cfg.get("reveal_duration",.55))
         p=ease((time-move-delay)/duration)
         stop=self.camera(i,time)
-        old=self._frame(self.stages[i],stop)
-        if p<=0:return old.convert("RGB")
-        new=self._frame(self.stages[i+1],stop)
-        return Image.blend(old,new,p).convert("RGB")
+        base=self._frame(self.stages[i],stop)
+        if p<=0:return base.convert("RGB")
+
+        # At reveal time camera is settled. Typography is drawn in the
+        # target shot's camera-facing coordinates (not an unrelated slide).
+        overlay=self.local_typography[i].copy()
+        effect=cfg.get("typography_motion","fade")
+        if effect not in ("fade","slide-up","mask-rise","scale-focus"):
+            raise ValueError(f"Unsupported camera_canvas typography_motion: {effect}")
+        if effect=="mask-rise":
+            bounds=overlay.getbbox()
+            if bounds:
+                x1,y1,x2,y2=bounds
+                clip=Image.new("L",overlay.size,0)
+                ImageDraw.Draw(clip).rectangle(
+                    (x1,max(y1,int(y2-(y2-y1)*p)),x2,y2),fill=255)
+                overlay.putalpha(ImageChops.multiply(overlay.getchannel("A"),clip))
+        elif effect=="scale-focus":
+            scale=.91+.09*p
+            overlay=overlay.resize((max(1,int(overlay.width*scale)),
+                                    max(1,int(overlay.height*scale))),
+                                   Image.Resampling.BICUBIC)
+        else:
+            overlay.putalpha(overlay.getchannel("A").point(
+                lambda value:int(value*p)))
+        # A camera zoom >1 exposes more world space, so the local text
+        # contracts proportionally when rendered in screen coordinates.
+        zoom=stop[3]
+        if zoom!=1:
+            overlay=overlay.resize((max(1,int(overlay.width/zoom)),
+                                    max(1,int(overlay.height/zoom))),
+                                   Image.Resampling.BICUBIC)
+        x=(self.w-overlay.width)//2
+        y=(self.h-overlay.height)//2
+        if effect=="slide-up":
+            y+=round((1-p)*min(self.h*.085,62))
+        base.alpha_composite(overlay,(x,y))
+        return base.convert("RGB")

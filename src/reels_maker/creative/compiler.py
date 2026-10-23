@@ -21,6 +21,13 @@ def _auto_camera_points(shots,width,height):
             for px,py,a in poses]
 
 def _relative_asset(asset,source_dir,root,brand):
+    if brand and root is None:
+        source=Path(source_dir).resolve()
+        if "brands" not in source.parts:
+            raise CreativeSpecError("$.brand",
+                "Branded asset scopes require --root pointing to repository root")
+        idx=source.parts.index("brands")
+        root=Path(*source.parts[:idx]) if idx else Path("/")
     anchor=(Path(root)/"brands"/brand).resolve() if brand else Path(source_dir).resolve()
     path=Path(asset)
     candidate=(path if path.is_absolute() else anchor/path).resolve()

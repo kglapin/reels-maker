@@ -6,6 +6,12 @@ from unittest.mock import patch
 
 from PIL import Image
 
+try:  # pragma: no cover - environment probe (system cairo needed by cairosvg)
+    import cairocffi  # noqa: F401
+    _CAIRO = True
+except (ImportError, OSError):
+    _CAIRO = False
+
 from reels_maker.icon_library import (
     IconLibraryError, _validated, asset, raster,
 )
@@ -41,6 +47,7 @@ class IconLibraryTests(unittest.TestCase):
                 with self.assertRaises(IconLibraryError):
                     _validated(item)
 
+    @unittest.skipUnless(_CAIRO, "system cairo is not available (cairosvg)")
     def test_cache_and_recolour(self):
         with tempfile.TemporaryDirectory() as root:
             path = Path(root) / "lucide" / "0.468.0" / "outline" / "sun.svg"

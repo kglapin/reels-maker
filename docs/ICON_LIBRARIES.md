@@ -10,6 +10,28 @@ cached persistently and rasterizations are memoized during export.
 pip install -e '.[icons]'
 ```
 
+cairosvg needs the system cairo library at render time. On Debian/Ubuntu it is
+already present; on macOS install it with Homebrew:
+
+```bash
+brew install cairo
+```
+
+Put only the cairo libraries on the dynamic-loader path when running tests or
+renders locally. Pointing `DYLD_LIBRARY_PATH` at the whole Homebrew `lib/`
+directory makes the loader substitute Homebrew's freetype/fontconfig for the
+system copies, which changes PIL font antialiasing and desynchronizes the
+pixel-exact golden frames:
+
+```bash
+mkdir -p ~/.reels-maker/cairo-only
+for f in /opt/homebrew/lib/libcairo*.dylib; do ln -sf "$f" ~/.reels-maker/cairo-only/; done
+export DYLD_LIBRARY_PATH=~/.reels-maker/cairo-only
+```
+
+Without cairo available, the studio engine renders unchanged (icons are
+opt-in), and the icon regression test skips itself.
+
 No JavaScript runtime is needed. Python downloads original icons from their
 upstream GitHub release only when absent in the local cache
 (`~/.cache/reels-maker/icon-libraries/`). Cached SVGs render offline.

@@ -112,8 +112,8 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 | **MD-403** | P0 | fragmenty istnieją — zweryfikować | Platform profile registry, safe-zone masks, captions/subtitles and locale adjustments. | MD-203 |
 | **MD-404** | P0 | fragmenty istnieją — zweryfikować | Frame-based quality repair loop, deterministic rerender, limited retries, audit report. | MD-206; DM-007; MD-402 |
 | **MD-405** | P0 | fragmenty istnieją — zweryfikować | Full HD 1080x1920 30fps master + review/square/landscape and audio validation. | MD-403; MD-404 |
-| **MD-406** | P0 | fragmenty istnieją — zweryfikować | End-to-end brief->assets->render->rights/quality review->deliver test in a fresh runner. | MD-106; MD-405; MD-404; DM-008 |
 | **DM-008** | P0 | do wdrożenia | 4 credible example videos with original datasets and signed art-director review. | DM-006; DM-007; MD-403 |
+| **MD-406** | P0 | fragmenty istnieją — zweryfikować | End-to-end brief->assets->render->rights/quality review->deliver test in a fresh runner. | MD-106; MD-405; MD-404; DM-008 |
 
 **Warunek odbioru F4:** Brief -> legalne media i dane -> animacja -> audio -> MP4 -> QA -> telefon; wymagane demo wyników kampanii, finansów i OZE.
 

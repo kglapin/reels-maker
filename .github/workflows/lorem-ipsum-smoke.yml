@@ -1,0 +1,119 @@
+name: Lorem Ipsum - native renderer smoke test
+on:
+  push:
+    branches: [test/lorem-smoke-20261023]
+
+permissions:
+  contents: read
+
+jobs:
+  render-lorem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /pyproject.toml
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install engine
+        run: python -m pip install -e .
+      - name: Require FFmpeg
+        run: |
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+          ffmpeg -hide_banner -encoders | grep libx264
+      - name: Create synthetic footage and audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-media renders
+          for spec in '1 0x101519' '2 0x171C20' '3 0x121924' '4 0x101519'; do
+            read -r no bg <<< "$spec"
+            ffmpeg -hide_banner -loglevel error -y -f lavfi \
+              -i "color=c=${bg}:s=720x1280:r=25:d=2.5" \
+              -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
+              "smoke-media/shot-${no}.mp4"
+          done
+          ffmpeg -hide_banner -loglevel error -y -f lavfi \
+            -i "sine=frequency=180:sample_rate=44100:duration=8" \
+            -af "volume=0.025,afade=t=in:st=0:d=0.2,afade=t=out:st=7.2:d=0.8" \
+            -c:a pcm_s16le smoke-media/ambience.wav
+      - name: Write Lorem Ipsum manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          panels = [
+            (("LOREM", "IPSUM"), "rise_soft"),
+            (("DOLOR", "SIT AMET"), "slide_left"),
+            (("CONSECTETUR", "ELIT"), "fade_stagger"),
+            (("LOREM", "IPSUM"), "editorial_reveal")
+          ]
+          scenes = []
+          for i, (words, motion) in enumerate(panels, 1):
+              item = {
+                  "file": f"smoke-media/shot-{i}.mp4",
+                  "duration": 2.0,
+                  "title": {
+                      "headline": {"runs": [
+                          {"text": words[0], "scale": 0.86},
+                          {"text": words[1], "scale": 1.25, "color": "accent", "break_before": True}
+                      ]}
+                  },
+                  "motion": {
+                      "preset": motion,
+                      "duration_frames": 7,
+                      "stagger_frames": 2,
+                  }
+              }
+              if motion != "fade_stagger":
+                  item["motion"]["distance_px"] = 16
+              if i == 3:
+                  item["transition_in"] = {"type":"dissolve", "frames":4}
+              scenes.append(item)
+          project = {
+              "name": "lorem-ipsum-native-smoke",
+              "video": {"width":720, "height":1280, "fps":25},
+              "branding": {
+                  "accent": "#C7F95F",
+                  "font_family": "DejaVu Sans",
+                  "safe_areas": {
+                      "horizontal_pixels": 72,
+                      "top_pixels": 210,
+                      "bottom_pixels": 290
+                  }
+              },
+              "scenes": scenes,
+              "music": {"file":"smoke-media/ambience.wav","volume":0.3,"fade_out":0.7},
+              "output": "renders/lorem-ipsum-native.mp4"
+          }
+          Path("lorem-ipsum.json").write_text(json.dumps(project,indent=2)+"\n")
+          PY
+      - name: Syntax and quality validation
+        run: reels-maker validate lorem-ipsum.json --root . --syntax-only --strict-quality --json
+      - name: Media preflight
+        run: reels-maker validate lorem-ipsum.json --root . --json
+      - name: Render via repository engine
+        run: reels-maker render lorem-ipsum.json --root . --jobs 2 --strict-quality --json
+      - name: Verify actual MP4 and make storyboard
+        run: |
+          reels-maker verify lorem-ipsum.json --video renders/lorem-ipsum-native.mp4 --json
+          reels-maker inspect renders/lorem-ipsum-native.mp4 --json
+          reels-maker storyboard lorem-ipsum.json --video renders/lorem-ipsum-native.mp4 --output renders/lorem-ipsum-storyboard.png --json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lorem-ipsum-native-mp4
+          path: |
+            renders/lorem-ipsum-native.mp4
+            renders/lorem-ipsum-storyboard.png
+            lorem-ipsum.json
+          if-no-files-found: error
+          retention-days: 14

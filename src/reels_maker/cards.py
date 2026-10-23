@@ -53,8 +53,32 @@ def _wrap(draw, value: str, face, width: int) -> list[str]:
     return result
 
 
+def resolve_title_style(project: Project, title: dict) -> dict:
+    """Apply an opt-in, brand-owned creative profile to a single scene.
+
+    Profiles avoid silently restyling existing videos; explicit scene settings
+    always win. Unrecognized profile names are a hard failure, not a fallback.
+    """
+    name = title.get("profile")
+    if name is None:
+        return title
+    profiles = project.branding.get("editorial_profiles", {})
+    if not isinstance(profiles, dict) or name not in profiles:
+        raise RenderError(f"Unknown editorial title profile: {name!r}")
+    preset = profiles[name]
+    if not isinstance(preset, dict):
+        raise RenderError(f"Invalid editorial title profile: {name!r}")
+    allowed = {"theme", "position", "headline_style", "backdrop", "logo"}
+    if set(preset) - allowed:
+        raise RenderError("Editorial title profile has unsupported settings")
+    return {**preset, **title}
+
+
 def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
               layers: list[dict] | None = None) -> bool:
+    title = resolve_title_style(project, title)
+    if title.get("logo", True) is False:
+        logo = None
     if not any(title.get(k) for k in ("kicker", "headline", "body", "footer")) and logo is None:
         return False
 

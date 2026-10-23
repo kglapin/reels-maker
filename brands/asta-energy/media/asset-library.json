@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "note": "Library entries carry only facts verified in this repository (licenses from brands/asta-energy/licensing/stock_credits.txt; editorial_state from media/asset-reviews.json frame inspections on 2026-10-23). Assets whose rights are not yet documented are intentionally absent rather than listed with guessed metadata.",
+  "entries": [
+    {
+      "id": "agrivoltaics-heggelbach-01",
+      "kind": "footage",
+      "file": "media/stock/agrivoltaics_heggelbach_01.webm",
+      "source": "https://commons.wikimedia.org/wiki/File:Agrivoltaics_pilot_plant_at_Heggelbach_Farm_in_Germany_01.webm",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "resolution": [1920, 1080],
+      "topics": ["pv", "agrivoltaics", "aerial"],
+      "editorial_state": "reviewed",
+      "review": {
+        "by": "agent frame inspection, pending owner sign-off",
+        "date": "2026-10-23"
+      }
+    },
+    {
+      "id": "agrivoltaics-heggelbach-05",
+      "kind": "footage",
+      "file": "media/stock/agrivoltaics_heggelbach_05.webm",
+      "source": "https://commons.wikimedia.org/wiki/File:Agrivoltaics_pilot_plant_at_Heggelbach_Farm_in_Germany_05.webm",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "resolution": [1920, 1080],
+      "topics": ["pv", "agrivoltaics", "aerial"],
+      "editorial_state": "reviewed",
+      "review": {
+        "by": "agent frame inspection, pending owner sign-off",
+        "date": "2026-10-23"
+      }
+    }
+  ]
+}

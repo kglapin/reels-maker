@@ -161,6 +161,23 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--force", action="store_true",
                       help="Overwrite an existing draft manifest")
     plan.add_argument("--json", action="store_true")
+    library = commands.add_parser("library",
+        help="Validate a reviewed asset-library manifest (license metadata is "
+             "mandatory)")
+    library.add_argument("manifest", type=Path, help="asset-library.json path")
+    library.add_argument("--json", action="store_true")
+    brand_init = commands.add_parser("brand-init",
+        help="Scaffold a new brand directory with placeholder identity "
+             "(no media, no invented content)")
+    brand_init.add_argument("slug", help="lowercase brand slug")
+    brand_init.add_argument("--name", required=True, help="Readable brand name")
+    brand_init.add_argument("--accent", required=True,
+                            help="Verified brand accent colour, #RRGGBB")
+    brand_init.add_argument("--root", type=Path, default=ROOT,
+                            help="Repository root containing brands/")
+    brand_init.add_argument("--force", action="store_true",
+                            help="Replace an existing brand directory")
+    brand_init.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -356,6 +373,14 @@ def main(argv: list[str] | None = None) -> int:
                 result = make_storyboard(load_project(args.project), args.video,
                                          args.output, columns=args.columns,
                                          motion_strip=args.motion_strip)
+        elif args.command == "library":
+            from .library import check_library
+            result = {"library": check_library(args.manifest)}
+        elif args.command == "brand-init":
+            from .brand import init_brand
+            result = {"brand_init": init_brand(
+                args.slug, name=args.name, accent=args.accent,
+                root=args.root, force=args.force)}
         else:
             project = load_project(args.project)
             if args.command == "validate":

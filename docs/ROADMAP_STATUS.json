@@ -1,7 +1,7 @@
 {
-  "current_milestone": "M11 - Flagship demos, formal approval and v1.0 delivery",
-  "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
-  "next_action": "Local: pull-integration of 97 upstream creative commits verified end-to-end (goldens recaptured for Lucide icons/camera-canvas/decor pruning, icon test skip-guarded without cairo, macOS DYLD pitfall documented); Owner: phone/rubric review and creative/licensing gates",
+  "current_milestone": "F0 — Zintegrowany plan MD + DM: audyt kodu, katalogu funkcji i referencji jakości",
+  "status": "Plan 2.0 scalony w jednym źródle prawdy; wdrożenie 64 pakietów MD/DM NIE jest zakończone. Historyczne wyniki wydania v1 poniżej nie stanowią zatwierdzenia nowego zakresu.",
+  "next_action": "Wykonać MD-001–005; zinwentaryzować kod i stan licencji/mediów, zweryfikować referencje, przejść do F1 MD-101–106 i DM-001–003. Sprawdzić prywatność repozytorium przed importem materiałów klientów.",
   "current_branch": "main",
   "latest_commit": "integration: upstream creative commits verified end-to-end, goldens recaptured, cairo regression test skip-guarded",
   "branch_up_to_date": true,
@@ -75,25 +75,131 @@
     "kinetic": "kinetic-render --engine studio adapts a legacy amount manifest; Cairo remains default",
     "classic_video": "render --title-engine studio composites animated RGBA scene-graph titles over moving source video; H.264/cache-key/audio tests and reviewed CC0 logo/backdrop comparison pass",
     "classic_parity_manifest": "brands/asta-energy/projects/asta-title-overlay-studio-parity.json (reviewed CC0 source; strict validation pass)",
-    "comparison_outputs": ["renders/asta-energy/qa/studio-title-overlay-parity-legacy.png", "renders/asta-energy/qa/studio-title-overlay-parity-studio.png"],
+    "comparison_outputs": [
+      "renders/asta-energy/qa/studio-title-overlay-parity-legacy.png",
+      "renders/asta-energy/qa/studio-title-overlay-parity-studio.png"
+    ],
     "remaining": "wider brand/profile parity, real audio and default-path migration review",
     "audio_and_cache_parity": "Same classic manifest rendered under both title engines: AAC codec, duration within 0.05s and mean volume within 0.4 dB (test_classic_audio_mix_matches_across_title_engines); brand-token accent flows into studio overlay nodes (test_brand_tokens_drive_studio_title_overlay_visuals); parity-clip cold/warm benchmark in timings_seconds: cold scene_encoding 1.5387s / total 1.6707s, warm 0.0s / 0.1203s with cache_hits=1"
   },
   "motion_design_backlog": [
-    {"id": "MD-01", "priority": "P0", "status": "partial_reference_board_delivered", "task": "docs/REFERENCE_BOARD.md: 18 annotated references with verified links, 10-rule design grammar, 10 negative examples; before/after benchmark blocked on owner-supplied ~35.55s original ASTA reel"},
-    {"id": "MD-02", "priority": "P0", "status": "partial_real_footage_overlay_pass", "task": "Opt-in kinetic adapter and classic moving-video title overlay; reviewed CC0 legacy/studio comparison, AAC audio parity (duration/volumedetect), brand-token overlay isolation and cold/warm cache benchmark (1.67s vs 0.12s) pass; default migration remains"},
-    {"id": "MD-03", "priority": "P0", "status": "partial_aspect_matrix_passed", "task": "Portrait/square/landscape build, geometry QA and real MP4 contact sheets passed; phone/real-footage review pending"},
-    {"id": "MD-04", "priority": "P1", "status": "partial_exit_choreography", "task": "Hold-preserving pure-fade exits planned in choreography with reading-hold QA measured to fade onset; morph/match-cut/parallax deliberately deferred; footage acceptance still owner-owned"},
-    {"id": "MD-05", "priority": "P1", "status": "partial_library_validator", "task": "asset-library.json validator (mandatory license/resolution/topics/review metadata, duplicate-shot and lottie guards) plus a first CC0-only ASTA library; external sourcing and Lottie support remain blocked"},
-    {"id": "MD-06", "priority": "P1", "status": "partial_pixabay_verified", "task": "reels-maker pixabay verified end-to-end: agent-assisted discovery (Cloudflare on pages/bootstrap) + autonomous CDN MP3 download into the imports quarantine with Pixabay Content License metadata; licensed narrator recording and approved mix remain blocked"},
-    {"id": "MD-07", "priority": "P1", "status": "partial_planner_delivered", "task": "reels-maker plan: explainable deterministic brief-to-manifest planner with copy/contact/metric invention guards and reviewed-media-only selection; real-brand brief still needs owner-approved copy"},
-    {"id": "MD-08", "priority": "P0", "status": "partial_golden_frames", "task": "Studio golden-strip fixtures (5 demo scenes x entry/settle/exit, exact-pixel verify + mutation negative), transition-cycle and preview audit tests; MP4-level transition strips and more profiles remain"},
-    {"id": "MD-09", "priority": "P0", "status": "partial_per_scene_cache", "task": "Opt-in per-scene segment cache with signature invalidation, corrupt-cache atomic recovery and final-profile 1080x1920 smoke; owner-footage benchmark suite remains"},
-    {"id": "MD-10", "priority": "P0", "status": "partial_brand_init_scaffold", "task": "brand-init scaffolds immediately usable brand directories (accent-driven palette, no media, never silently overwritten) on top of synthetic isolation tests; real brand renders and human review pending"},
-    {"id": "MD-11", "priority": "P0", "status": "partial_code_release_authorized", "task": "Owner authorized code push to GitHub main on 2026-10-23; per-delivery media rights, claims and phone/rubric review remain owner gates"}
+    {
+      "id": "MD-01",
+      "priority": "P0",
+      "status": "partial_reference_board_delivered",
+      "task": "docs/REFERENCE_BOARD.md: 18 annotated references with verified links, 10-rule design grammar, 10 negative examples; before/after benchmark blocked on owner-supplied ~35.55s original ASTA reel"
+    },
+    {
+      "id": "MD-02",
+      "priority": "P0",
+      "status": "partial_real_footage_overlay_pass",
+      "task": "Opt-in kinetic adapter and classic moving-video title overlay; reviewed CC0 legacy/studio comparison, AAC audio parity (duration/volumedetect), brand-token overlay isolation and cold/warm cache benchmark (1.67s vs 0.12s) pass; default migration remains"
+    },
+    {
+      "id": "MD-03",
+      "priority": "P0",
+      "status": "partial_aspect_matrix_passed",
+      "task": "Portrait/square/landscape build, geometry QA and real MP4 contact sheets passed; phone/real-footage review pending"
+    },
+    {
+      "id": "MD-04",
+      "priority": "P1",
+      "status": "partial_exit_choreography",
+      "task": "Hold-preserving pure-fade exits planned in choreography with reading-hold QA measured to fade onset; morph/match-cut/parallax deliberately deferred; footage acceptance still owner-owned"
+    },
+    {
+      "id": "MD-05",
+      "priority": "P1",
+      "status": "partial_library_validator",
+      "task": "asset-library.json validator (mandatory license/resolution/topics/review metadata, duplicate-shot and lottie guards) plus a first CC0-only ASTA library; external sourcing and Lottie support remain blocked"
+    },
+    {
+      "id": "MD-06",
+      "priority": "P1",
+      "status": "partial_pixabay_verified",
+      "task": "reels-maker pixabay verified end-to-end: agent-assisted discovery (Cloudflare on pages/bootstrap) + autonomous CDN MP3 download into the imports quarantine with Pixabay Content License metadata; licensed narrator recording and approved mix remain blocked"
+    },
+    {
+      "id": "MD-07",
+      "priority": "P1",
+      "status": "partial_planner_delivered",
+      "task": "reels-maker plan: explainable deterministic brief-to-manifest planner with copy/contact/metric invention guards and reviewed-media-only selection; real-brand brief still needs owner-approved copy"
+    },
+    {
+      "id": "MD-08",
+      "priority": "P0",
+      "status": "partial_golden_frames",
+      "task": "Studio golden-strip fixtures (5 demo scenes x entry/settle/exit, exact-pixel verify + mutation negative), transition-cycle and preview audit tests; MP4-level transition strips and more profiles remain"
+    },
+    {
+      "id": "MD-09",
+      "priority": "P0",
+      "status": "partial_per_scene_cache",
+      "task": "Opt-in per-scene segment cache with signature invalidation, corrupt-cache atomic recovery and final-profile 1080x1920 smoke; owner-footage benchmark suite remains"
+    },
+    {
+      "id": "MD-10",
+      "priority": "P0",
+      "status": "partial_brand_init_scaffold",
+      "task": "brand-init scaffolds immediately usable brand directories (accent-driven palette, no media, never silently overwritten) on top of synthetic isolation tests; real brand renders and human review pending"
+    },
+    {
+      "id": "MD-11",
+      "priority": "P0",
+      "status": "partial_code_release_authorized",
+      "task": "Owner authorized code push to GitHub main on 2026-10-23; per-delivery media rights, claims and phone/rubric review remain owner gates"
+    }
   ],
   "test_count": 269,
   "files_added": 12,
   "current_date": "2026-10-23",
-  "version": "1.0"
+  "version": "1.0",
+  "canonical_master_plan": "docs/MASTER_PLAN.md",
+  "integrated_roadmap": {
+    "version": "2.0",
+    "updated_on": "2026-10-23",
+    "source_of_truth": "docs/MASTER_PLAN.md",
+    "source_roadmaps_retired": [
+      "docs/PRO_MOTION_ROADMAP_2026.md",
+      "docs/DATA_MOTION_DESIGN.md"
+    ],
+    "historical_master_archive": "docs/MASTER_PLAN_LEGACY_V1.md",
+    "total_packages": 64,
+    "motion_packages": 44,
+    "data_packages": 20,
+    "phases": [
+      {
+        "id": "F0",
+        "tasks": 5
+      },
+      {
+        "id": "F1",
+        "tasks": 9
+      },
+      {
+        "id": "F2",
+        "tasks": 6
+      },
+      {
+        "id": "F3",
+        "tasks": 10
+      },
+      {
+        "id": "F4",
+        "tasks": 7
+      },
+      {
+        "id": "F5",
+        "tasks": 18
+      },
+      {
+        "id": "F6",
+        "tasks": 9
+      }
+    ],
+    "verified_implementation_progress": "not audited against consolidated acceptance criteria",
+    "status_rule": "Existing code or green CI alone does not mean a package is creatively approved.",
+    "priority": "P0 foundation before P1 advanced motion and P2 optional 3D"
+  },
+  "historical_status_notice": "Existing completed_gates, pending_g11, flagship_deliveries, local_tests, experimental_motion_system and motion_design_backlog refer to earlier v1 history; they are not the canonical current MD/DM task board."
 }

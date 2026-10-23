@@ -138,6 +138,34 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
     return node
 
 
+def apply_exit(node: Node, onset: float, duration: float,
+               tokens: DesignTokens, *, drift_px: float | None = None) -> Node:
+    """Restrained, motivated exit fade (reference-board grammar #3).
+
+    The exit is a pure opacity fade: quieter than any entrance, no new motion
+    axis, no positional drift (late drift can push settled type out of the
+    safe area — verified by QA sampling). onset/duration must have been
+    planned so the full reading hold precedes the fade.
+    """
+    if duration <= 0:
+        raise ValueError("Exit duration must be positive")
+    if onset < 0:
+        raise ValueError("Exit onset must be nonnegative")
+    end = onset + duration
+    opacity = node.tracks.get("opacity")
+    if opacity is None:
+        node.track("opacity", Track([Keyframe(onset, 1.0, "out-quad"),
+                                     Keyframe(end, 0.0, "out-quad")]))
+    else:
+        current = float(opacity.value(onset))
+        easing = opacity.keys[-1].easing
+        opacity.add(onset, current, easing)
+        opacity.add(end, 0.0, "out-quad")
+    node.meta["exit_onset"] = round(onset, 4)
+    node.meta["exit_duration"] = round(duration, 4)
+    return node
+
+
 def camera_track(duration: float, intensity: float = .06,
                  direction: str = "push-in") -> dict[str, Track]:
     """Subtle photo camera motion. Never a fast zoom or a whip pan."""

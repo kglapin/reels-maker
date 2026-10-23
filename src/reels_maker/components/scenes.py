@@ -19,7 +19,7 @@ from ..design.tokens import DesignTokens
 from ..layout.engine import Rect
 from ..motionkit.choreography import ElementSpec
 from ..motionkit.keyframes import Keyframe, Track
-from ..motionkit.presets import apply_entrance
+from ..motionkit.presets import apply_entrance, apply_exit
 from ..textkit.typesetter import Run, TextBlock, TextStyle, fit_text, typeset
 from . import icons
 from .base import (
@@ -339,6 +339,9 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
                            ctx.tokens, seed=ctx.seed)
             node.meta["motion"] = entry.preset
             node.meta["onset"] = round(entry.onset, 4)
+        exit_entry = plan.exits.get(role)
+        if exit_entry:
+            apply_exit(node, exit_entry.onset, exit_entry.duration, ctx.tokens)
     return BuiltScene(
         index=ctx.scene_index, scene=scene, context=ctx, layout=layout,
         background=background, nodes=(decor or []) + list(elements.values()),

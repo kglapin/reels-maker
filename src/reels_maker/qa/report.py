@@ -165,12 +165,17 @@ def audit(project, built_scenes, timeline: Timeline, *,
                     "Remove the empty layer from the composition."))
         # -------------------------------------------------------------- timing
         for role, entry in built.choreography.entries.items():
-            window = built.duration - entry.settle
+            exit_entry = built.choreography.exits.get(role)
+            # A planned exit keeps the reading window intact: hold counts up
+            # to the fade onset, not to the cut.
+            readable_until = (exit_entry.onset if exit_entry
+                              else built.duration)
+            window = readable_until - entry.settle
             if window < MIN_HOLD:
                 scene_issues.append(Issue(
                     "reading_hold_short", "error",
-                    (f"{role!r} settles with only {window:.2f}s before the cut "
-                     f"(minimum {MIN_HOLD:.2f}s)."),
+                    (f"{role!r} settles with only {window:.2f}s readable "
+                     f"hold (minimum {MIN_HOLD:.2f}s)."),
                     built.index + 1, round(entry.settle, 3), [role],
                     "Move the cue earlier, shorten the entrance or extend the shot.",
                     round(entry.settle * timeline.fps)))

@@ -13,7 +13,7 @@ from typing import Iterable, Mapping
 from ..core.scene_graph import Node
 from ..design.styles import STYLE_SYSTEMS
 from ..design.tokens import DesignTokens
-from .presets import PRESETS, apply_entrance, canonical_preset
+from .presets import PRESETS, apply_entrance, apply_exit, canonical_preset
 
 
 @dataclass(frozen=True)
@@ -44,11 +44,25 @@ class EntranceTiming:
         return self.onset + self.duration
 
 
+@dataclass(frozen=True)
+class ExitTiming:
+    """Restrained, motivated fade-out shortly before the cut.
+
+    Reference-board grammar #3: exits are fewer and quieter than entrances.
+    A scene only gets an exit when the full reading hold survives before the
+    fade starts; otherwise the element runs to the cut unchanged.
+    """
+    role: str
+    onset: float
+    duration: float
+
+
 @dataclass
 class Choreography:
     entries: dict[str, EntranceTiming]
     warnings: list[dict] = field(default_factory=list)
     scene_index: int = 0
+    exits: dict[str, ExitTiming] = field(default_factory=dict)
 
     def timing(self, role: str) -> EntranceTiming:
         if role not in self.entries:
@@ -65,6 +79,9 @@ class Choreography:
                                entry.duration, tokens, seed=seed)
                 node.meta["motion"] = entry.preset
                 node.meta["onset"] = round(entry.onset, 4)
+            if role in self.exits:
+                exit_entry = self.exits[role]
+                apply_exit(node, exit_entry.onset, exit_entry.duration, tokens)
             result[role] = node
         return result
 
@@ -78,6 +95,11 @@ class Choreography:
                        "preset": item.preset,
                        "explicit": item.explicit}
                 for role, item in self.entries.items()
+            },
+            "exits": {
+                role: {"onset": round(item.onset, 4),
+                       "duration": round(item.duration, 4)}
+                for role, item in self.exits.items()
             },
             "warnings": list(self.warnings),
         }
@@ -196,7 +218,25 @@ def plan_choreography(elements: Iterable[ElementSpec], *,
                         first.role, second.onset, first.duration, first.preset)
                     entries[support.role] = EntranceTiming(
                         second.role, first.onset, second.duration, second.preset)
-    return Choreography(entries, warnings, scene_index)
+    # Restrained exits (reference-board grammar #3). An element only fades
+    # out when the complete reading hold still fits between its settle and
+    # the fade onset; otherwise it runs unchanged to the cut.
+    exits: dict[str, ExitTiming] = {}
+    exit_duration = max(0.0, float(tokens.motion.exit))
+    if exit_duration > 0:
+        for spec in specs:
+            if spec.kind == "decor":
+                continue
+            entry = entries.get(spec.role)
+            if entry is None:
+                continue
+            window = scene_duration - entry.settle
+            if window - exit_duration < hold:
+                continue
+            exits[spec.role] = ExitTiming(
+                spec.role, round(scene_duration - exit_duration, 4),
+                round(exit_duration, 4))
+    return Choreography(entries, warnings, scene_index, exits)
 
 
 def variety_report(plans: Iterable[Choreography]) -> dict:

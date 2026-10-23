@@ -8,7 +8,7 @@
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
   "ci_status": "Latest observed workflows on feat/kinetic-motion-primitives-20261023 succeeded; no CI run for the current local prototype branch",
-  "local_tests": "166 passed in 49.17s (four golden-frame/transition/profile tests added; 2026-10-23)",
+  "local_tests": "173 passed in 47.37s (seven exit-choreography tests added; golden strips recaptured after the intended change; 2026-10-23)",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
@@ -83,7 +83,7 @@
     {"id": "MD-01", "priority": "P0", "status": "partial_reference_board_delivered", "task": "docs/REFERENCE_BOARD.md: 18 annotated references with verified links, 10-rule design grammar, 10 negative examples; before/after benchmark blocked on owner-supplied ~35.55s original ASTA reel"},
     {"id": "MD-02", "priority": "P0", "status": "partial_real_footage_overlay_pass", "task": "Opt-in kinetic adapter and classic moving-video title overlay; reviewed CC0 legacy/studio comparison, AAC audio parity (duration/volumedetect), brand-token overlay isolation and cold/warm cache benchmark (1.67s vs 0.12s) pass; default migration remains"},
     {"id": "MD-03", "priority": "P0", "status": "partial_aspect_matrix_passed", "task": "Portrait/square/landscape build, geometry QA and real MP4 contact sheets passed; phone/real-footage review pending"},
-    {"id": "MD-04", "priority": "P1", "status": "partial", "task": "Reference-backed motion gaps and choreography acceptance"},
+    {"id": "MD-04", "priority": "P1", "status": "partial_exit_choreography", "task": "Hold-preserving pure-fade exits planned in choreography with reading-hold QA measured to fade onset; morph/match-cut/parallax deliberately deferred; footage acceptance still owner-owned"},
     {"id": "MD-05", "priority": "P1", "status": "partial", "task": "Licensed product visuals and Lottie/dotLottie integration"},
     {"id": "MD-06", "priority": "P1", "status": "partial_blocked_rights", "task": "Real manually spotted narration, licensed music/SFX and listening report"},
     {"id": "MD-07", "priority": "P1", "status": "partial_planner_delivered", "task": "reels-maker plan: explainable deterministic brief-to-manifest planner with copy/contact/metric invention guards and reviewed-media-only selection; real-brand brief still needs owner-approved copy"},
@@ -92,7 +92,7 @@
     {"id": "MD-10", "priority": "P0", "status": "partial_synthetic_isolation", "task": "Synthetic three-brand palette/style isolation passes, including classic-video studio title overlays driven by brand tokens; real brand renders and human review pending"},
     {"id": "MD-11", "priority": "P0", "status": "blocked_owner", "task": "Privacy, rights, claims, phone review and release approval"}
   ],
-  "test_count": 166,
+  "test_count": 173,
   "files_added": 12,
   "current_date": "2026-10-23",
   "version": "1.0"

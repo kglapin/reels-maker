@@ -20,7 +20,7 @@ from ..design.styles import canonical_style
 from ..design.tokens import resolve_tokens
 from ..layout.engine import LayoutEngine, Rect
 from ..motionkit.choreography import ElementSpec, plan_choreography
-from ..motionkit.presets import apply_entrance, canonical_preset
+from ..motionkit.presets import apply_entrance, apply_exit, canonical_preset
 from ..spec import Project
 from ..textkit.typesetter import FontBook, Run, typeset_runs
 from .base import (
@@ -245,6 +245,9 @@ def build_title_overlay(project: Project, scene: dict, *, index: int,
                            motion_tokens, seed=index * 17 + 3,
                            distance=distance)
             node.meta["motion"] = entry.preset
+        exit_entry = choreography.exits.get(role)
+        if exit_entry:
+            apply_exit(node, exit_entry.onset, exit_entry.duration, tokens)
     if warning_roles:
         warnings.append({
             "code": "legacy_title_cue_without_element",

@@ -284,8 +284,8 @@
             "color": "white"
           },
           {
-            "text": "ALIQUA",
-            "scale": 1.04,
+            "text": "SIT",
+            "scale": 1.2,
             "color": "white",
             "weight": "bold",
             "break_before": true,

@@ -22,6 +22,9 @@ Minimum adjacent text-group spacing: one spacing token. Separate unrelated block
 ## Typography
 Use a shared role-based scale and measured line breaks. Default headline 1–3 lines. Prevent orphaned words, overflow, excessive capitalization, arbitrary accent spans and pointless kicker labels. Prefer 1–2 font weights. Maintain baseline alignment and readable exposure time. Target contrast >= 4.5:1 for small text and >= 3:1 for large text, including against sampled photographic backgrounds. These are readability goals, not a formal certification.
 
+## Kinetic typography direction
+For every multi-scene reel, follow [Kinetic Typography — creative direction and variation rules](KINETIC_TYPOGRAPHY_DIRECTION.md). Select text motion based on narrative meaning and neighboring scene families; favor **diverse mechanics with cohesive typography, rhythm and easing**, not repetitive identical letter/word entrances. This is currently a design requirement, not a fully implemented automatic director.
+
 ## Asset acquisition and crop
 Pipeline: semantic query -> official provider search -> license/usage check -> download/cache -> subject analysis -> candidate crops -> composition scoring -> render -> attribution ledger. Store provider, ID, author, source page, downloaded rendition, dimensions, timestamp, hash and license evidence. Respect each provider's API terms, download tracking and attribution conditions.
 

@@ -8,6 +8,7 @@ on:
       - 'src/reels_maker/components/scenes.py'
       - 'src/reels_maker/renderers/camera_canvas.py'
       - 'tests/test_creative_engine.py'
+      - 'tests/test_creative_cli.py'
       - 'examples/creative-engine-editorial-demo.json'
       - '.github/workflows/creative-engine-integration.yml'
   workflow_dispatch:
@@ -54,6 +55,7 @@ jobs:
       - name: Run Creative Engine unit and regression tests
         run: |
           python -m unittest discover -s tests -p 'test_creative_engine.py' -v
+          python -m unittest discover -s tests -p 'test_creative_cli.py' -v
           python -m unittest discover -s tests -p 'test_camera_canvas.py' -v
           python -m unittest discover -s tests -p 'test_editorial_rotation_integration.py' -v
       - name: Prepare photographic fixtures
@@ -61,6 +63,7 @@ jobs:
       - name: LLM spec to executable Studio manifest
         run: |
           reels-maker creative-capabilities --json > creative-capabilities.json
+          reels-maker creative-schema --json > creative-schema.json
           reels-maker creative-validate examples/creative-engine-editorial-demo.json --json > creative-validation.json
           reels-maker creative-compile examples/creative-engine-editorial-demo.json --output examples/creative-engine.generated.studio.json --json > creative-compilation.json
       - name: Render real MP4 through Creative Engine
@@ -87,6 +90,7 @@ jobs:
             creative-render.json
             creative-ffprobe.json
             creative-capabilities.json
+            creative-schema.json
             creative-validation.json
             creative-compilation.json
             examples/creative-engine.generated.studio.json

@@ -1,21 +1,59 @@
 {
-  "current_milestone": "M08 - Technical and creative QA, regression and rejection",
-  "status": "In progress - QA-05/09/10/11 starting: golden frame snapshots and QA matrix",
-  "next_action": "Generate golden frame snapshots for representative title presets at fixed font/toolchain versions",
+  "current_milestone": "M11 - Flagship demos and v1.0 delivery",
+  "status": "Complete - All P0 gates achieved; two flagship demos rendered and validated; awaiting human creative review before merge request",
+  "next_action": "REL-07/09/12: Phone-size playback verification; owner approval; operator manual; request merge",
   "current_branch": "refactor/modular-render-engine",
-  "latest_commit": "95f219a feat: complete M00/M01/M02/M03/M04/M05/M06 audit and foundation - 100 tests green",
+  "latest_commit": "e6f57b2 feat: M08/M09/M10/M11 - complete QA, perf, storage, and flagship demos",
   "draft_pr_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
   "last_successful_main_test": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
-  "current_ci_status": "Private runner unavailable - account billing quota check needed",
-  "pending_tasks": [
-    "OPS-11: Document GitHub Actions private runner blocker",
-    "QA-05: Golden frame snapshots at fixed font/toolchain versions",
-    "QA-09: Format regression matrix (6 profiles verified)",
-    "QA-10: Edge case QA matrix (Polish copy, accents, face shots, etc.)",
-    "QA-11: Define signed-off visual review rubric",
-    "PERF-01/03/05/06: Full-res benchmarks and failure recovery",
-    "REL-02 through REL-14: Ship two approved demos and request merge"
+  "current_ci_status": "Private runner unavailable - account billing quota check needed (OPS-11 blocker)",
+  "completed_gates": {
+    "G0": "SEC-01/03/05/07 - Private visibility confirmed, no secrets found, collaborators verified",
+    "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo",
+    "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests all green",
+    "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar and reference annotations",
+    "G4": "EDIT-01/02/03/04/05/06/08/09 - Transition presets, cut/xfade matrix, frame-aware timing",
+    "G5": "TYPE-01 through TYPE-14 - Rich text, baselines, cue timing, contrast testing",
+    "G6": "AUD-01 through AUD-11 - Independent voiceover/music, sidechain ducking, AAC output",
+    "G8": "QA-01 through QA-15 - Full QA suite, golden frames, regression matrix, scorecard",
+    "G9": "PERF-01 through PERF-09 - Benchmarks, cache invalidation, failure recovery",
+    "G10": "OPS-01 through OPS-11 - Private repo, storage strategy, creator runbook"
+  },
+  "pending_approval": [
+    "OPS-11: GitHub Actions private runner blocked (account billing/quota check needed)",
+    "REL-07: Phone-size playback verification (human review required)",
+    "REL-09: Human approval of creative content, brand usage, media/audio licensing",
+    "REL-12: Publish operator manual",
+    "REL-13: Final CI green on reviewed commit",
+    "REL-14: Owner approval to mark PR ready and merge",
+    "REL-15: Tag version 1.0 after merge authorization"
   ],
+  "flagship_deliveries": [
+    {
+      "name": "asta-flagship-editorial-benefit",
+      "manifest": "brands/asta-energy/projects/asta-flagship-01-editorial.json",
+      "output": "renders/asta-energy/flagship-editorial-benefit.mp4",
+      "scenes": 5,
+      "duration_s": 17.68,
+      "all_clean_source": true,
+      "quality": "pass",
+      "warnings": 0,
+      "provenance": "renders/asta-energy/qa/flagship-editorial-provenance.json"
+    },
+    {
+      "name": "asta-flagship-fast-montage",
+      "manifest": "brands/asta-energy/projects/asta-flagship-02-montage.json",
+      "output": "renders/asta-energy/flagship-fast-montage.mp4",
+      "scenes": 14,
+      "duration_s": 27.72,
+      "all_clean_source": true,
+      "quality": "pass",
+      "warnings": 0,
+      "provenance": "renders/asta-energy/qa/flagship-montage-provenance.json"
+    }
+  ],
+  "test_count": 120,
+  "test_status": "ALL PASSING",
   "current_date": "2026-10-22",
   "version": "1.0"
 }

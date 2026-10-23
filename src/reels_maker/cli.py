@@ -208,6 +208,9 @@ def main(argv: list[str] | None = None) -> int:
     creative_caps = commands.add_parser(
         "creative-capabilities", help="Versioned capability registry for LLM callers")
     creative_caps.add_argument("--json", action="store_true")
+    creative_schema = commands.add_parser(
+        "creative-schema", help="Export JSON Schema for LLM structured outputs")
+    creative_schema.add_argument("--json", action="store_true")
 
     creative_val = commands.add_parser(
         "creative-validate", help="Validate Creative Spec v1 and perform asset/geometry QA")
@@ -245,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
-        if args.command in ("creative-capabilities", "creative-validate",
+        if args.command in ("creative-capabilities", "creative-schema", "creative-validate",
                             "creative-compile", "creative-edit", "creative-render"):
             import tempfile
             from .creative.registry import capabilities
@@ -255,6 +258,9 @@ def main(argv: list[str] | None = None) -> int:
             from .creative.edit import edit_creative_spec
             if args.command=="creative-capabilities":
                 result=capabilities()
+            elif args.command=="creative-schema":
+                from .creative.schema import creative_json_schema
+                result={"json_schema":creative_json_schema()}
             else:
                 spec=json.loads(args.spec.read_text(encoding="utf-8"))
                 if args.command=="creative-edit":

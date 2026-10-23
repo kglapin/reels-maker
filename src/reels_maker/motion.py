@@ -33,12 +33,17 @@ def compose_motion(vf: str, fps: int, scene_frames: int, background,
         # Alpha fade and a modest vertical translation, both opt-in.
         delay = schedule.starts[roles[index]] / fps
         seconds = duration / fps
+        # A kinetic rise starts visibly faster than the restrained editorial
+        # style and completes before its text reading hold. Timing is still
+        # frame-accurate and independently checked by the cue scheduler.
+        if preset == "kinetic_rise":
+            seconds = max(1 / fps, seconds * .72)
         # FFmpeg overlay evaluates y on each frame. Escape commas in expressions.
         progress = (
             f"pow(max(0\\,1-min(1\\,(t-{delay:.8f})/{seconds:.8f}))\\,3)"
         )
         x_offset, y_offset = str(layer["x"]), str(layer["y"])
-        if movement and preset in ("editorial_reveal", "rise_soft"):
+        if movement and preset in ("editorial_reveal", "rise_soft", "kinetic_rise"):
             y_offset = f"{layer['y']}+{movement}*{progress}"
         elif movement and preset in ("slide_left", "slide_right"):
             sign = -1 if preset == "slide_left" else 1

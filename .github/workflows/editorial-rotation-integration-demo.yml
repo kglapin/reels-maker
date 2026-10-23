@@ -1,0 +1,85 @@
+name: Editorial rotation integrated demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/reels_maker/motionkit/editorial_rotation.py'
+      - 'src/reels_maker/components/scenes.py'
+      - 'src/reels_maker/studio.py'
+      - 'tests/test_editorial_rotation_integration.py'
+      - 'examples/editorial-rotation-integrated-demo.json'
+      - 'examples/generate_editorial_rotation_assets.py'
+      - '.github/workflows/editorial-rotation-integration-demo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rotation-integrated-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /archives/asta-energy/intermediates/subsidy_ad/card_01.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_04.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_07.png
+            /examples/editorial-rotation-integrated-demo.json
+            /examples/generate_editorial_rotation_assets.py
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: System dependency preflight
+        timeout-minutes: 4
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! ldconfig -p | grep -q 'libcairo.so'; then
+            timeout 100s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=0 -o Acquire::http::Timeout=10 -o DPkg::Lock::Timeout=15 install -y --no-install-recommends ffmpeg libcairo2
+          fi
+          command -v ffmpeg
+          command -v ffprobe
+      - name: Install renderer
+        timeout-minutes: 5
+        run: python -m pip --disable-pip-version-check install --retries 2 --timeout 15 -e '.[icons]'
+      - name: Test rotation integration and geometry
+        run: |
+          python -m unittest discover -s tests -p 'test_editorial_rotation_integration.py' -v
+          python -m unittest discover -s tests -p 'test_editorial_rotation_engine.py' -v
+          python -m unittest discover -s tests -p 'test_rotation_motion.py' -v
+      - name: Generate reproducible media fixtures
+        run: python examples/generate_editorial_rotation_assets.py
+      - name: Render real studio project
+        run: |
+          reels-maker studio-inspect examples/editorial-rotation-integrated-demo.json > rotation-inspect.json
+          reels-maker studio-render examples/editorial-rotation-integrated-demo.json --output editorial-rotation-integrated.mp4 --supersample 1 > rotation-render.json
+          ffprobe -v error -show_entries stream=codec_name,width,height,nb_frames -of json editorial-rotation-integrated.mp4 > rotation-ffprobe.json
+          python - <<'PY'
+          import json
+          p=json.load(open('rotation-render.json'))
+          assert p['ok'] and p['frames']==300,p
+          v=next(s for s in json.load(open('rotation-ffprobe.json'))['streams'] if s['codec_name']=='h264')
+          assert int(v['nb_frames'])==300,v
+          assert (v['width'],v['height'])==(540,960),v
+          print('SUCCESS: integrated editorial photo and typography demo 300 frames')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editorial-rotation-integration-demo
+          path: |
+            editorial-rotation-integrated.mp4
+            rotation-inspect.json
+            rotation-render.json
+            rotation-ffprobe.json
+          retention-days: 7

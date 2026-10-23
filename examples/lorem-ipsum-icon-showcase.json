@@ -181,17 +181,7 @@
       "subtitle": "LOREM IPSUM / DOLOR SIT",
       "visual": "battery",
       "icon_library": "lucide",
-      "icon_style": "outline",
-      "icon_assets": [
-        {
-          "library": "lucide",
-          "name": "sparkles",
-          "x": 0.79,
-          "y": 0.3,
-          "size": 0.095,
-          "color": "accent"
-        }
-      ]
+      "icon_style": "outline"
     },
     {
       "id": "04-bars",

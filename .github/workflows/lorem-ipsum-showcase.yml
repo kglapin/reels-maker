@@ -78,6 +78,39 @@ jobs:
           ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,avg_frame_rate \
             -of json renders/studio/lorem-ipsum-motion-showcase.mp4 \
             > renders/studio/ffprobe.json
+      - name: Check scene diversity in the actual encoded MP4
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import subprocess
+          from pathlib import Path
+
+          project = json.loads(Path("examples/lorem-ipsum-showcase.json").read_text())
+          video = "renders/studio/lorem-ipsum-motion-showcase.mp4"
+          positions = []
+          cursor = 0.0
+          for scene in project["scenes"]:
+              positions.append(cursor + scene["duration"] * .58)
+              cursor += scene["duration"]
+
+          fingerprints = []
+          for t in positions:
+              proc = subprocess.run([
+                  "ffmpeg", "-hide_banner", "-loglevel", "error",
+                  "-ss", f"{t:.4f}", "-i", video, "-frames:v", "1",
+                  "-vf", "scale=72:128", "-pix_fmt", "rgb24",
+                  "-f", "rawvideo", "-"
+              ], check=True, capture_output=True)
+              assert len(proc.stdout) == 72 * 128 * 3, f"Frame unavailable at {t}"
+              fingerprints.append(hashlib.sha256(proc.stdout).hexdigest())
+          unique = len(set(fingerprints))
+          print(f"Sampled {len(positions)} scene midpoints, {unique} unique frames")
+          assert unique >= 10, "Scene variety too low: suspected repeated-segment export"
+          assert all(a != b for a,b in zip(fingerprints, fingerprints[1:])), (
+              "Adjacent scenes contain identical frames"
+          )
+          PY
       - name: Upload demonstrator (MP4 + preview + QA)
         if: always()
         uses: actions/upload-artifact@v4

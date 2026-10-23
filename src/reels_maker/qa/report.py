@@ -134,6 +134,15 @@ def audit(project, built_scenes, timeline: Timeline, *,
             scene_issues.extend(_safe_area(elements, built, time, local_frame))
             for element in elements:
                 elements_seen.setdefault(element["role"], element)
+        for element in elements_seen.values():
+            if element["meta"].get("negative_effect"):
+                scene_issues.append(Issue(
+                    "negative_text_review", "warning",
+                    ("Negative/inverted glyph fill depends on the underlying "
+                     "image; verify this heavy word at phone size."),
+                    built.index + 1, None,
+                    [element.get("path", element["role"])],
+                    "Keep the effect to one short, bold word and inspect real footage."))
         # --------------------------------------------------------- typography
         root = Node(kind="group", children=built.at(0.0))
         for role, block in _text_blocks(root):
@@ -273,6 +282,7 @@ def audit(project, built_scenes, timeline: Timeline, *,
             "Collision, safe-area, contrast and timing checks are deterministic.",
             "Aesthetic quality and brand fit require human review on a phone.",
             "Music ducking and sidechain pumping are not measured here.",
+            "Negative glyph fills are image-dependent and require manual contrast review.",
             "Auto contrast samples a border ring around each text block; extreme "
             "gradients may need a manual check.",
         ],
@@ -349,6 +359,10 @@ def _contrast(elements: list[dict], frame: Image.Image, built,
         # Transient entrance states are intentionally semi-transparent; only
         # judge contrast once the element has settled into its readable state.
         if element["opacity"] < .98:
+            continue
+        if element["meta"].get("negative_effect"):
+            # The ink is a per-pixel inverse of the sampled image, not the
+            # token color stored in the typeset block.
             continue
         colour = element["meta"].get("color")
         if not colour:
@@ -526,8 +540,13 @@ def contact_sheet(report: dict, built_scenes, renderer, timeline: Timeline,
         issues = scene_report.get("issues") or []
         if issues:
             issue = next((item for item in issues
-                          if item.get("time") is not None), issues[0])
-            time = float(issue.get("time") or 0.0)
+                          if item.get("severity") == "error"
+                          and item.get("time") is not None), None)
+            if issue is not None:
+                time = float(issue["time"])
+            else:
+                issue = issues[0]
+                time = built_scenes[index].duration * .75
             entries.append((index, time, issue.get("code", "issue")))
         else:
             entries.append((index, built_scenes[index].duration * .75,

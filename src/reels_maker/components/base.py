@@ -157,6 +157,7 @@ def rich_text_node(role: str, runs: Iterable[Run], style: TextStyle,
                    rect: Rect, fonts: FontBook, *, align: str = "left",
                    valign: str = "center", qa_class: str = "text",
                    meta: Mapping | None = None) -> Node:
+    runs = list(runs)
     style = TextStyle(**{**style.__dict__, "align": align})
     block = typeset_runs(runs, style, max(4.0, rect.w), fonts)
     while block.height > rect.h + .5 and style.size > 10:
@@ -180,6 +181,9 @@ def rich_text_node(role: str, runs: Iterable[Run], style: TextStyle,
         meta={"text": " ".join(run.text for run in runs),
               "color": style.color, "size": style.size,
               "weight": style.weight,
+              "negative_effect": any(run.effect == "negative" for run in runs),
+              "negative_words": [run.text.strip() for run in runs
+                                 if run.effect == "negative"],
               "bounds": (rect.x, y, rect.x + block.width, y + block.height),
               **dict(meta or {})})
 

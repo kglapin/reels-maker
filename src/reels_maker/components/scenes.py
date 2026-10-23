@@ -112,7 +112,8 @@ def _runs(scene: dict, tokens: DesignTokens, ink, accent) -> list[Run] | None:
         runs.append(Run(str(item.get("text", "")),
                         float(item.get("scale", 1.0)), colour,
                         item.get("weight", "bold"),
-                        bool(item.get("break_before", False))))
+                        bool(item.get("break_before", False)),
+                        item.get("effect")))
     return runs
 
 

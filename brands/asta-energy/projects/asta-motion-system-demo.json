@@ -102,7 +102,11 @@
         "camera": {"direction": "pan-left", "intensity": 0.05}
       },
       "kicker": "MAGAZYN ENERGII",
-      "headline": "ENERGIA, KTÓRA ZOSTAJE",
+      "headline": {"runs": [
+        {"text": "ENERGIA, KTÓRA", "scale": 0.9, "color": "white"},
+        {"text": "ZOSTAJE", "scale": 1.18, "color": "white",
+         "weight": "bold", "break_before": true, "effect": "negative"}
+      ]},
       "subtitle": "PRODUKUJ · MAGAZYNUJ · WYKORZYSTUJ"
     },
     {

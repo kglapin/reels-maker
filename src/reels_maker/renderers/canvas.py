@@ -175,12 +175,16 @@ def line(image: Image.Image, points, color, width: float = 2,
 
 def text_block(image: Image.Image, block: TextBlock, origin: tuple[float, float],
                fonts: FontBook, *, tracking_offset: float = 0.0,
-               color=None, opacity: float = 1.0, scale: float = 1.0) -> None:
+               color=None, opacity: float = 1.0, scale: float = 1.0,
+               skip_effects: bool = False) -> None:
     draw = ImageDraw.Draw(image, "RGBA")
     ox, oy = origin[0] * scale, origin[1] * scale
     progress = 0
     for line in block.lines:
         for word in line.words:
+            if skip_effects and word.effect:
+                progress += max(1, len(word.text))
+                continue
             ink = color or word.color
             alpha = int(round(255 * opacity * block.style.opacity))
             if alpha <= 0:
@@ -194,6 +198,31 @@ def text_block(image: Image.Image, block: TextBlock, origin: tuple[float, float]
                       font=font, fill=(*ink, alpha), anchor="ls")
             progress += max(1, len(word.text))
     return
+
+
+def text_block_mask(image: Image.Image, block: TextBlock,
+                    origin: tuple[float, float], fonts: FontBook, *,
+                    effect: str = "negative", tracking_offset: float = 0.0,
+                    opacity: float = 1.0, scale: float = 1.0) -> None:
+    """Draw only words carrying ``effect`` into a transparent alpha mask."""
+    if effect != "negative":
+        raise ValueError(f"Unsupported text mask effect {effect!r}")
+    draw = ImageDraw.Draw(image, "RGBA")
+    ox, oy = origin[0] * scale, origin[1] * scale
+    progress = 0
+    for line in block.lines:
+        for word in line.words:
+            if word.effect != effect:
+                progress += max(1, len(word.text))
+                continue
+            alpha = int(round(255 * opacity * block.style.opacity))
+            size = max(6, round((word.size or block.style.size) * scale))
+            font = fonts.get(size, word.weight or block.style.weight)
+            offset = tracking_offset * progress * scale
+            draw.text((ox + word.x * scale + offset,
+                       oy + line.baseline * scale), word.text,
+                      font=font, fill=(255, 255, 255, alpha), anchor="ls")
+            progress += max(1, len(word.text))
 
 
 def number(image: Image.Image, value: float, rect: tuple[float, float, float, float],

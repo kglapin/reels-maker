@@ -3,7 +3,7 @@
   "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
   "next_action": "Owner: resolve repository privacy, review docs/REVIEW_RECORD.md and flagship media/claim licences; decide release approval and v1.0 tag",
   "current_branch": "feat/motion-design-system-20261023 (local prototype; not pushed)",
-  "latest_commit": "05f58b72dffdacb2716b87025a01486b6f72cec0 feat: reusable native kinetic animation renderer (upstream base)",
+  "latest_commit": "18f73d9 feat: add reusable motion-design studio engine (local, unpushed)",
   "branch_up_to_date": false,
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
@@ -55,15 +55,15 @@
   ],
   "experimental_motion_system": {
     "branch": "feat/motion-design-system-20261023",
-    "status": "Local, not pushed; separate from v1.0 gates",
+    "status": "Negative-word effect added on the local branch; follow-up commit pending and not pushed",
     "manifest": "brands/asta-energy/projects/asta-motion-system-demo.json",
     "render": "renders/asta-energy/asta-motion-system-demo-final.mp4",
     "contact_sheet": "renders/asta-energy/qa/asta-motion-system-demo-final.png",
     "export": "H.264 yuv420p, 1080x1920, 30 fps, 1260 frames, 42.0 seconds; silent pending music rights",
-    "strict_qa": "pass: 13 scenes, 78 samples, zero errors/warnings at final profile",
+    "strict_qa": "pass: 13 scenes, 78 geometry plus 39 contrast samples, zero errors and one explicit negative-word phone-review warning",
     "human_review": "pending; prototype is not a publication-approved flagship"
   },
-  "test_count": 144,
+  "test_count": 146,
   "files_added": 12,
   "current_date": "2026-10-23",
   "version": "1.0"

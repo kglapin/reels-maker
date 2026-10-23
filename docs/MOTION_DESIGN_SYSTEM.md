@@ -43,6 +43,28 @@ Five reusable styles are registered in `design/styles.py`:
 spacing, safe margins, motion vocabulary and transition choices; they do not
 select different renderer implementations.
 
+### Negative/knockout word fill
+
+Rich-text runs may opt into a pixel-negative glyph fill:
+
+```json
+"headline": {"runs": [
+  {"text": "ENERGIA, KTÓRA", "scale": 0.9, "color": "white"},
+  {"text": "ZOSTAJE", "scale": 1.18, "weight": "bold",
+   "color": "white", "break_before": true, "effect": "negative"}
+]}
+```
+
+Only the marked word's glyph mask inverts the already-composited scene pixels;
+other words and the full-frame background remain untouched. It is intentionally
+limited to a single word of at most 18 characters, bold weight, a run scale of
+at least 1.08 and a rendered font size of at least 32 px. Use a heavy font and
+reserve it for one short focal word over full-bleed imagery. The effect must be
+a top-level text element so it can sample
+the actual scene surface. Because arbitrary imagery can contain mid-tones,
+strict QA emits a human-review warning instead of claiming automatic contrast
+approval; inspect the actual MP4 at phone size.
+
 ## Manifest essentials
 
 Projects remain under `brands/<slug>/projects/`; relative input paths are
@@ -122,16 +144,17 @@ human gates.
 
 ## Local acceptance evidence (2026-10-23)
 
-- `144` repository tests passed (`unittest discover`).
+- `146` repository tests passed (`unittest discover`).
 - Final-profile studio QA passed for 13 scenes / 78 geometry samples plus 39
-  rendered contrast-frame samples, with zero blocking errors or warnings.
+  rendered contrast-frame samples, with zero errors and one explicit warning
+  to manually inspect the negative-filled word on actual footage.
 - Real MP4: `renders/asta-energy/asta-motion-system-demo-final.mp4` — H.264,
   yuv420p, 1080×1920, 30 fps, 1,260 frames, 42.0 seconds; encoder metadata
   verified before atomic publication.
 - Real-frame contact sheet:
   `renders/asta-energy/qa/asta-motion-system-demo-final.png`; motion strip:
   `renders/asta-energy/qa/asta-motion-system-demo-motion-strip.png`.
-- Measured local render time: 83.96 seconds (15.01 rendered fps) at
+- Measured local render time: 91.24 seconds (13.81 rendered fps) at
   supersample 1. This is a single-machine measurement, not a before/after
   benchmark.
 - The file is intentionally silent pending music-rights verification. Human

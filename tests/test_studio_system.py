@@ -9,13 +9,17 @@ import unittest
 from pathlib import Path
 
 from reels_maker.audiokit.cues import load_transcript, plan_cues
+from reels_maker.components.base import SceneContext
+from reels_maker.components.scenes import build_scene
 from reels_maker.core.scene_graph import collect_qa_elements
 from reels_maker.design.color import contrast_ratio, ensure_contrast
+from reels_maker.design.tokens import resolve_tokens
 from reels_maker.ffmpeg import RenderError
 from reels_maker.qa.report import _audio_report, audit
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.renderers.studio import probe_output, render_studio
 from reels_maker.studio import StudioError, load_studio
+from reels_maker.textkit.typesetter import FontBook, Run
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "brands/asta-energy/projects/asta-motion-system-demo.json"
@@ -26,6 +30,37 @@ class StudioDesignTests(unittest.TestCase):
         deep_green = (20, 44, 30)
         accessible = ensure_contrast((71, 160, 19), deep_green, 4.5)
         self.assertGreaterEqual(contrast_ratio(accessible, deep_green), 4.5)
+
+    def test_negative_rich_word_inverts_only_its_bold_glyphs(self):
+        width, height, fps = 720, 1280, 30
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        fonts = FontBook()
+        context = SceneContext(width, height, fps, 2.5, tokens,
+                               "editorial-premium", fonts, scene_index=0)
+        scene = {
+            "type": "statement", "duration": 2.5, "decor": False,
+            "background": {"kind": "solid", "color": "#345678"},
+            "headline": {"runs": [{
+                "text": "INVERT", "scale": 1.08, "weight": "bold",
+                "color": "white", "effect": "negative",
+            }]},
+        }
+        built = build_scene(context, scene)
+        block = built.elements["headline"].props["block"]
+        self.assertEqual(block.lines[0].words[0].effect, "negative")
+        renderer = SceneRenderer(width, height, tokens, fonts,
+                                 options=RenderOptions(supersample=1))
+        frame = renderer.render(built, 2.0)
+        bounds = built.elements["headline"].meta["bounds"]
+        x0, y0, x1, y1 = (round(value) for value in bounds)
+        colours = frame.crop((x0, y0, x1, y1)).getcolors(500_000) or []
+        self.assertIn((203, 169, 135), {colour for _count, colour in colours})
+
+    def test_negative_rich_word_rejects_light_or_multiword_runs(self):
+        with self.assertRaisesRegex(ValueError, "one word"):
+            Run("TWO WORDS", scale=1.2, weight="bold", effect="negative")
+        with self.assertRaisesRegex(ValueError, "one word"):
+            Run("WORD", scale=1.2, weight="regular", effect="negative")
 
     def test_word_cues_are_exact_and_subtitles_do_not_invent_intra_cue_times(self):
         with tempfile.TemporaryDirectory() as directory:

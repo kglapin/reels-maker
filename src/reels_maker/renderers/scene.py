@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from ..components.base import BuiltScene
 from ..core.scene_graph import Node
@@ -135,6 +135,12 @@ class SceneRenderer:
         progress = float(reveal.get("progress", 1.0))
         if progress <= .001:
             return
+        block = node.props.get("block") if node.kind == "text" else None
+        if (block is not None
+                and any(word.effect == "negative"
+                        for line in block.lines for word in line.words)):
+            self._draw_negative_text(target, node, ox, oy)
+            return
         needs_layer = (node.opacity < .999 or node.scale != 1
                        or abs(node.rotation) > 1e-6
                        or node.clip is not None or progress < .999)
@@ -143,10 +149,15 @@ class SceneRenderer:
             return
         layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
         self._content(layer, node, ox, oy)
+        self._apply_node_state(layer, node, ox, oy, progress)
+        target.alpha_composite(layer)
+
+    def _apply_node_state(self, layer: Image.Image, node: Node,
+                          ox: float, oy: float, progress: float) -> Image.Image:
         if node.clip is not None or progress < .999:
             visible = node.world_bounds()
             if visible is None:
-                return
+                return layer
             mask = Image.new("L", (self.W, self.H), 0)
             draw = ImageDraw.Draw(mask)
             box = (round(visible[0] * self.ss), round(visible[1] * self.ss),
@@ -164,7 +175,7 @@ class SceneRenderer:
             if anchor is None:
                 base = node.base_bounds()
                 if base is None:
-                    return
+                    return layer
                 anchor = ((base[0] + base[2]) / 2, (base[1] + base[3]) / 2)
             ax, ay = anchor[0] * self.ss + ox * self.ss, anchor[1] * self.ss + oy * self.ss
             angle = math.radians(node.rotation)
@@ -176,7 +187,36 @@ class SceneRenderer:
                       ay + (sine / scale) * ax - (cosine / scale) * ay)
             layer = layer.transform((self.W, self.H), Image.Transform.AFFINE,
                                     matrix, resample=Image.Resampling.BICUBIC)
-        target.alpha_composite(layer)
+        return layer
+
+    def _draw_negative_text(self, target: Image.Image, node: Node,
+                            ox: float, oy: float) -> None:
+        """Invert pixels only inside marked glyphs on an opaque scene surface."""
+        if target.getchannel("A").getextrema()[0] < 255:
+            raise ValueError(
+                "Negative rich text must be a top-level scene element so it "
+                "can sample the composed background")
+        block = node.props["block"]
+        origin = (node.props["x"] + node.dx + ox,
+                  node.props["y"] + node.dy + oy)
+        normal = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        cv.text_block(
+            normal, block, origin, self.fonts,
+            tracking_offset=float(node.props.get("tracking_offset", 0)),
+            color=node.props.get("color"), scale=self.ss, skip_effects=True)
+        mask_layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        cv.text_block_mask(
+            mask_layer, block, origin, self.fonts,
+            tracking_offset=float(node.props.get("tracking_offset", 0)),
+            scale=self.ss)
+        progress = float((node.reveal or {}).get("progress", 1.0))
+        normal = self._apply_node_state(normal, node, ox, oy, progress)
+        mask_layer = self._apply_node_state(mask_layer, node, ox, oy, progress)
+        target.alpha_composite(normal)
+        original = target.convert("RGB")
+        negative = ImageOps.invert(original)
+        result = Image.composite(negative, original, mask_layer.getchannel("A"))
+        target.paste(result, (0, 0))
 
     def _content(self, target: Image.Image, node: Node,
                  ox: float = 0.0, oy: float = 0.0) -> None:
@@ -257,7 +297,8 @@ class SceneRenderer:
             cv.text_block(target, block, (props["x"] + dx, props["y"] + dy),
                           self.fonts,
                           tracking_offset=float(props.get("tracking_offset", 0)),
-                          color=props.get("color"), opacity=opacity, scale=s)
+                          color=props.get("color"), opacity=opacity, scale=s,
+                          skip_effects=True)
             return
         if kind == "number":
             cv.number(target, float(props.get("value", 0)),

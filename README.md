@@ -54,7 +54,8 @@ FFmpeg is the rendering backend; there is no hosted model dependency.
 The separate Pillow-based studio engine is available without changing the
 legacy `render` or `kinetic-render` paths. It adds shared layout recipes,
 measured typography, five reusable style systems, retained scene graphs,
-cue-aware motion, asset provenance checks and deterministic visual QA:
+cue-aware motion, asset provenance checks, selective one-word image-negative
+type and deterministic visual QA:
 
 ```sh
 reels-maker studio-inspect brands/asta-energy/projects/asta-motion-system-demo.json --profile review --json

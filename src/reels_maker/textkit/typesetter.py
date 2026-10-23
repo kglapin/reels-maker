@@ -71,6 +71,7 @@ class Word:
     tracking: float = 0.0
     size: int = 0
     weight: str = "regular"
+    effect: str | None = None
 
 
 @dataclass(frozen=True)
@@ -380,6 +381,19 @@ class Run:
     color: tuple[int, int, int] = (255, 255, 255)
     weight: str = "bold"
     break_before: bool = False
+    effect: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.effect not in (None, "negative"):
+            raise ValueError("Rich-text effect must be 'negative' or omitted")
+        if self.effect == "negative":
+            word = self.text.strip()
+            if (not math.isfinite(self.scale) or len(word.split()) != 1
+                    or len(word) > 18
+                    or self.weight != "bold" or self.scale < 1.08):
+                raise ValueError(
+                    "Negative text is limited to one word (max 18 chars), "
+                    "bold weight and scale >= 1.08")
 
 
 def typeset_runs(runs: Iterable[Run], style: TextStyle, max_width: float,
@@ -391,9 +405,12 @@ def typeset_runs(runs: Iterable[Run], style: TextStyle, max_width: float,
     # Build token records: (text, font, color, run index, break-before).
     tokens = []
     for index, run in enumerate(run_list):
+        size = max(6, round(style.size * run.scale))
+        if run.effect == "negative" and size < 32:
+            raise ValueError(
+                "Negative text requires a rendered font size of at least 32px")
         if run.break_before:
             tokens.append(("\n", None, None, index, size, run.weight))
-        size = max(6, round(style.size * run.scale))
         font = fonts.get(size, run.weight)
         source = normalise_copy(run.text)
         if style.uppercase:
@@ -465,7 +482,7 @@ def typeset_runs(runs: Iterable[Run], style: TextStyle, max_width: float,
             words.append(Word(item[0], offset + position, width,
                               item[1].path if hasattr(item[1], "path") else path,
                               0, item[2], item[3], style.tracking,
-                              item[4], item[5]))
+                              item[4], item[5], run_list[item[3]].effect))
         placed.append(Line(tuple(words), row_width, ascent, descent,
                            y + ascent, height))
         y += height

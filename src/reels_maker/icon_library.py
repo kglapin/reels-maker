@@ -30,7 +30,7 @@ ALLOWED_ATTRS = {"xmlns", "viewBox", "width", "height", "fill",
                  "fill-rule", "clip-rule", "d", "cx", "cy", "r", "rx",
                  "ry", "x", "y", "x1", "y1", "x2", "y2", "points",
                  "opacity", "transform", "id", "clip-path", "fill-opacity",
-                 "stroke-opacity"}
+                 "stroke-opacity", "aria-hidden", "role", "focusable"}
 MAX_SVG_BYTES = 100_000
 
 

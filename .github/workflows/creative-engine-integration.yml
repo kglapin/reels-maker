@@ -80,12 +80,41 @@ jobs:
           assert int(stream["nb_frames"])==int(report["render"]["frames"]),stream
           print("PASS Creative Spec -> compiled manifest -> audited MP4:",stream["nb_frames"],"frames")
           PY
+      - name: Verify independent Studio composition mode
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("examples/creative-engine-editorial-demo.json")
+          d=json.loads(p.read_text(encoding="utf-8"))
+          d["mode"]="studio"
+          d["name"]="creative-engine-studio-qa"
+          d["shots"]=d["shots"][:2]
+          for shot in d["shots"]:
+              shot.pop("camera",None)
+              shot["layout"]="auto"
+              shot["typography"]={"family":"mask-rise"}
+          Path("examples/creative-engine-studio-qa.json").write_text(
+              json.dumps(d,indent=2)+"\\n",encoding="utf-8")
+          PY
+          reels-maker creative-render examples/creative-engine-studio-qa.json --output creative-studio-demo.mp4 --json > creative-studio-render.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("creative-studio-render.json").read_text())
+          assert r["ok"] and r["qa"]["ok"],r
+          assert r["render"]["frames"]>100,r
+          assert Path("creative-studio-demo.mp4").is_file()
+          print("PASS: Creative Spec conventional Studio renderer")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: creative-engine-v1-demo
           path: |
             creative-engine-demo.mp4
+            creative-studio-demo.mp4
+            creative-studio-render.json
             creative-engine-storyboard.png
             creative-render.json
             creative-ffprobe.json

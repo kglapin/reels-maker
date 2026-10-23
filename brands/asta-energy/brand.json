@@ -11,28 +11,32 @@
         "position": "upper",
         "headline_style": "hero",
         "backdrop": "none",
-        "logo": false
+        "logo": false,
+        "accent_rule": false
       },
       "light-detail": {
         "theme": "light",
         "position": "middle",
         "headline_style": "standard",
         "backdrop": "none",
-        "logo": false
+        "logo": false,
+        "accent_rule": false
       },
       "dark-hero": {
         "theme": "dark",
         "position": "upper",
         "headline_style": "hero",
         "backdrop": "strong",
-        "logo": true
+        "logo": true,
+        "accent_rule": false
       },
       "dark-cta": {
         "theme": "dark",
         "position": "middle",
         "headline_style": "standard",
         "backdrop": "strong",
-        "logo": true
+        "logo": true,
+        "accent_rule": false
       }
     }
   },

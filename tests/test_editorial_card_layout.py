@@ -107,7 +107,7 @@ class EditorialLayoutTests(unittest.TestCase):
             "light-information": {
                 "theme": "light", "position": "upper",
                 "headline_style": "hero", "logo": False,
-                "backdrop": "none"
+                "backdrop": "none", "accent_rule": False
             }
         }})
         preset = resolve_title_style(p, {
@@ -115,6 +115,7 @@ class EditorialLayoutTests(unittest.TestCase):
         self.assertEqual(preset["theme"], "light")
         self.assertEqual(preset["headline_style"], "hero")
         self.assertFalse(preset["logo"])
+        self.assertFalse(preset["accent_rule"])
         changed = resolve_title_style(p, {
             "profile": "light-information", "position": "middle"})
         self.assertEqual(changed["position"], "middle")
@@ -129,6 +130,7 @@ class EditorialLayoutTests(unittest.TestCase):
                 {"position": "random"},
                 {"headline_style": "huge"},
                 {"logo": "false"},
+                {"accent_rule": "false"},
                 {"theme": "light", "backdrop": "strong"}
             ]
             for item in bad:

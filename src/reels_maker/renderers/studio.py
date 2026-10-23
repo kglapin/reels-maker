@@ -254,7 +254,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     part = cached
             frames_done += timing.frames
             parts.append(part)
-        _join(parts, silent, scratch)
+        _join(parts, silent, scratch, max_frames=timeline.total_frames)
         audio_result = _mux(project, silent, staged, timeline.duration)
         export_quality = _verify_studio_output(staged, project, timeline)
         os.replace(staged, destination)

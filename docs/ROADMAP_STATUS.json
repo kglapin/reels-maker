@@ -1,21 +1,20 @@
 {
-  "current_milestone": "M09 - Reliability, performance, reproducibility",
-  "status": "In progress - M08 complete: all QA tests pass (golden frames + edge case matrix); M09 benchmarks starting",
-  "next_action": "PERF-01/03/05/06: Full-res benchmarks and failure recovery tests",
+  "current_milestone": "M08 - Technical and creative QA, regression and rejection",
+  "status": "In progress - QA-05/09/10/11 starting: golden frame snapshots and QA matrix",
+  "next_action": "Generate golden frame snapshots for representative title presets at fixed font/toolchain versions",
   "current_branch": "refactor/modular-render-engine",
-  "latest_commit": "7d1efb9 feat: complete M08 QA suite - golden frames, edge case matrix, review rubric - 113 tests green",
+  "latest_commit": "95f219a feat: complete M00/M01/M02/M03/M04/M05/M06 audit and foundation - 100 tests green",
   "draft_pr_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
   "last_successful_main_test": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
   "current_ci_status": "Private runner unavailable - account billing quota check needed",
   "pending_tasks": [
     "OPS-11: Document GitHub Actions private runner blocker",
-    "PERF-01: Benchmark 15s/30s clips at production dimensions (cold and warm caches)",
-    "PERF-03: Verify first-render vs cached-render durations and cache invalidation",
-    "PERF-05: Add disk-space preflight, temp cleanup on failure, cache eviction",
-    "PERF-06: Test interrupt/resume and atomic replacement after failed render",
-    "PERF-07: Fix packaging dependencies and reproducibility (pin versions)",
-    "M10: Storage, CI, agent creator workflow",
-    "M11: Ship two approved demos and request merge"
+    "QA-05: Golden frame snapshots at fixed font/toolchain versions",
+    "QA-09: Format regression matrix (6 profiles verified)",
+    "QA-10: Edge case QA matrix (Polish copy, accents, face shots, etc.)",
+    "QA-11: Define signed-off visual review rubric",
+    "PERF-01/03/05/06: Full-res benchmarks and failure recovery",
+    "REL-02 through REL-14: Ship two approved demos and request merge"
   ],
   "current_date": "2026-10-22",
   "version": "1.0"

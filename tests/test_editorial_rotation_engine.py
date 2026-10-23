@@ -23,7 +23,7 @@ class EditorialRotationTests(unittest.TestCase):
 
     def test_diagonal_hold(self):
         track=rotation_track({"family":"diagonal-hold","angle":-5,
-                              "start":1,"duration":.8,"settle_angle":-5},3,"photo")
+                              "start":1,"duration":.8,"settle_angle":-5},3,role="photo")
         self.assertAlmostEqual(track.value(.7),-5)
         self.assertAlmostEqual(track.value(2),-5)
 

@@ -1,0 +1,81 @@
+{
+  "creative_schema_version": 1,
+  "name": "creative-engine-editorial-demo",
+  "mode": "camera_canvas",
+  "style": "editorial-premium",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 24
+  },
+  "creative_direction": "Irregular infinite canvas editorial photo reel. Distinct camera angles and a new typography family after each arrival, restrained photographic compositions.",
+  "shots": [
+    {
+      "id": "architecture",
+      "intent": "opening",
+      "headline": "FRAMES MOVE",
+      "subtitle": "One persistent canvas. New perspectives.",
+      "duration": 3.1,
+      "asset": "assets/rotation-01.jpg",
+      "layout": "photo-above",
+      "typography": {
+        "family": "mask-rise",
+        "duration": 0.58
+      }
+    },
+    {
+      "id": "workspace",
+      "intent": "reveal",
+      "headline": "CHANGE THE ANGLE",
+      "subtitle": "The camera moves before the title.",
+      "duration": 3.35,
+      "asset": "assets/rotation-02.jpg",
+      "layout": "photo-left",
+      "typography": {
+        "family": "slide-up",
+        "duration": 0.52
+      },
+      "camera": {
+        "angle": 76,
+        "zoom": 1.06,
+        "move_duration": 1
+      }
+    },
+    {
+      "id": "perspective",
+      "intent": "proof",
+      "headline": "SEE DIFFERENTLY",
+      "subtitle": "Irregular placement. Deliberate hierarchy.",
+      "duration": 3.3,
+      "asset": "assets/rotation-03.jpg",
+      "layout": "diagonal",
+      "typography": {
+        "family": "scale-focus",
+        "duration": 0.62
+      },
+      "camera": {
+        "angle": 159,
+        "zoom": 1,
+        "move_duration": 1.03
+      }
+    },
+    {
+      "id": "reframe",
+      "intent": "finale",
+      "headline": "REFRAME THE STORY",
+      "subtitle": "Different scenes. One shared world.",
+      "duration": 3.45,
+      "asset": "assets/rotation-01.jpg",
+      "layout": "offset",
+      "typography": {
+        "family": "fade",
+        "duration": 0.48
+      },
+      "camera": {
+        "angle": 287,
+        "zoom": 1.03,
+        "move_duration": 1
+      }
+    }
+  ]
+}

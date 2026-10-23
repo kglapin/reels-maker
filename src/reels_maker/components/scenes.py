@@ -207,9 +207,12 @@ def _background(ctx: SceneContext, scene: dict, theme: dict) -> dict:
 
 
 def _decor(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
-    index = ctx.scene_index
-    if scene.get("decor") is False:
+    # Editorial default: no automatically injected ornaments. Decorative
+    # bars, dots, rings and floating blobs must be an explicit art-direction
+    # choice, never a scene-index-dependent template flourish.
+    if scene.get("decor") is not True:
         return []
+    index = ctx.scene_index
     w, h = ctx.width, ctx.height
     accent = theme["accent"]
     pattern = index % 4

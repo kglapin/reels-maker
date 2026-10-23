@@ -3,12 +3,12 @@
   "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
   "next_action": "Owner: resolve repository privacy, review docs/REVIEW_RECORD.md and flagship media/claim licences; decide release approval and v1.0 tag",
   "current_branch": "feat/motion-design-system-20261023 (local prototype; not pushed)",
-  "latest_commit": "18f73d9 feat: add reusable motion-design studio engine (local, unpushed)",
+  "latest_commit": "66e64ac feat: add negative-fill rich text effect (local, unpushed)",
   "branch_up_to_date": false,
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
   "ci_status": "Latest observed workflows on feat/kinetic-motion-primitives-20261023 succeeded; no CI run for the current local prototype branch",
-  "local_tests": "144 passed in 45.65s",
+  "local_tests": "146 passed in 47.25s",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
@@ -55,7 +55,7 @@
   ],
   "experimental_motion_system": {
     "branch": "feat/motion-design-system-20261023",
-    "status": "Negative-word effect added on the local branch; follow-up commit pending and not pushed",
+    "status": "Committed locally as 18f73d9 and 66e64ac; not pushed and separate from v1.0 gates",
     "manifest": "brands/asta-energy/projects/asta-motion-system-demo.json",
     "render": "renders/asta-energy/asta-motion-system-demo-final.mp4",
     "contact_sheet": "renders/asta-energy/qa/asta-motion-system-demo-final.png",

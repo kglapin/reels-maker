@@ -6,6 +6,10 @@ on:
       - feat/lorem-ipsum-showcase-20261023
   workflow_dispatch:
 
+concurrency:
+  group: lorem-showcase-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -17,6 +21,13 @@ jobs:
       - name: Checkout current reels-maker
         uses: actions/checkout@v4
         with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /pyproject.toml
+            /examples/lorem-ipsum-showcase.json
+            /examples/generate_lorem_assets.py
           lfs: false
       - name: Python 3.11
         uses: actions/setup-python@v5

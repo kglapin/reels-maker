@@ -1,0 +1,112 @@
+name: Editorial typography regression and render smoke
+
+on:
+  push:
+    branches: [fix/editorial-layout-asta-20261023]
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /pyproject.toml
+            /brands/asta-energy/brand.json
+            /brands/asta-energy/assets/logo.png
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Install FFmpeg
+        run: |
+          python -m pip install 'static-ffmpeg==3.0'
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"],"a",encoding="utf-8") as f:
+              f.write(str(Path(ffmpeg).parent) + "\n")
+          print("FFmpeg",ffmpeg,"FFprobe",ffprobe)
+          PY
+      - name: Run targeted typography and brand tests
+        run: |
+          python -m unittest discover -s tests -p 'test_editorial_card_layout.py' -v
+          python -m unittest discover -s tests -p 'test_canvas_layout.py' -v
+          python -m unittest discover -s tests -p 'test_rich_typography.py' -v
+          python -m unittest discover -s tests -p 'test_brands.py' -v
+      - name: Produce two synthetic clean background scenes
+        run: |
+          mkdir -p brands/asta-energy/media renders/asta-energy
+          ffmpeg -hide_banner -loglevel error -y -f lavfi \
+            -i color=c=white:s=540x960:r=25:d=3.2 \
+            -an -c:v libx264 -pix_fmt yuv420p brands/asta-energy/media/synthetic-light.mp4
+          ffmpeg -hide_banner -loglevel error -y -f lavfi \
+            -i color=c=0x14221a:s=540x960:r=25:d=3.2 \
+            -an -c:v libx264 -pix_fmt yuv420p brands/asta-energy/media/synthetic-dark.mp4
+      - name: Create explicit ASTA editorial profile render example
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          project = {
+              "name": "asta-editorial-profile-qa",
+              "brand": "asta-energy",
+              "video": {"width": 540, "height": 960, "fps": 25},
+              "scenes": [
+                  {"file":"media/synthetic-light.mp4", "duration":3.0,
+                   "title":{"profile":"light-information",
+                            "kicker":"ŁĄCZNIE NAWET",
+                            "headline":"19 000 zł",
+                            "body":"maksymalnego wsparcia",
+                            "footer":"Przy spełnieniu warunków programu"},
+                   "motion":{"preset":"editorial_reveal","duration_frames":7,
+                             "stagger_frames":2,"distance_px":22}},
+                  {"file":"media/synthetic-dark.mp4", "duration":3.0,
+                   "title":{"profile":"dark-hero",
+                            "kicker":"DOTACJA DO",
+                            "headline":"16 000 zł",
+                            "body":"na magazyn energii"},
+                   "motion":{"preset":"rise_soft","duration_frames":7,
+                             "stagger_frames":2,"distance_px":18}}
+              ],
+              "branding": {
+                  "safe_areas":{"horizontal_pixels":46,
+                                 "top_pixels":78,"bottom_pixels":130}
+              },
+              "output":"renders/asta-energy/editorial-profile-qa.mp4"
+          }
+          p=Path("editorial-demo.json")
+          p.write_text(json.dumps(project,indent=2,ensure_ascii=False)+"\n",
+                       encoding="utf-8")
+          PY
+      - name: Syntax and media preflight
+        run: |
+          reels-maker validate editorial-demo.json --root . --syntax-only --strict-quality --json
+          reels-maker validate editorial-demo.json --root . --json
+      - name: Render actual MP4 with repository engine
+        run: |
+          reels-maker render editorial-demo.json --root . --jobs 2 --strict-quality --json
+          reels-maker verify editorial-demo.json --video renders/asta-energy/editorial-profile-qa.mp4 --json
+          reels-maker storyboard editorial-demo.json --video renders/asta-energy/editorial-profile-qa.mp4 --output renders/asta-energy/editorial-profile-qa.png --json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: asta-editorial-profile-qa
+          path: |
+            renders/asta-energy/editorial-profile-qa.mp4
+            renders/asta-energy/editorial-profile-qa.png
+            editorial-demo.json
+          if-no-files-found: ignore
+          retention-days: 7

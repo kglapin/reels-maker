@@ -205,8 +205,131 @@ def main(argv: list[str] | None = None) -> int:
     pixabay.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
+    creative_caps = commands.add_parser(
+        "creative-capabilities", help="Versioned capability registry for LLM callers")
+    creative_caps.add_argument("--json", action="store_true")
+
+    creative_val = commands.add_parser(
+        "creative-validate", help="Validate Creative Spec v1 and perform asset/geometry QA")
+    creative_val.add_argument("spec", type=Path)
+    creative_val.add_argument("--root", type=Path)
+    creative_val.add_argument("--semantic-only", action="store_true")
+    creative_val.add_argument("--json", action="store_true")
+
+    creative_compile = commands.add_parser(
+        "creative-compile", help="Compile LLM-authored Creative Spec to executable Studio JSON")
+    creative_compile.add_argument("spec", type=Path)
+    creative_compile.add_argument("--root", type=Path)
+    creative_compile.add_argument("--output", type=Path)
+    creative_compile.add_argument("--force", action="store_true")
+    creative_compile.add_argument("--strict", action="store_true",
+                                  help="Reject warnings in addition to errors")
+    creative_compile.add_argument("--json", action="store_true")
+
+    creative_edit = commands.add_parser(
+        "creative-edit", help="Apply JSON Patch edits to a Creative Spec without overwriting original")
+    creative_edit.add_argument("spec", type=Path)
+    creative_edit.add_argument("patch", type=Path)
+    creative_edit.add_argument("--output", type=Path, required=True)
+    creative_edit.add_argument("--force", action="store_true")
+    creative_edit.add_argument("--json", action="store_true")
+
+    creative_render = commands.add_parser(
+        "creative-render", help="Compile, preflight and render Creative Spec via actual Studio engine")
+    creative_render.add_argument("spec", type=Path)
+    creative_render.add_argument("--root", type=Path)
+    creative_render.add_argument("--output", type=Path, required=True)
+    creative_render.add_argument("--storyboard", type=Path)
+    creative_render.add_argument("--strict", action="store_true")
+    creative_render.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
     try:
+        if args.command in ("creative-capabilities", "creative-validate",
+                            "creative-compile", "creative-edit", "creative-render"):
+            import tempfile
+            from .creative.registry import capabilities
+            from .creative.spec import validate_creative_spec
+            from .creative.compiler import compile_creative_spec
+            from .creative.quality import audit_creative_spec
+            from .creative.edit import edit_creative_spec
+            if args.command=="creative-capabilities":
+                result=capabilities()
+            else:
+                spec=json.loads(args.spec.read_text(encoding="utf-8"))
+                if args.command=="creative-edit":
+                    patches=json.loads(args.patch.read_text(encoding="utf-8"))
+                    revised,changes=edit_creative_spec(spec,patches)
+                    destination=args.output.resolve()
+                    if destination==args.spec.resolve():
+                        raise ProjectError("creative-edit must write a new versioned file")
+                    if destination.exists() and not args.force:
+                        raise ProjectError(f"Output exists: {destination} (use --force)")
+                    destination.parent.mkdir(parents=True,exist_ok=True)
+                    destination.write_text(
+                        json.dumps(revised,ensure_ascii=False,indent=2)+"\n",
+                        encoding="utf-8")
+                    result={"spec":str(destination),"changes":changes}
+                elif args.command=="creative-validate" and args.semantic_only:
+                    result={"validation":validate_creative_spec(spec),
+                            "assets_checked":False}
+                else:
+                    manifest,plan=compile_creative_spec(
+                        spec,source_dir=args.spec.parent,root=args.root,
+                        check_assets=True)
+                    qa=audit_creative_spec(spec,manifest,
+                        source_dir=args.spec.parent,root=args.root)
+                    if not qa["ok"] or (getattr(args,"strict",False)
+                                         and qa["warnings"]):
+                        _emit({"status":"error","ok":False,"qa":qa,"plan":plan,
+                               "error":{"type":"CreativeQualityError",
+                                        "message":"Creative Spec has unresolved QA issues"}},
+                              error=True)
+                        return 2
+                    if args.command=="creative-validate":
+                        result={"validation":validate_creative_spec(spec),
+                                "qa":qa,"plan":plan,"assets_checked":True}
+                    elif args.command=="creative-compile":
+                        destination=(args.output or args.spec.with_suffix(".studio.json")).resolve()
+                        if destination==args.spec.resolve():
+                            raise ProjectError("Compiler output must not overwrite Creative Spec")
+                        if destination.exists() and not args.force:
+                            raise ProjectError(f"Output exists: {destination} (use --force)")
+                        destination.parent.mkdir(parents=True,exist_ok=True)
+                        destination.write_text(
+                            json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",
+                            encoding="utf-8")
+                        report_path=destination.with_suffix(".creative-report.json")
+                        report_path.write_text(
+                            json.dumps({"plan":plan,"qa":qa},ensure_ascii=False,indent=2)+"\n",
+                            encoding="utf-8")
+                        result={"manifest":str(destination),"report":str(report_path),
+                                "plan":plan,"qa":qa}
+                    else:
+                        from .studio import load_studio
+                        from .renderers.studio import render_studio
+                        from .storyboard import make_studio_storyboard
+                        # Keep temporary manifest beside spec, because the Studio
+                        # asset resolver intentionally scopes local assets to it.
+                        with tempfile.NamedTemporaryFile(
+                                mode="w",suffix=".json",prefix=".creative-studio-",
+                                dir=args.spec.parent,delete=False,encoding="utf-8") as tmp:
+                            path=Path(tmp.name)
+                            tmp.write(json.dumps(manifest,ensure_ascii=False)+"\n")
+                        try:
+                            project=load_studio(path,root=args.root)
+                            rendered=render_studio(project,output=args.output,supersample=1)
+                            sheet=None
+                            if args.storyboard:
+                                sheet=make_studio_storyboard(
+                                    project,Path(rendered["output"]),
+                                    args.storyboard,columns=4,motion_strip=True)
+                            result={"render":rendered,"plan":plan,"qa":qa,
+                                    "storyboard":sheet}
+                        finally:
+                            path.unlink(missing_ok=True)
+            _emit({"status":"ok","ok":True,**result})
+            return 0
         if args.command == "doctor":
             import subprocess
             report = {}

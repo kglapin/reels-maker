@@ -447,7 +447,13 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
         exit_entry = plan.exits.get(role)
         if exit_entry:
             apply_exit(node, exit_entry.onset, exit_entry.duration, ctx.tokens)
-    final_nodes = (decor or []) + list(elements.values()) + _extra_icons(
+    from ..motionkit.editorial_rotation import (
+        apply_editorial_rotations, editorial_media_nodes)
+    if scene.get("editorial_rotation"):
+        plan.warnings.extend(apply_editorial_rotations(
+            elements, scene["editorial_rotation"], ctx.duration))
+    media_nodes = editorial_media_nodes(scene, ctx.width, ctx.height, ctx.duration)
+    final_nodes = (decor or []) + media_nodes + list(elements.values()) + _extra_icons(
         ctx, scene, _theme(ctx, scene))
     _validate_icon_spacing(ctx, final_nodes)
     return BuiltScene(

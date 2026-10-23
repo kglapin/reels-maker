@@ -237,7 +237,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                 cache_hits += 1
             else:
                 encoded = _encode_studio_scene(
-                    project, renderer, item, timing, scratch / "part.mp4",
+                    project, renderer, item, timing, part,
                     codec=codec, crf=crf, preset=preset,
                     frames_done=frames_done,
                     total_frames=timeline.total_frames,
@@ -247,14 +247,13 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     raise RenderError(
                         f"Scene {item.index + 1}: encoded {encoded} of "
                         f"{timing.frames} frames")
-                part = scratch / "part.mp4"
                 if cached is not None:
                     # Atomic publication avoids half-written cache objects.
                     os.replace(part, cached)
                     part = cached
             frames_done += timing.frames
             parts.append(part)
-        _join(parts, silent, scratch)
+        _join(parts, silent, scratch, max_frames=timeline.total_frames)
         audio_result = _mux(project, silent, staged, timeline.duration)
         export_quality = _verify_studio_output(staged, project, timeline)
         os.replace(staged, destination)

@@ -1,0 +1,76 @@
+name: Irregular camera canvas demo
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/reels_maker/renderers/camera_canvas.py'
+      - 'src/reels_maker/renderers/studio.py'
+      - 'tests/test_camera_canvas.py'
+      - 'examples/irregular-camera-canvas-demo.json'
+      - '.github/workflows/irregular-camera-canvas-demo.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: camera-canvas-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /examples/irregular-camera-canvas-demo.json
+            /examples/generate_editorial_rotation_assets.py
+            /archives/asta-energy/intermediates/subsidy_ad/card_01.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_04.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_07.png
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: python -m pip install --disable-pip-version-check -e '.[icons]' static-ffmpeg==3.0
+      - name: Prepare portable FFmpeg
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"],"a",encoding="utf-8") as file:
+              print(str(Path(ffmpeg).parent),file=file)
+          PY
+      - name: Test camera canvas and legacy motion
+        run: |
+          python -m unittest discover -s tests -p 'test_camera_canvas.py' -v
+          python -m unittest discover -s tests -p 'test_editorial_rotation_integration.py' -v
+      - name: Prepare four-shot media
+        run: python examples/generate_editorial_rotation_assets.py
+      - name: Render with actual Studio backend
+        run: |
+          reels-maker studio-render examples/irregular-camera-canvas-demo.json --output irregular-camera-canvas.mp4 --supersample 1 > irregular-render.json
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,nb_frames -of json irregular-camera-canvas.mp4 > irregular-probe.json
+          python - <<'PY'
+          import json
+          report=json.load(open("irregular-render.json"))
+          assert report["ok"] and report["frames"] == 302, report
+          stream=json.load(open("irregular-probe.json"))["streams"][0]
+          assert (stream["codec_name"],stream["width"],stream["height"],int(stream["nb_frames"])) == ("h264",540,960,302),stream
+          print("SUCCESS: camera canvas MP4 generated and verified")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: irregular-camera-canvas-demo
+          path: |
+            irregular-camera-canvas.mp4
+            irregular-render.json
+            irregular-probe.json
+          retention-days: 7

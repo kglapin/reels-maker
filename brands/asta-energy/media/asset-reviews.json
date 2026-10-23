@@ -17,7 +17,7 @@
         "captions",
         "metric"
       ],
-      "notes": "Logo and location/capacity labels (Pi\u0142a 30.02 kWp) visible in decoded shots; new lower-third text overlaps them."
+      "notes": "Logo and location/capacity labels (Piła 30.02 kWp) visible in decoded shots; new lower-third text overlaps them."
     },
     "media/footage/1_fotowoltaika-25wp-budzyn.mp4": {
       "type": "clean_source",
@@ -59,7 +59,7 @@
       "burned_in": [],
       "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
     },
-    "media/footage/11_chodzie\u017c-2x39,59kwp-fotowoltaika-asta.mp4": {
+    "media/footage/11_chodzież-2x39,59kwp-fotowoltaika-asta.mp4": {
       "type": "clean_source",
       "burned_in": [],
       "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
@@ -74,7 +74,7 @@
       "burned_in": [],
       "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
     },
-    "media/footage/14_Pi\u0142a-pv-39,96-kwp.mp4": {
+    "media/footage/14_Piła-pv-39,96-kwp.mp4": {
       "type": "clean_source",
       "burned_in": [],
       "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
@@ -83,6 +83,18 @@
       "type": "clean_source",
       "burned_in": [],
       "notes": "No baked-in logos or captions detected in sampled frames at 1s and duration-1s timestamps. Suitable for new typography/branding."
+    },
+    "media/stock/agrivoltaics_heggelbach_01.webm": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "Inspected frames at 1s and 3s: aerial PV array over farmland, no burned-in logos or captions. CC0 1.0; see licensing/stock_credits.txt.",
+      "license": "CC0 1.0"
+    },
+    "media/stock/agrivoltaics_heggelbach_05.webm": {
+      "type": "clean_source",
+      "burned_in": [],
+      "notes": "Inspected frames at 1s and 3s: aerial PV array over farmland, no burned-in logos or captions. CC0 1.0; see licensing/stock_credits.txt.",
+      "license": "CC0 1.0"
     }
   }
 }

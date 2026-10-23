@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "name": "ASTA Motion System Demo",
+  "brand": "asta-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "profile": "final",
+    "codec": "libx264",
+    "crf": 17,
+    "preset": "slow"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#101A14",
+      "surface": "#F7F7F2",
+      "ink": "#FFFFFF",
+      "muted": "#C9D2CB",
+      "accent": "#47A013"
+    }
+  },
+  "scenes": [
+    {
+      "id": "opening-statement",
+      "composition": "statement",
+      "duration": 3.0,
+      "background": {"kind": "gradient", "from": "#101A14", "to": "#1B3324"},
+      "headline": "ENERGIA, KTÓRA PRACUJE DLA CIEBIE",
+      "subtitle": "FOTOWOLTAIKA · MAGAZYNY ENERGII · WSPARCIE"
+    },
+    {
+      "id": "farm-photo",
+      "composition": "spotlight",
+      "duration": 3.4,
+      "photo": "media/stock/agrivoltaics_heggelbach_05.webm",
+      "photo_time": 2.0,
+      "background": {
+        "scrim": 0.688,
+        "tint": "#0A1A10",
+        "tint_amount": 0.18,
+        "camera": {"direction": "push-in", "intensity": 0.06}
+      },
+      "kicker": "FOTOWOLTAIKA",
+      "headline": "ENERGIA ZE SŁOŃCA",
+      "subtitle": "DLA FIRM, KTÓRE MYŚLĄ DŁUGOTERMINOWO"
+    },
+    {
+      "id": "capacity",
+      "composition": "amount",
+      "duration": 3.0,
+      "background": {"kind": "solid", "color": "#142C1E"},
+      "kicker": "PRZYKŁADOWA MOC",
+      "value": 39.6,
+      "format": {"suffix": " kWp", "decimals": 1, "thousands": " "},
+      "subtitle": "INSTALACJA DLA FIRMY",
+      "visual": "none"
+    },
+    {
+      "id": "energy-breakdown",
+      "composition": "breakdown",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F2F5F0"},
+      "kicker": "ENERGIA W FIRMIE",
+      "total": 100,
+      "format": {"suffix": "%", "decimals": 0, "thousands": ""},
+      "items": [
+        {"label": "PRODUKCJA", "value": 55},
+        {"label": "ZUŻYCIE", "value": 30},
+        {"label": "MAGAZYN", "value": 15}
+      ],
+      "subtitle": "PRZYKŁADOWY PODZIAŁ"
+    },
+    {
+      "id": "process-checklist",
+      "composition": "checklist",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F7F7F2"},
+      "headline": "OD AUDYTU DO URUCHOMIENIA",
+      "items": [
+        "Audyt zużycia i możliwości",
+        "Projekt instalacji",
+        "Dobór magazynu energii",
+        "Montaż i uruchomienie"
+      ]
+    },
+    {
+      "id": "storage-photo",
+      "composition": "spotlight",
+      "duration": 3.0,
+      "photo": "media/stock/agrivoltaics_heggelbach_01.webm",
+      "photo_time": 1.0,
+      "background": {
+        "scrim": 0.68,
+        "tint": "#0A1A10",
+        "tint_amount": 0.2,
+        "camera": {"direction": "pan-left", "intensity": 0.05}
+      },
+      "kicker": "MAGAZYN ENERGII",
+      "headline": "ENERGIA, KTÓRA ZOSTAJE",
+      "subtitle": "PRODUKUJ · MAGAZYNUJ · WYKORZYSTUJ"
+    },
+    {
+      "id": "bars-example",
+      "composition": "bars",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F2F5F0"},
+      "headline": "WIĘCEJ ENERGII W FIRMIE",
+      "bars": [
+        {"label": "PRZED", "value": 35, "suffix": "%"},
+        {"label": "PO", "value": 78, "suffix": "%"}
+      ],
+      "subtitle": "PRZYKŁADOWE WARTOŚCI"
+    },
+    {
+      "id": "comparison-example",
+      "composition": "comparison",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F7F7F2"},
+      "headline": "DWA PODEJŚCIA",
+      "columns": [
+        {"label": "BEZ MAGAZYNU", "value": 35, "suffix": "%"},
+        {"label": "Z MAGAZYNEM", "value": 78, "suffix": "%"}
+      ],
+      "subtitle": "PRZYKŁADOWE WARTOŚCI"
+    },
+    {
+      "id": "energy-flow",
+      "composition": "energy",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F2F5F0"},
+      "headline": "OD SŁOŃCA DO FIRMY",
+      "subtitle": "PRODUKCJA · MAGAZYN · ZUŻYCIE"
+    },
+    {
+      "id": "meeting",
+      "composition": "announcement",
+      "duration": 3.2,
+      "background": {"kind": "gradient", "from": "#101A14", "to": "#1B3324"},
+      "kicker": "SPOTKANIE ONLINE",
+      "headline": "POROZMAWIAJMY\nO ENERGII",
+      "subtitle": "PRZYKŁADOWY UKŁAD",
+      "day": "?",
+      "calendar_label": "TERMIN DO USTALENIA"
+    },
+    {
+      "id": "next-step",
+      "composition": "deadline",
+      "duration": 3.2,
+      "background": {"kind": "solid", "color": "#142C1E"},
+      "kicker": "KOLEJNY KROK",
+      "date": "KONSULTACJA",
+      "subtitle": "UMÓW TERMIN",
+      "milestones": [
+        {"label": "AUDYT", "value": "START"},
+        {"label": "PROJEKT", "value": "2–4 TYG."},
+        {"label": "MONTAŻ", "value": "REALIZACJA"}
+      ]
+    },
+    {
+      "id": "four-steps",
+      "composition": "stats",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {"kind": "solid", "color": "#F7F7F2"},
+      "headline": "JAK PRACUJEMY",
+      "stats": [
+        {"label": "AUDYT", "value": 1},
+        {"label": "PROJEKT", "value": 2},
+        {"label": "MONTAŻ", "value": 3},
+        {"label": "OPIEKA", "value": 4}
+      ]
+    },
+    {
+      "id": "cta",
+      "composition": "cta",
+      "duration": 3.6,
+      "background": {"kind": "solid", "color": "#142C1E"},
+      "headline": "POROZMAWIAJMY O TWOJEJ INSTALACJI",
+      "phone": "NAPISZ DO NAS",
+      "line_one": "ZOBACZ REALIZACJE",
+      "line_two": "asta-energy.pl",
+      "website": "asta-energy.pl",
+      "logo": "assets/logo.png"
+    }
+  ]
+}

@@ -51,6 +51,41 @@ def main(argv: list[str] | None = None) -> int:
     kinetic.add_argument("--root", type=Path)
     kinetic.add_argument("--output", type=Path)
     kinetic.add_argument("--json", action="store_true")
+
+    studio = commands.add_parser(
+        "studio-render",
+        help="Render a complete motion-design film with the shared scene engine")
+    studio.add_argument("manifest", type=Path)
+    studio.add_argument("--root", type=Path)
+    studio.add_argument("--output", type=Path)
+    studio.add_argument("--profile", choices=("preview", "review", "final",
+                                              "high-motion"))
+    studio.add_argument("--supersample", type=int, choices=(1, 2))
+    studio.add_argument("--json", action="store_true")
+
+    studio_qa = commands.add_parser(
+        "studio-qa",
+        help="Audit collisions, safe areas, typography, contrast, timing and data")
+    studio_qa.add_argument("manifest", type=Path)
+    studio_qa.add_argument("--root", type=Path)
+    studio_qa.add_argument("--profile", choices=("preview", "review", "final",
+                                                 "high-motion"))
+    studio_qa.add_argument("--samples", type=int, default=6,
+                           help="Geometry samples per scene (default: 6)")
+    studio_qa.add_argument("--output-dir", type=Path)
+    studio_qa.add_argument("--no-contact-sheet", action="store_true")
+    studio_qa.add_argument("--strict", action="store_true",
+                           help="Return exit code 2 when any error is reported")
+    studio_qa.add_argument("--json", action="store_true")
+
+    studio_info = commands.add_parser(
+        "studio-inspect",
+        help="Print resolved tokens, layouts, choreography and cue timings")
+    studio_info.add_argument("manifest", type=Path)
+    studio_info.add_argument("--root", type=Path)
+    studio_info.add_argument("--profile", choices=("preview", "review", "final",
+                                                   "high-motion"))
+    studio_info.add_argument("--json", action="store_true")
     cues = commands.add_parser("cue-sheet",
         help="List exact local/global cue times including transition overlaps")
     cues.add_argument("project", type=Path)
@@ -78,6 +113,9 @@ def main(argv: list[str] | None = None) -> int:
     storyboard.add_argument("--video", type=Path, required=True)
     storyboard.add_argument("--output", type=Path, required=True)
     storyboard.add_argument("--columns", type=int, default=4)
+    storyboard.add_argument("--root", type=Path)
+    storyboard.add_argument("--profile", choices=("preview", "review", "final",
+                                                    "high-motion"))
     storyboard.add_argument("--motion-strip", action="store_true",
         help="Show entry/settled/exit frames for every shot")
     storyboard.add_argument("--json", action="store_true")
@@ -118,7 +156,9 @@ def main(argv: list[str] | None = None) -> int:
                         check=True).stdout.splitlines()[0]
                 except (OSError, RenderError, subprocess.CalledProcessError):
                     report[name] = None
-            valid = all(report.values())
+            import PIL
+            report["pillow"] = PIL.__version__
+            valid = all(report.get(name) for name in ("ffmpeg", "ffprobe"))
             _emit({"status": "ok" if valid else "error",
                    "ok": valid, "tools": report}, error=not valid)
             return 0 if valid else 3
@@ -159,6 +199,54 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "kinetic-render":
             from .kinetic_video import render_kinetic
             result = render_kinetic(args.manifest, root=args.root, output=args.output)
+        elif args.command == "studio-render":
+            from .studio import load_studio
+            from .renderers.studio import render_studio
+            project = load_studio(args.manifest, root=args.root,
+                                  profile=args.profile)
+            result = render_studio(project, output=args.output,
+                                   profile=args.profile,
+                                   supersample=args.supersample)
+        elif args.command == "studio-inspect":
+            from .studio import load_studio
+            project = load_studio(args.manifest, root=args.root,
+                                  profile=args.profile)
+            timeline = project.timeline()
+            result = {**project.to_dict(),
+                      "timeline": timeline.to_dict(),
+                      "scenes": [scene.to_dict()
+                                 for scene in project.build(timeline)]}
+        elif args.command == "studio-qa":
+            from .studio import load_studio
+            from .renderers.scene import RenderOptions, SceneRenderer
+            from .qa.report import audit, contact_sheet, write_report
+            project = load_studio(args.manifest, root=args.root,
+                                  profile=args.profile)
+            timeline = project.timeline()
+            built = project.build(timeline)
+            renderer = SceneRenderer(project.width, project.height,
+                                     project.tokens, project.fonts,
+                                     options=RenderOptions(supersample=1))
+            report = audit(project, built, timeline, renderer=renderer,
+                           samples_per_scene=args.samples,
+                           strict=args.strict)
+            out_dir = (args.output_dir or (project.root / "renders" /
+                       (project.brand or "studio") / "qa" /
+                       project.name)).resolve()
+            written = write_report(report, out_dir)
+            sheet = None
+            if not args.no_contact_sheet:
+                sheet = contact_sheet(report, built, renderer, timeline,
+                                      out_dir / "qa-contact-sheet.png")
+            result = {"project": project.name, "report": written["report"],
+                      "contact_sheet": str(sheet) if sheet else None,
+                      "qa": report}
+            if args.strict and not report["ok"]:
+                _emit({"status": "error", "ok": False, **result,
+                       "error": {"type": "QualityReviewRequired",
+                                 "message": "studio-qa reported blocking errors"}},
+                      error=True)
+                return 2
         elif args.command == "brandbook":
             try:
                 from .brandbook import generate_brandbook
@@ -193,10 +281,22 @@ def main(argv: list[str] | None = None) -> int:
             from .export_quality import verify_export
             result = verify_export(load_project(args.project), args.video)
         elif args.command == "storyboard":
-            from .storyboard import make_storyboard
-            result = make_storyboard(load_project(args.project), args.video,
-                                     args.output, columns=args.columns,
-                                     motion_strip=args.motion_strip)
+            from .storyboard import make_storyboard, make_studio_storyboard
+            manifest = json.loads(args.project.read_text(encoding="utf-8"))
+            is_studio = bool(manifest.get("style")) or any(
+                isinstance(scene, dict) and "composition" in scene
+                for scene in manifest.get("scenes", []))
+            if is_studio:
+                from .studio import load_studio
+                project = load_studio(args.project, root=args.root,
+                                      profile=args.profile)
+                result = make_studio_storyboard(
+                    project, args.video, args.output, columns=args.columns,
+                    motion_strip=args.motion_strip)
+            else:
+                result = make_storyboard(load_project(args.project), args.video,
+                                         args.output, columns=args.columns,
+                                         motion_strip=args.motion_strip)
         else:
             project = load_project(args.project)
             if args.command == "validate":

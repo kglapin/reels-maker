@@ -1,15 +1,16 @@
 {
   "current_milestone": "M11 - Flagship demos, formal approval and v1.0 delivery",
-  "status": "READY FOR OWNER REVIEW - All P0 gates G0-G10 satisfied; G11 pending human creative review and merge approval",
-  "next_action": "Owner: Review docs/REVIEW_RECORD.md, approve flagships, check account billing for Actions runner (OPS-11), authorize PR merge and v1.0 tag",
-  "current_branch": "refactor/modular-render-engine",
-  "latest_commit": "520b610 test: fix audio_qc macOS path resolution; add final review record",
-  "branch_up_to_date": true,
-  "draft_pr_state": "OPEN",
-  "ci_status": "OPS-11 BLOCKER: GitHub Actions jobs QUEUED, not provisioning (account billing/quota check needed)",
-  "local_tests": "125 passed in 43.19s",
+  "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
+  "next_action": "Owner: resolve repository privacy, review docs/REVIEW_RECORD.md and flagship media/claim licences; decide release approval and v1.0 tag",
+  "current_branch": "feat/motion-design-system-20261023 (local prototype; not pushed)",
+  "latest_commit": "05f58b72dffdacb2716b87025a01486b6f72cec0 feat: reusable native kinetic animation renderer (upstream base)",
+  "branch_up_to_date": false,
+  "worktree_clean": false,
+  "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
+  "ci_status": "Latest observed workflows on feat/kinetic-motion-primitives-20261023 succeeded; no CI run for the current local prototype branch",
+  "local_tests": "144 passed in 45.65s",
   "completed_gates": {
-    "G0": "SEC-01/03/05/07 - Private visibility confirmed, no secrets found, collaborators verified",
+    "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
     "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests, caching, atomic publish, path safety, Unicode NFC normalization",
     "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar, reference annotations, rejection examples, minimum read times",
@@ -18,18 +19,18 @@
     "G6": "AUD-01/02/03/05/07/08 - Independent voiceover/music, sidechain ducking, sync marks, AAC output validated via render",
     "G8": "QA-01/02/03/05/09/10/11 - All QA checks: storyboard, motion strip, golden frames, format matrix, edge cases, review rubric",
     "G9": "PERF-01/03/05/06 - Benchmarks (cold/warm), cache invalidation, failure recovery, atomic replacement",
-    "G10": "OPS-01/02/06/07/08/10 - Private repo, storage strategy, provenance, creator runbook, roadmap status"
+    "G10": "OPS-01/02/06/07/08/10 - Storage strategy, provenance, creator runbook and roadmap status; private-repository requirement is currently unmet"
   },
   "pending_g11": [
     "REL-07: Phone-size playback verification (human review required)",
     "REL-09: Human approval of creative content, brand usage, media/audio licensing",
     "REL-10: Approve final flagship MP4 and archive reproducible bundle",
-    "REL-13: Final CI green on reviewed commit (blocked by OPS-11)",
-    "REL-14: Owner approval to mark PR ready and merge",
+    "REL-13: Fresh CI green on the reviewed release commit",
+    "REL-14: Owner release approval (PR #1 is already merged)",
     "REL-15: Tag version 1.0 after merge authorization"
   ],
   "blockers": [
-    "OPS-11: Private GitHub Actions runner provisioning (account billing/quota check needed)",
+    "SEC-06: Repository currently PUBLIC; owner must restore/confirm private visibility",
     "REL-09: Human creative review and approval"
   ],
   "flagship_deliveries": [
@@ -52,8 +53,18 @@
       "all_clean_source": true
     }
   ],
-  "test_count": 125,
+  "experimental_motion_system": {
+    "branch": "feat/motion-design-system-20261023",
+    "status": "Local, not pushed; separate from v1.0 gates",
+    "manifest": "brands/asta-energy/projects/asta-motion-system-demo.json",
+    "render": "renders/asta-energy/asta-motion-system-demo-final.mp4",
+    "contact_sheet": "renders/asta-energy/qa/asta-motion-system-demo-final.png",
+    "export": "H.264 yuv420p, 1080x1920, 30 fps, 1260 frames, 42.0 seconds; silent pending music rights",
+    "strict_qa": "pass: 13 scenes, 78 samples, zero errors/warnings at final profile",
+    "human_review": "pending; prototype is not a publication-approved flagship"
+  },
+  "test_count": 144,
   "files_added": 12,
-  "current_date": "2026-10-22",
+  "current_date": "2026-10-23",
   "version": "1.0"
 }

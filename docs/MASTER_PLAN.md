@@ -95,11 +95,25 @@ Stop/ask-for-input conditions
 Ask for human/owner input only when the next step requires actual permission or unavailable licensed inputs: repository access changes, history rewrites, source media/licences, publishing rights, final creative approval or merging. Continue with independently testable tasks in the meantime.
 
 ## 9. Project and Repository Links
-Draft working PR: #1
+Merged refactor PR: [#1](https://github.com/kglapin/reels-maker/pull/1)
 Current unit/FFmpeg CI: https://github.com/kglapin/reels-maker/actions
 Historical evidence: docs/REFACTOR_PLAN.md
 Creative negative-control findings: docs/ASTA_CREATIVE_QA.md
 Typography and timing: docs/MOTION_DESIGN.md
 Format and QA principles: docs/VISUAL_QA.md
 Current task status: docs/ROADMAP_STATUS.json
-Repository privacy is required and confirmed as of 2026-10-22. Existing downstream copies of content previously public remain a separate risk to assess.
+Repository privacy is required. A live GitHub check on 2026-10-23 reported
+`PUBLIC`, so the earlier 2026-10-22 confirmation is stale and owner action is
+required. Existing downstream copies of content previously public remain a
+separate risk to assess.
+
+## 10. Separate native studio prototype (not a release gate)
+
+PR #1 merged the modular renderer on 2026-10-23. A separate local branch,
+`feat/motion-design-system-20261023`, contains an experimental Pillow-based
+motion-design studio and an ASTA design-system sample. The prototype is not in
+PR #1, has not been pushed, and does not replace the two human-review flagship
+deliveries or any G0–G11 acceptance gate. Its sample output is explicitly
+illustrative and silent because supplied music publication rights are not
+verified. Keep it local until the repository privacy blocker and owner review
+are resolved; do not characterize automated QA as creative approval.

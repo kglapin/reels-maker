@@ -3,9 +3,10 @@
 One Python/FFmpeg engine for many brands and video formats, usable from ChatGPT, Pi, OpenCode
 and any noninteractive terminal harness.
 
-**Refactor status:** Work stays on branch `refactor/modular-render-engine`,
-within draft [PR #1](https://github.com/kglapin/reels-maker/pull/1).
-`main` is unchanged until explicit approval.
+**Refactor status:** `refactor/modular-render-engine` was merged through
+[PR #1](https://github.com/kglapin/reels-maker/pull/1) on 2026-10-23. The
+separate native motion-studio prototype is on local branch
+`feat/motion-design-system-20261023`; it has not been pushed or merged.
 
 ## Canonical 1.0 completion plan
 
@@ -13,7 +14,10 @@ The comprehensive, ordered backlog is
 [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md), with a compact machine-readable
 [milestone status](docs/ROADMAP_STATUS.json). Use these for all follow-up
 work. A passing CI run is not a creative sign-off. The repository **must
-remain private** and the Draft PR must not be merged without approval.
+remain private**. A live GitHub check on 2026-10-23 reported `PUBLIC`, contrary
+to this policy. An owner must restore/confirm privacy; do not push the local
+prototype or media while this blocker is open. PR #1 is already merged; that
+does not approve the prototype or release.
 
 ## Architecture
 
@@ -44,6 +48,28 @@ reels-maker render brands/asta-energy/projects/asta-rush-demo.json --root . --jo
 An agent needs only a brand folder, selected project manifest and source media.
 Renders reuse cached, encoded segments and concatenate without re-encoding.
 FFmpeg is the rendering backend; there is no hosted model dependency.
+
+## Native motion-design studio (experimental)
+
+The separate Pillow-based studio engine is available without changing the
+legacy `render` or `kinetic-render` paths. It adds shared layout recipes,
+measured typography, five reusable style systems, retained scene graphs,
+cue-aware motion, asset provenance checks and deterministic visual QA:
+
+```sh
+reels-maker studio-inspect brands/asta-energy/projects/asta-motion-system-demo.json --profile review --json
+reels-maker studio-qa brands/asta-energy/projects/asta-motion-system-demo.json --profile review --strict --json
+reels-maker studio-render brands/asta-energy/projects/asta-motion-system-demo.json --profile final --supersample 1 --json
+reels-maker storyboard brands/asta-energy/projects/asta-motion-system-demo.json --video renders/asta-energy/asta-motion-system-demo-final.mp4 --output renders/asta-energy/qa/asta-motion-system-demo.png --json
+```
+
+Profiles: `preview` (360×640/20 fps), `review` (720×1280/30 fps), `final`
+(1080×1920/30 fps) and `high-motion` (1080×1920/60 fps). See
+[docs/MOTION_DESIGN_SYSTEM.md](docs/MOTION_DESIGN_SYSTEM.md) for architecture,
+manifest contract and QA limits. The included ASTA demo is a design-system
+sample with explicitly illustrative numbers, not an approved advertisement.
+Its stock clips are rights-documented; music is omitted until its publication
+licence is verified. An automated QA pass is not human creative approval.
 
 **Read** `AGENTS.md`, `docs/CLI.md`, and
 `brands/asta-energy/BRAND.md` before producing video.

@@ -80,8 +80,9 @@ def choose_layout(shot,index,mode,used):
         scores.append(CompositionCandidate(
             candidate_id=f"{index}-{i}-{layout}",layout=layout,
             scores=metrics,element_count=3 if shot.get("asset") else 2))
-    best,report=evaluate_candidates(scores)
-    return best.layout,{"decision":"candidate_ranking","layout":best.layout,
+    report=evaluate_candidates(scores)
+    selected=next(c for c in scores if c.candidate_id==report["selected_id"])
+    return selected.layout,{"decision":"candidate_ranking","layout":selected.layout,
                         "candidate_count":len(scores),
                         "reason":"heuristic hierarchy, legibility and continuity"}
 

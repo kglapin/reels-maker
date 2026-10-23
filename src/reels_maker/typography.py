@@ -23,7 +23,9 @@ class RichLayout:
 
 
 def layout_runs(draw: ImageDraw.ImageDraw, runs: list[dict], font_loader,
-                base_size: int, max_width: int, accent: str) -> RichLayout:
+                base_size: int, max_width: int, accent: str,
+                primary: str = "#FFFFFF",
+                muted: str = "#D6E5DD") -> RichLayout:
     """Measure and line-break a headline with a shared baseline per line."""
     if max_width < 1:
         raise RenderError("Headline has no horizontal layout space")
@@ -45,9 +47,9 @@ def layout_runs(draw: ImageDraw.ImageDraw, runs: list[dict], font_loader,
         size = max(9, round(base_size * item.get("scale", 1.0)))
         font = font_loader(size, item.get("weight", "bold") == "bold")
         ink = {
-            "white": "#FFFFFF",
+            "white": primary,
             "accent": accent,
-            "muted": "#D6E5DD",
+            "muted": muted,
         }[item.get("color", "white")]
         # Whitespace remains attached to text until the next word; leading
         # whitespace after an explicit break is intentionally discarded.

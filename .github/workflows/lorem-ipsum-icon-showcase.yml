@@ -25,6 +25,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /src/
+            /tests/test_icon_spacing.py
             /pyproject.toml
             /examples/lorem-ipsum-icon-showcase.json
             /examples/generate_lorem_assets.py
@@ -35,6 +36,8 @@ jobs:
           python-version: '3.11'
       - name: Install actual repository renderer and asset dependencies
         run: python -m pip install -e '.[icons]' 'numpy>=1.26,<3'
+      - name: Check icon and typography spacing regressions
+        run: python -m unittest discover -s tests -p test_icon_spacing.py -v
       - name: Check FFmpeg availability
         shell: bash
         run: |

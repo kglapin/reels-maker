@@ -46,52 +46,52 @@
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 7.85,
+        "time": 7.9,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 10.6,
+        "time": 10.7,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 13.6,
+        "time": 13.7,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 16.2,
+        "time": 16.3,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 18.8,
+        "time": 18.9,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 21.55,
+        "time": 21.7,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 24.55,
+        "time": 24.7,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 27.1,
+        "time": 27.3,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 29.95,
+        "time": 30.2,
         "volume": 0.3
       },
       {
         "file": "media/soft-hit.wav",
-        "time": 32.4,
+        "time": 32.7,
         "volume": 0.3
       }
     ]
@@ -163,7 +163,7 @@
     {
       "id": "03-counter",
       "composition": "amount",
-      "duration": 2.75,
+      "duration": 2.8,
       "transition_in": "dip",
       "transition_seconds": 0.18,
       "theme": "light",
@@ -184,7 +184,7 @@
     {
       "id": "04-bars",
       "composition": "bars",
-      "duration": 2.75,
+      "duration": 2.8,
       "transition_in": "wipe-up",
       "transition_seconds": 0.22,
       "theme": "light",
@@ -298,7 +298,7 @@
     {
       "id": "08-comparison",
       "composition": "comparison",
-      "duration": 2.75,
+      "duration": 2.8,
       "transition_in": "wipe-up",
       "transition_seconds": 0.2,
       "theme": "light",
@@ -357,7 +357,7 @@
     {
       "id": "10-energy",
       "composition": "energy",
-      "duration": 2.55,
+      "duration": 2.6,
       "transition_in": "wipe-left",
       "transition_seconds": 0.2,
       "theme": "light",
@@ -371,7 +371,7 @@
     {
       "id": "11-checklist",
       "composition": "checklist",
-      "duration": 2.85,
+      "duration": 2.9,
       "transition_in": "dip",
       "transition_seconds": 0.18,
       "background": {
@@ -389,7 +389,7 @@
     {
       "id": "12-quote",
       "composition": "quote",
-      "duration": 2.45,
+      "duration": 2.5,
       "transition_in": "cut",
       "theme": "light",
       "background": {

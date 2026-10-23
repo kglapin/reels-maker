@@ -39,7 +39,10 @@ jobs:
               handle.write(str(Path(ffmpeg).parent)+"\n")
           PY
           fi
-          ffmpeg -version | head -n 1
+          if ! command -v ffmpeg >/dev/null; then
+            export PATH="$(python -c 'from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise as r; from pathlib import Path; print(Path(r()[0]).parent)'):$PATH"
+          fi
+          ffmpeg -version | sed -n '1p'
       - name: Generate original abstract visuals and audio sources
         run: python examples/generate_lorem_assets.py
       - name: Validate manifest and render scene QA

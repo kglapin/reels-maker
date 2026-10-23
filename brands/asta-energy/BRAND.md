@@ -71,3 +71,46 @@ burned-in logos or labels. Check `media/asset-reviews.json`. In particular,
 `8_asta-pila-realizacja-30kwp.mp4` are **finished promotional edits**, not
 clean source shots. The strict editorial quality gate blocks rebranding them.
 Request clean source exports for new ads with professional moving typography.
+
+## Reels visual defaults — typography and spacing regression (2026-10-23)
+
+Use the built-in editorial profiles via `scene.title.profile` rather than
+standalone Pillow/FFmpeg scripts. Approved starting points:
+
+- `light-information`: light editorial composition, dark ink, hero number,
+  top-positioned copy and no white logo on white footage.
+- `light-detail`: restrained dark text on white, vertically centered.
+- `dark-hero`: large white hero number with strong neutral contrast overlay.
+- `dark-cta`: white logo and final call-to-action centered on dark footage.
+
+Composition is anchored by **real glyph bounds** rather than font point sizes.
+Keep supporting lines below hero numbers, never directly on top. Hard-fail
+when a headline violates the scene safe area. Use scene-specific positions
+(`upper`, `middle`, `lower`), and only animate within the readable hold
+window. For portrait Reels, do not put core text under platform UI, and use
+short two-level copy instead of stacked captions and decorative ribbons.
+
+Example:
+
+```json
+{
+  "title": {
+    "profile": "light-information",
+    "kicker": "ŁĄCZNIE NAWET",
+    "headline": "19 000 zł",
+    "body": "maksymalnego wsparcia",
+    "footer": "Przy spełnieniu warunków programu"
+  },
+  "motion": {
+    "preset": "editorial_reveal",
+    "duration_frames": 7,
+    "stagger_frames": 2,
+    "distance_px": 22
+  }
+}
+```
+
+The renderer supports role-based entrances; synthetic/patterned footage is not
+a substitute for an actual source-and-license review. Background media must
+have sufficient luminance contrast. No default green gradients or duplicate
+picture-in-picture imagery.

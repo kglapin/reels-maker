@@ -77,11 +77,17 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         layers.append({"file": str(file), "x": bounds[0],
                        "y": bounds[1], "role": role})
 
-    # The incoming footage may already contain a baked-in grade. Keep the
-    # default subtle, but allow explicit stronger contrast on complex motion.
-    backdrop = title.get("backdrop", "soft")
+    # Light editorial cards use dark ink on bright clean footage; dark cards
+    # retain the familiar white-on-scrim treatment. Never apply a dark scrim
+    # under a light-theme headline.
+    theme = title.get("theme", "dark")
+    if theme not in ("dark", "light"):
+        raise RenderError("title.theme must be dark or light")
+    backdrop = title.get("backdrop", "none" if theme == "light" else "soft")
     if backdrop not in ("soft", "strong", "none"):
         raise RenderError("title.backdrop must be soft, strong or none")
+    if theme == "light" and backdrop != "none":
+        raise RenderError("Light typography requires title.backdrop=none")
     if title and backdrop != "none":
         y0 = int(h * .38)
         gradient = Image.new("RGBA", (1, h - y0))
@@ -126,10 +132,11 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
               project.branding.get("font_family"))
         for i, n in enumerate(size)
     ]
-    available = w - 2 * margin - round(22 * scale)
+    available = w - 2 * margin - round(30 * scale)
+    if available <= 0:
+        raise RenderError("Safe areas leave no room for text")
     lines = [_wrap(draw, s.upper() if i == 0 else s, f, available)
              for i, (s, f) in enumerate(zip(fields, faces))]
-    spacing = [round(v * scale) for v in (46, 93, 64, 41)]
     accent = str(project.branding.get("accent", "#47A013"))
     rich_layout = (layout_runs(
         draw, headline_spec["runs"],
@@ -137,16 +144,40 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
             n, bold,
             project.branding.get("font_bold" if bold else "font_regular"),
             project.branding.get("font_family")),
-        max(9, size[1]), available, accent) if rich else None)
+        max(9, size[1]), available, accent,
+        primary="#14221A" if theme == "light" else "#FFFFFF",
+        muted="#546459" if theme == "light" else "#D6E5DD") if rich else None)
     if rich_layout:
         lines[1] = ["<rich>"]
+    # Real glyph bounds replace fixed line-height guesses. A headline with
+    # tall digits/diacritics can never swallow the following supporting copy.
+    spacing = [
+        max(round(nominal * scale),
+            max((draw.textbbox((0, 0), line, font=face)[3] -
+                 draw.textbbox((0, 0), line, font=face)[1]
+                 for line in group if line != "<rich>"), default=0)
+            + max(4, round(17 * scale)))
+        for nominal, group, face in zip((46, 93, 64, 41), lines, faces)
+    ]
+    group_gap = max(7, round(23 * scale))
     block_height = sum((rich_layout.height if i == 1 and rich_layout
-                        else len(line) * spacing[i])
-                       for i, line in enumerate(lines))
-    block_height += round(22 * scale) * sum(bool(line) for line in lines[1:])
+                        else len(group) * spacing[i])
+                       for i, group in enumerate(lines))
+    block_height += group_gap * sum(bool(group) for group in lines[1:])
     bottom = h - bottom_safe
-    y = bottom - block_height
-    if y < max(top_safe, round(h * 0.36)):
+    placement = title.get("position", "lower")
+    if placement not in ("upper", "middle", "lower"):
+        raise RenderError("title.position must be upper, middle or lower")
+    top = max(top_safe, round(h * .29) if logo else round(h * .20))
+    if placement == "upper":
+        y = top
+    elif placement == "middle":
+        y = (top + bottom - block_height) // 2
+    else:
+        y = bottom - block_height
+    if y < top_safe or y + block_height > bottom:
+        raise RenderError("Title card exceeds safe text area; shorten its text")
+    if placement == "lower" and y < max(top_safe, round(h * .32)):
         raise RenderError("Title card exceeds safe text area; shorten its text")
     accent_hex = str(project.branding.get("accent", "#47A013")).lstrip("#")
     try:
@@ -154,7 +185,8 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         Image.new("RGB", (1, 1), accent)
     except ValueError as exc:
         raise RenderError("Invalid branding.accent hex color") from exc
-    colors = [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"]
+    colors = ([accent, "#14221A", "#34463A", "#546459"] if theme == "light"
+              else [accent, "#FFFFFF", "#E5F3EA", "#C4D4CC"])
     stroke = max(1, round(scale))
     def draw_safe_text(layer_draw, xy, value, font, ink, *,
                        anchor=None) -> None:
@@ -178,7 +210,7 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
         store_layer(accent_layer, "accent")
     for i, (group, face, step, ink) in enumerate(zip(lines, faces, spacing, colors)):
         if i and group:
-            y += round(22 * scale)
+            y += group_gap
         if not group:
             continue
         element = Image.new("RGBA", (w, h), (0, 0, 0, 0))

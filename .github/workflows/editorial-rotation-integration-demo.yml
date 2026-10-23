@@ -55,7 +55,7 @@ jobs:
           from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
           ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
           with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as f:
-              f.write(str(Path(ffmpeg).parent)+"\\n")
+              print(str(Path(ffmpeg).parent),file=f)
           print("FFmpeg:", ffmpeg, "FFprobe:", ffprobe)
           PY
       - name: Test rotation integration and geometry

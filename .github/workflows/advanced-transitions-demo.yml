@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: advanced-transitions-demo
+  group: advanced-transitions-demo-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

@@ -62,7 +62,7 @@ def wav(name: str, signal: np.ndarray, sr: int = 32000) -> None:
 
 def audio() -> None:
     sr = 32000
-    duration = 35.7
+    duration = 36.0
     n = round(duration * sr)
     t = np.arange(n, dtype=np.float32) / sr
     tempo = 116

@@ -104,7 +104,11 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     card = scratch / "card.png"
     motion = scene.get("motion")
     layers = [] if motion else None
-    show_card = draw_card(project, scene.get("title") or {}, logo, card,
+    title = scene.get("title") or {}
+    # Light cards may suppress a light/white brand mark instead of showing an
+    # invisible logo on white footage. The original brand asset is not recolored.
+    effective_logo = logo if title.get("logo", True) else None
+    show_card = draw_card(project, title, effective_logo, card,
                           layers=layers)
     args = ["-ss", str(scene.get("start", 0)), "-i", str(source)]
     if show_card and motion and layers:

@@ -62,7 +62,7 @@ def search_pixabay(query: str, *, per_page: int = 12,
     return [StockAsset("pixabay", str(p["id"]), p["previewURL"],
                        p["pageURL"], p.get("user", "Unknown"),
                        p["imageWidth"], p["imageHeight"],
-                       p.get("largeImageURL", p["webformatURL"]), p["pageURL"])
+                       (p.get("largeImageURL") or p.get("webformatURL") or p["previewURL"]), p["pageURL"])
             for p in payload.get("hits", [])]
 
 

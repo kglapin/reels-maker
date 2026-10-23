@@ -59,24 +59,24 @@ jobs:
       - name: Validate manifest and render scene QA
         run: |
           mkdir -p renders/studio
-          reels-maker studio-inspect examples/lorem-ipsum-showcase.json --profile final --json > renders/studio/inspect.json
-          reels-maker studio-qa examples/lorem-ipsum-showcase.json --profile final --samples 3 --json > renders/studio/qa-summary.json
+          reels-maker studio-inspect examples/lorem-ipsum-icon-showcase.json --profile final --json > renders/studio/inspect.json
+          reels-maker studio-qa examples/lorem-ipsum-icon-showcase.json --profile final --samples 3 --json > renders/studio/qa-summary.json
       - name: Render full HD MP4 with native studio renderer
         run: |
           set -o pipefail
-          reels-maker studio-render examples/lorem-ipsum-showcase.json \
+          reels-maker studio-render examples/lorem-ipsum-icon-showcase.json \
             --profile final --supersample 1 \
             --output renders/studio/lorem-ipsum-icon-showcase.mp4 \
             --json | tee renders/studio/render-result.json
       - name: Verify MP4 and produce contact-sheet
         run: |
           set -o pipefail
-          reels-maker storyboard examples/lorem-ipsum-showcase.json \
-            --profile final --video renders/studio/lorem-ipsum-motion-showcase.mp4 \
+          reels-maker storyboard examples/lorem-ipsum-icon-showcase.json \
+            --profile final --video renders/studio/lorem-ipsum-icon-showcase.mp4 \
             --output renders/studio/lorem-ipsum-icon-storyboard.png \
             --motion-strip --json | tee renders/studio/storyboard-result.json
           ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,avg_frame_rate \
-            -of json renders/studio/lorem-ipsum-motion-showcase.mp4 \
+            -of json renders/studio/lorem-ipsum-icon-showcase.mp4 \
             > renders/studio/ffprobe.json
       - name: Check scene diversity in the actual encoded MP4
         run: |
@@ -86,8 +86,8 @@ jobs:
           import subprocess
           from pathlib import Path
 
-          project = json.loads(Path("examples/lorem-ipsum-showcase.json").read_text())
-          video = "renders/studio/lorem-ipsum-motion-showcase.mp4"
+          project = json.loads(Path("examples/lorem-ipsum-icon-showcase.json").read_text())
+          video = "renders/studio/lorem-ipsum-icon-showcase.mp4"
           positions = []
           cursor = 0.0
           for scene in project["scenes"]:
@@ -117,8 +117,8 @@ jobs:
         with:
           name: lorem-ipsum-icon-showcase-mp4
           path: |
-            renders/studio/lorem-ipsum-motion-showcase.mp4
-            renders/studio/lorem-ipsum-storyboard.png
+            renders/studio/lorem-ipsum-icon-showcase.mp4
+            renders/studio/lorem-ipsum-icon-storyboard.png
             renders/studio/*motion-strip*.png
             renders/studio/inspect.json
             renders/studio/qa-summary.json

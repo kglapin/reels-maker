@@ -178,6 +178,31 @@ def main(argv: list[str] | None = None) -> int:
     brand_init.add_argument("--force", action="store_true",
                             help="Replace an existing brand directory")
     brand_init.add_argument("--json", action="store_true")
+    pixabay = commands.add_parser("pixabay",
+        help="Search Pixabay music/sound-effects; download only explicitly "
+             "picked candidates into the brand imports/ quarantine area")
+    pixabay.add_argument("query", help="Search words or a pixabay.com URL")
+    pixabay.add_argument("--kind", choices=("music", "sound-effects"),
+                         default="music")
+    pixabay.add_argument("--root", type=Path, default=ROOT,
+                         help="Repository root containing brands/")
+    pixabay.add_argument("--brand", help="Brand slug for imports/ staging")
+    pixabay.add_argument("--page-file", type=Path,
+                         help="Parse a page saved from the browser instead of "
+                              "fetching (needed when Cloudflare blocks us)")
+    pixabay.add_argument("--tracks-file", type=Path,
+                         help="Plain text file with cdn.pixabay.com MP3 urls "
+                              "(one per line, from the browser network tab); "
+                              "always works because the CDN is not blocked")
+    pixabay.add_argument("--cookies", help="Cookie header, e.g. "
+                                           "'cf_clearance=...; ...'")
+    pixabay.add_argument("--limit", type=int, default=10,
+                         help="Candidates to list before picking")
+    pixabay.add_argument("--pick", help="Comma-separated candidate numbers to "
+                                        "download, e.g. --pick 2,3")
+    pixabay.add_argument("--all", action="store_true",
+                         help="Download every listed candidate")
+    pixabay.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -381,6 +406,46 @@ def main(argv: list[str] | None = None) -> int:
             result = {"brand_init": init_brand(
                 args.slug, name=args.name, accent=args.accent,
                 root=args.root, force=args.force)}
+        elif args.command == "pixabay":
+            from .pixabay import (fetch_search_page, download_candidates,
+                                  parse_tracks, parse_track_list,
+                                  search_page_url)
+            if args.tracks_file:
+                try:
+                    source = args.tracks_file.read_text(encoding="utf-8")
+                except OSError as exc:
+                    raise ProjectError(
+                        f"Cannot read track list {args.tracks_file}: {exc}"
+                    ) from exc
+                tracks = parse_track_list(source)
+            elif args.page_file:
+                try:
+                    source = args.page_file.read_text(encoding="utf-8")
+                except OSError as exc:
+                    raise ProjectError(
+                        f"Cannot read saved page {args.page_file}: {exc}"
+                    ) from exc
+                tracks = parse_tracks(source, "")[:max(1, args.limit)]
+            else:
+                source = fetch_search_page(args.query, args.kind,
+                                           cookies=args.cookies)
+                tracks = parse_tracks(
+                    source, search_page_url(args.query, args.kind)
+                )[:max(1, args.limit)]
+            result = {"query": args.query, "candidates": tracks}
+            if args.all and not args.pick:
+                args.pick = ",".join(str(i) for i in range(1, len(tracks) + 1))
+            if args.pick:
+                if not args.brand:
+                    raise ProjectError(
+                        "Downloading requires --brand (quarantine staging "
+                        "lives in brands/<slug>/imports/audio/)")
+                destination = brand_directory(args.brand, args.root) / \
+                    "imports" / "audio"
+                report = download_candidates(tracks, destination, args.pick,
+                                             kind=args.kind,
+                                             cookies=args.cookies)
+                result["download"] = report
         else:
             project = load_project(args.project)
             if args.command == "validate":

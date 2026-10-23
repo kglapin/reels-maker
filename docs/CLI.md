@@ -21,6 +21,27 @@ motion. `studio-qa --strict` returns a nonzero exit code on blocking QA errors.
 An opt-in `--cache-dir PATH` stores per-scene encoded segments; unchanged
 scenes stream-copy from the cache on the next run (any scene, token, font or
 encoder change invalidates the signature).
+## Pixabay audio (music / sound-effects)
+
+Automated access to pixabay.com is blocked by Cloudflare and the CDN MP3
+delivery returns 403 without browser context (verified 2026-10-23), so the
+module is explicit about it:
+
+- `reels-maker pixabay "query"` tries the direct fetch and, when blocked,
+  prints exact guidance instead of retrying blindly.
+- `--page-file saved.html` parses a page saved from the browser (search
+  results or any rendered response served with the page).
+- `--tracks-file urls.txt` works from a plain list of CDN MP3 urls copied
+  from the browser DevTools network tab (one per line, `#` comments allowed).
+- `--cookies "cf_clearance=...; ..."` passes the operator's browser cookie
+  header for fetching and downloading.
+- Downloads require `--pick 2,3` or `--all` and land in
+  `brands/<slug>/imports/audio/` — the same git-ignored quarantine area the
+  brand scan uses; files inside `media/` are refused.
+- Every report carries the Pixabay Content License facts and source URLs;
+  publishing a track still requires a human review record in
+  `media/asset-library.json` (see the `library` command).
+
 For legacy kinetic manifests, `kinetic-render` keeps Cairo as its default; opt
 into the shared studio engine with `--engine studio` during migration:
 

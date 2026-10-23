@@ -3,7 +3,7 @@
   "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
   "next_action": "Local: extend studio overlay parity to audio and more brand profiles; keep legacy defaults until review; Owner: resolve repository privacy and complete creative/licensing gates",
   "current_branch": "feat/motion-design-system-20261023 (local prototype; not pushed)",
-  "latest_commit": "66e64ac feat: add negative-fill rich text effect (local, unpushed)",
+  "latest_commit": "76ebbae feat: bridge classic video titles to scene graph (local, unpushed)",
   "branch_up_to_date": false,
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
@@ -55,7 +55,7 @@
   ],
   "experimental_motion_system": {
     "branch": "feat/motion-design-system-20261023",
-    "status": "Local unpushed commits; aspect matrix and opt-in legacy/studio comparisons recorded; separate from v1.0 gates",
+    "status": "Local commits 18f73d9, 66e64ac and 76ebbae; not pushed; separate from v1.0 gates",
     "manifest": "brands/asta-energy/projects/asta-motion-system-demo.json",
     "render": "renders/asta-energy/asta-motion-system-demo-final.mp4",
     "contact_sheet": "renders/asta-energy/qa/asta-motion-system-demo-final.png",

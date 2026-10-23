@@ -54,7 +54,7 @@ class AudioMeterFFmpegTests(unittest.TestCase):
             before = source.read_bytes()
             report = analyze_audio_loudness(source, reference_lufs=-16)
             self.assertEqual(report["measurement"], "ebu_r128_loudnorm_first_pass")
-            self.assertEqual(report["file"], str(source))
+            self.assertEqual(Path(report["file"]).resolve(), Path(source).resolve())
             self.assertIsInstance(report["integrated_lufs"], float)
             self.assertIsInstance(report["true_peak_dbtp"], float)
             self.assertIsInstance(report["difference_from_reference_lu"], float)

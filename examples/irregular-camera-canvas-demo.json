@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "name": "irregular-camera-canvas-demo",
+  "style": "kinetic-advertising",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 24
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 21,
+    "preset": "veryfast"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#F7F5F0",
+      "surface": "#FFFFFF",
+      "ink": "#19211D",
+      "muted": "#68736B",
+      "accent": "#376B56"
+    }
+  },
+  "audio": {},
+  "scenes": [
+    {
+      "id": "01-framing",
+      "composition": "statement",
+      "duration": 3.05,
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "photo": "assets/rotation-01.jpg",
+      "headline": "FRAMES SHIFT",
+      "subtitle": "A new perspective starts here.",
+      "camera_canvas": {
+        "x": 760,
+        "y": 790,
+        "angle": -8,
+        "zoom": 1,
+        "layout": "photo-above",
+        "reveal_delay": 0.21,
+        "reveal_duration": 0.58
+      }
+    },
+    {
+      "id": "02-angle",
+      "composition": "statement",
+      "duration": 3.15,
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "photo": "assets/rotation-02.jpg",
+      "headline": "CHANGE ANGLE",
+      "subtitle": "Camera arrives before the text.",
+      "camera_canvas": {
+        "x": 2200,
+        "y": 840,
+        "angle": 68,
+        "zoom": 1.02,
+        "layout": "photo-left",
+        "move_duration": 1,
+        "reveal_delay": 0.22,
+        "reveal_duration": 0.6
+      }
+    },
+    {
+      "id": "03-different",
+      "composition": "statement",
+      "duration": 3.25,
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "photo": "assets/rotation-03.jpg",
+      "headline": "SEE DIFFERENTLY",
+      "subtitle": "Irregular positions. One canvas.",
+      "camera_canvas": {
+        "x": 2400,
+        "y": 2230,
+        "angle": 158,
+        "zoom": 1,
+        "layout": "diagonal",
+        "move_duration": 1.03,
+        "reveal_delay": 0.2,
+        "reveal_duration": 0.62
+      }
+    },
+    {
+      "id": "04-editorial",
+      "composition": "statement",
+      "duration": 3.15,
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "photo": "assets/rotation-01.jpg",
+      "headline": "EDITORIAL FLOW",
+      "subtitle": "Motion directed by composition.",
+      "camera_canvas": {
+        "x": 850,
+        "y": 2450,
+        "angle": 287,
+        "zoom": 1.04,
+        "layout": "offset",
+        "move_duration": 0.99,
+        "reveal_delay": 0.24,
+        "reveal_duration": 0.65
+      }
+    }
+  ]
+}

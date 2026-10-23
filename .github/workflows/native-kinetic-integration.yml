@@ -1,0 +1,57 @@
+name: Native kinetic scene integration
+on:
+  push:
+    branches: [feat/kinetic-motion-primitives-20261023]
+permissions:
+  contents: read
+jobs:
+  render-kinetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e '.[kinetic]'
+      - name: Install FFmpeg
+        run: |
+          python -m pip install 'static-ffmpeg==3.0'
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          f,p=get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"],"a") as h: h.write(str(Path(f).parent)+"\n")
+          PY
+      - name: Generate all ten animated scene types
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          kinds=['amount','breakdown','announcement','donut','comparison','heat','europe','deadline','urgency','cta']
+          data={'video':{'width':360,'height':640,'fps':15},'scenes':[{'type':k,'duration':.9} for k in kinds],'output':'kinetic-integration.mp4'}
+          Path('integration.json').write_text(json.dumps(data))
+          PY
+          reels-maker kinetic-render integration.json --root . --json
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 kinetic-integration.mp4
+          python - <<'PY'
+          from pathlib import Path
+          assert Path('kinetic-integration.mp4').stat().st_size>10000
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-kinetic-integration
+          path: |
+            kinetic-integration.mp4
+            integration.json
+            src/reels_maker/kinetic_video.py
+            src/reels_maker/kinetics.py
+          if-no-files-found: error

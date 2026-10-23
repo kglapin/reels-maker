@@ -40,3 +40,45 @@ jobs:
               assert path.is_file() and icon.getbbox()
               print("Verified", library, name, path)
           PY
+      - name: Smoke-test native studio scene with two icon libraries
+        run: |
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from reels_maker.studio import load_studio
+          from reels_maker.renderers.scene import SceneRenderer
+
+          with tempfile.TemporaryDirectory() as temp:
+              path = Path(temp) / "smoke.json"
+              data = {
+                  "name": "icon-smoke",
+                  "style": "social-native",
+                  "video": {"width": 360, "height": 640, "fps": 20},
+                  "scenes": [{
+                      "duration": 2,
+                      "composition": "statement",
+                      "headline": "ICON TEST",
+                      "subtitle": "Lorem ipsum",
+                      "icon_assets": [
+                          {"library": "lucide", "name": "sun",
+                           "x": .30, "y": .26, "size": .22,
+                           "color": "#FF8833"},
+                          {"library": "heroicons", "name": "home",
+                           "x": .68, "y": .26, "size": .22,
+                           "color": "#FFFFFF"}
+                      ]
+                  }]
+              }
+              path.write_text(json.dumps(data))
+              project = load_studio(path, root=temp)
+              built = project.build()
+              icons = [n for n in built[0].nodes if n.kind == "icon"]
+              assert len(icons) == 2
+              renderer = SceneRenderer(project.width, project.height,
+                                       project.tokens, project.fonts)
+              frame = renderer.render(built[0], 1.0)
+              assert frame.size == (360, 640)
+              assert len(frame.getcolors(360 * 640)) > 8
+              print("Actual scene rasterization: PASS")
+          PY

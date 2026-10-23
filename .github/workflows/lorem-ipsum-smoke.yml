@@ -24,11 +24,20 @@ jobs:
           python-version: '3.11'
       - name: Install engine
         run: python -m pip install -e .
-      - name: Require FFmpeg
+      - name: Install FFmpeg and FFprobe
         run: |
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
-          ffmpeg -hide_banner -encoders | grep libx264
+          python -m pip install 'static-ffmpeg==3.0'
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          assert Path(ffmpeg).is_file() and Path(ffprobe).is_file()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as f:
+              f.write(str(Path(ffmpeg).parent) + "\n")
+          print("FFmpeg:", ffmpeg)
+          print("FFprobe:", ffprobe)
+          PY
       - name: Create synthetic footage and audio
         shell: bash
         run: |

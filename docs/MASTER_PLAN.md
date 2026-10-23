@@ -1,5 +1,7 @@
 # Reels Maker — Master Plan 1.0
 
+> **2026-10-23 planning update:** This document records the earlier v1.0 engineering/release backlog and contains historical status. For the current professional motion-design expansion, autonomous stock media/audio acquisition, SVG and icon providers, and Creative Engine evolution, see [Professional Motion Design Roadmap 2026](PRO_MOTION_ROADMAP_2026.md). Do not treat this earlier document's status checkboxes as verification of new feature completion.
+
 This document is the single source of truth for the project's backlog, priorities, order, and acceptance gates. It defines the version 1.0 release scope (must-have features), the critical dependency chain, and the concrete execution order for the next twelve work packages.
 
 ## 1. Goal and Decision Framework

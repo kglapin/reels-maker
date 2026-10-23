@@ -116,7 +116,7 @@
           },
           {
             "text": "IPSUM",
-            "scale": 1.32,
+            "scale": 1.02,
             "color": "accent",
             "break_before": true,
             "weight": "bold"
@@ -285,7 +285,7 @@
           },
           {
             "text": "ALIQUA",
-            "scale": 1.23,
+            "scale": 1.04,
             "color": "white",
             "weight": "bold",
             "break_before": true,

@@ -8,6 +8,7 @@ on:
       - 'src/reels_maker/components/scenes.py'
       - 'src/reels_maker/studio.py'
       - 'tests/test_editorial_rotation_integration.py'
+      - 'tests/test_editorial_rotation_engine.py'
       - 'examples/editorial-rotation-integrated-demo.json'
       - 'examples/generate_editorial_rotation_assets.py'
       - '.github/workflows/editorial-rotation-integration-demo.yml'

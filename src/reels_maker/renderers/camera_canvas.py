@@ -143,7 +143,7 @@ class CameraCanvasRenderer:
                 x1,y1,x2,y2=bounds
                 clip=Image.new("L",overlay.size,0)
                 ImageDraw.Draw(clip).rectangle(
-                    (x1,max(y1,int(y2-(y2-y1)*p)),x2,y2),fill=255)
+                    (x1,y1,x2,min(y2,int(y1+(y2-y1)*p))),fill=255)
                 overlay.putalpha(ImageChops.multiply(overlay.getchannel("A"),clip))
         elif effect=="scale-focus":
             scale=.91+.09*p

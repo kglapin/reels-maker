@@ -429,6 +429,8 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
         specs, style=ctx.style, scene_index=ctx.scene_index,
         scene_duration=ctx.duration, tokens=ctx.tokens,
         cues=cues)
+    from ..design.editorial_quality import audit_editorial_style
+    plan.warnings.extend(audit_editorial_style(scene))
     if dropped:
         plan.warnings.append({
             "code": "cue_without_element",

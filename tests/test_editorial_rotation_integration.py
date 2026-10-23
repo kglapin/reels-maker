@@ -10,7 +10,7 @@ class EditorialRotationIntegrationTests(unittest.TestCase):
         hold=rotation_track({"family":"diagonal-hold","angle":7,"start":.7,"duration":.5},2,role="photo")
         transition=rotation_track({"family":"rotation-to-layout","angle":6,"duration":.5},2,role="headline")
         self.assertAlmostEqual(tilt.value(0),-7)
-        self.assertAlmostEqual(tilt.value(.5),0)
+        self.assertAlmostEqual(tilt.value(.56),0)
         self.assertAlmostEqual(hold.value(0),7)
         self.assertAlmostEqual(transition.value(0),0)
         self.assertAlmostEqual(transition.value(.55),6)

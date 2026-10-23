@@ -422,6 +422,15 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     elements = {role: node for role, node in elements.items() if node is not None}
     specs = list(specs)
     roles = {spec.role for spec in specs}
+    # Creative Engine's explicit, renderer-backed typography preset wins
+    # over the ordinary scene-index pattern, without changing older projects.
+    requested_type_motion = scene.get("typography_motion")
+    if requested_type_motion:
+        from ..motionkit.choreography import ElementSpec
+        specs = [ElementSpec(role=spec.role, weight=spec.weight,
+                             kind=spec.kind, order=spec.order,
+                             hint=requested_type_motion if spec.role == "headline"
+                             else spec.hint) for spec in specs]
     raw_cues = scene.get("cues") or {}
     cues = {role: value for role, value in raw_cues.items() if role in roles}
     dropped = sorted(set(raw_cues) - roles)

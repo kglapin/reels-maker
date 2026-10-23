@@ -1,0 +1,84 @@
+name: Backend SVG icon libraries
+
+on:
+  push:
+    branches:
+      - feat/icon-libraries-lucide-heroicons-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  icon-library-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/test_icon_library.py
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e '.[icons]'
+      - name: Compile Python sources
+        run: python -m compileall -q src/reels_maker tests/test_icon_library.py
+      - name: Test safe icon backend
+        run: python -m unittest discover -s tests -p test_icon_library.py -v
+      - name: Load icons from real pinned upstream releases
+        run: |
+          python - <<'PY'
+          from reels_maker.icon_library import asset, raster
+          for library, name in (("lucide", "sun"), ("heroicons", "home")):
+              path = asset(library, name)
+              icon = raster(library, name, 96, "#47A013")
+              assert path.is_file() and icon.getbbox()
+              print("Verified", library, name, path)
+          PY
+      - name: Smoke-test native studio scene with two icon libraries
+        run: |
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from reels_maker.studio import load_studio
+          from reels_maker.renderers.scene import SceneRenderer
+
+          with tempfile.TemporaryDirectory() as temp:
+              path = Path(temp) / "smoke.json"
+              data = {
+                  "name": "icon-smoke",
+                  "style": "social-native",
+                  "video": {"width": 360, "height": 640, "fps": 20},
+                  "scenes": [{
+                      "duration": 2,
+                      "composition": "statement",
+                      "headline": "ICON TEST",
+                      "subtitle": "Lorem ipsum",
+                      "icon_assets": [
+                          {"library": "lucide", "name": "sun",
+                           "x": .30, "y": .26, "size": .22,
+                           "color": "#FF8833"},
+                          {"library": "heroicons", "name": "home",
+                           "x": .68, "y": .26, "size": .22,
+                           "color": "#FFFFFF"}
+                      ]
+                  }]
+              }
+              path.write_text(json.dumps(data))
+              project = load_studio(path, root=temp)
+              built = project.build()
+              icons = [n for n in built[0].nodes if n.kind == "icon"]
+              assert len(icons) == 2
+              renderer = SceneRenderer(project.width, project.height,
+                                       project.tokens, project.fonts)
+              frame = renderer.render(built[0], 1.0)
+              assert frame.size == (360, 640)
+              assert len(frame.getcolors(360 * 640)) > 8
+              print("Actual scene rasterization: PASS")
+          PY

@@ -13,6 +13,7 @@ dependencies = ["Pillow>=10,<13"]
 pdf = ["reportlab>=4,<5"]
 brand = ["reportlab>=4,<5", "tinycss2>=1.3,<2"]
 kinetic = ["cairocffi>=1.6,<2", "Pillow>=10,<13"]
+icons = ["CairoSVG>=2.7,<3"]
 
 [project.scripts]
 reels-maker = "reels_maker.cli:main"

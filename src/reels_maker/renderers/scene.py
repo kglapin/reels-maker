@@ -303,6 +303,9 @@ class SceneRenderer:
                     closed=bool(props.get("closed")),
                     fill=bool(props.get("fill")))
             return
+        if kind == "icon":
+            self._icon(target, node, dx, dy)
+            return
         if kind == "image":
             self._image(target, node, dx, dy)
             return
@@ -327,6 +330,23 @@ class SceneRenderer:
                       scale=s)
             return
         raise ValueError(f"Unknown primitive kind {kind!r}")
+
+    def _icon(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
+        """Rasterize a pinned icon SVG with per-size, colour and stroke cache."""
+        from ..icon_library import raster
+        props = node.props
+        size = round(float(props["size"]) * self.ss)
+        colour = props["color"]
+        if isinstance(colour, (tuple, list)):
+            colour = "#{:02X}{:02X}{:02X}".format(*(int(v) for v in colour))
+        bitmap = raster(str(props["library"]), str(props["name"]), size,
+                        str(colour), style=str(props.get("style", "outline")),
+                        stroke_width=float(props.get("stroke_width", 0)),
+                        cache_dir=props.get("cache_dir"),
+                        offline=bool(props.get("offline", False)))
+        x = int(round((float(props["x"]) + dx) * self.ss))
+        y = int(round((float(props["y"]) + dy) * self.ss))
+        target.alpha_composite(bitmap, (x, y))
 
     def _image(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
         s = self.ss

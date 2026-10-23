@@ -311,6 +311,76 @@ def _spec(role: str, weight: float, kind: str = "support",
     return ElementSpec(role, weight=weight, kind=kind, hint=hint, order=order)
 
 
+def _external_icon(scene: dict, key: str, cx: float, cy: float,
+                   size: float, color, *, role: str | None = None) -> Node | None:
+    """Resolve scene-selected Lucide/Heroicons without drawing custom paths.
+
+    Explicit icon_library activates the provider. icon_names overrides the
+    default semantic mapping and icon_style picks outline/solid.
+    """
+    library = scene.get("icon_library")
+    if not library:
+        return None
+    defaults = {"battery": "battery-charging", "sun": "sun",
+                "house": "house", "arrow": "arrow-right",
+                "check": "check", "calendar": "calendar-days",
+                "clock": "clock", "phone": "smartphone",
+                "shield": "shield-check", "heat": "waves"}
+    hero = {"battery": "battery-100", "sun": "sun",
+            "house": "home", "arrow": "arrow-right",
+            "check": "check", "calendar": "calendar-days",
+            "clock": "clock", "phone": "device-phone-mobile",
+            "shield": "shield-check", "heat": "fire"}
+    overrides = scene.get("icon_names") or {}
+    if not isinstance(overrides, dict):
+        raise ValueError("icon_names must be a dictionary")
+    name = str(overrides.get(key) or (hero if library == "heroicons" else defaults)[key])
+    rgb = tuple(color)
+    return Node(kind="icon", role=role or key, qa_class="decor",
+                props={"x": cx - size / 2, "y": cy - size / 2,
+                       "w": size, "h": size, "size": size,
+                       "library": library, "name": name,
+                       "style": scene.get("icon_style", "outline"),
+                       "color": "#{:02X}{:02X}{:02X}".format(*rgb),
+                       "stroke_width": scene.get("icon_stroke_width", 0)},
+                meta={"icon_library": library, "icon_name": name})
+
+
+def _extra_icons(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
+    """Place arbitrary named assets in the scene using normalized coordinates."""
+    config = scene.get("icon_assets") or []
+    if not isinstance(config, list):
+        raise ValueError("icon_assets must be a list")
+    nodes = []
+    for index, item in enumerate(config):
+        if not isinstance(item, dict):
+            raise ValueError("Every icon_assets entry must be an object")
+        library = str(item.get("library", scene.get("icon_library", "lucide")))
+        name = str(item.get("name", ""))
+        size = float(item.get("size", .10))
+        x = float(item.get("x", .5))
+        y = float(item.get("y", .5))
+        if not (0.02 <= size <= 0.70 and 0 <= x <= 1 and 0 <= y <= 1):
+            raise ValueError("icon_assets coordinates must be 0..1 and size .02..70")
+        px = size * ctx.width
+        colour_name = item.get("color", "accent")
+        color = theme.get(colour_name) if isinstance(colour_name, str) else None
+        if color is None:
+            from ..design.color import parse_hex
+            color = parse_hex(str(colour_name))
+        nodes.append(Node(kind="icon", role=f"asset-icon-{index}",
+                          props={"library": library, "name": name,
+                                 "style": item.get("style", "outline"),
+                                 "x": x * ctx.width - px / 2,
+                                 "y": y * ctx.height - px / 2,
+                                 "w": px, "h": px, "size": px,
+                                 "color": "#{:02X}{:02X}{:02X}".format(*color),
+                                 "stroke_width": item.get("stroke_width", 0)},
+                          qa_class="decor",
+                          meta={"icon_library": library, "icon_name": name}))
+    return nodes
+
+
 def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             elements: dict[str, Node], specs: Iterable[ElementSpec],
             decor: list[Node] | None = None, meta: dict | None = None) -> BuiltScene:
@@ -344,7 +414,7 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             apply_exit(node, exit_entry.onset, exit_entry.duration, ctx.tokens)
     return BuiltScene(
         index=ctx.scene_index, scene=scene, context=ctx, layout=layout,
-        background=background, nodes=(decor or []) + list(elements.values()),
+        background=background, nodes=(decor or []) + list(elements.values()) + _extra_icons(ctx, scene, _theme(ctx, scene)),
         elements=elements, choreography=plan, meta={
             "headline": _headline(scene), "body": _subtitle(scene),
             "theme": "light" if _is_light(ctx, scene) else "dark",
@@ -437,8 +507,9 @@ def build_amount(ctx: SceneContext, scene: dict) -> BuiltScene:
         region = layout.region("visual")
         size = min(region.w * .72, region.h * .76)
         cx, cy = region.center_x, region.center_y
-        battery = icons.battery(cx, cy, size, theme["accent"],
-                                shell=theme["ink"], level=.7)
+        battery = (_external_icon(scene, "battery", cx, cy, size, theme["accent"])
+                   or icons.battery(cx, cy, size, theme["accent"],
+                                    shell=theme["ink"], level=.7))
         elements["visual"] = battery
         specs.append(_spec("visual", 3, "visual", hint="scale-focus"))
     plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
@@ -1286,8 +1357,11 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
         region = Rect(list_region.x, list_region.y + index * row_h,
                       list_region.w, row_h)
         icon_size = min(row_h * .58, region.w * .10)
-        check = icons.check(region.x + icon_size / 2 + ctx.tokens.px(6),
-                            region.center_y, icon_size, theme["accent"])
+        check = (_external_icon(scene, "check",
+                                region.x + icon_size / 2 + ctx.tokens.px(6),
+                                region.center_y, icon_size, theme["accent"])
+                 or icons.check(region.x + icon_size / 2 + ctx.tokens.px(6),
+                                region.center_y, icon_size, theme["accent"]))
         text_region = Rect(region.x + icon_size + ctx.tokens.space("md"),
                            region.y + row_h * .12,
                            region.w - icon_size - ctx.tokens.space("md"),
@@ -1476,13 +1550,21 @@ def build_energy(ctx: SceneContext, scene: dict) -> BuiltScene:
     cy = diagram.center_y
     size = min(diagram.w * .22, diagram.h * .26)
     xs = [diagram.x + diagram.w * ratio for ratio in (.14, .40, .66, .90)]
-    sun = icons.sun(xs[0], cy, size, theme["accent"])
-    panel = icons.house(xs[1], cy, size, theme["ink"])
-    battery = icons.battery(xs[2], cy, size * 1.05, theme["accent"],
-                            shell=theme["ink"], level=.8)
-    house = icons.house(xs[3], cy, size, theme["ink"])
-    arrows = [icons.arrow((xs[i] + xs[i + 1]) / 2, cy, size * .62,
-                          theme["muted"]) for i in range(3)]
+    sun = (_external_icon(scene, "sun", xs[0], cy, size, theme["accent"])
+           or icons.sun(xs[0], cy, size, theme["accent"]))
+    panel = (_external_icon(scene, "house", xs[1], cy, size, theme["ink"])
+             or icons.house(xs[1], cy, size, theme["ink"]))
+    battery = (_external_icon(scene, "battery", xs[2], cy, size * 1.05,
+                              theme["accent"])
+               or icons.battery(xs[2], cy, size * 1.05, theme["accent"],
+                                shell=theme["ink"], level=.8))
+    house = (_external_icon(scene, "house", xs[3], cy, size, theme["ink"])
+             or icons.house(xs[3], cy, size, theme["ink"]))
+    arrows = [(_external_icon(scene, "arrow",
+                             (xs[i] + xs[i + 1]) / 2, cy, size * .62,
+                             theme["muted"])
+               or icons.arrow((xs[i] + xs[i + 1]) / 2, cy, size * .62,
+                              theme["muted"])) for i in range(3)]
     group = Node(kind="group", role="diagram",
                  children=[sun, panel, battery, house] + arrows,
                  qa_class="control")

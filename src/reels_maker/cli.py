@@ -307,13 +307,13 @@ def main(argv: list[str] | None = None) -> int:
                                 "Unbranded Studio manifests must stay beside source assets")
                         if destination.exists() and not args.force:
                             raise ProjectError(f"Output exists: {destination} (use --force)")
+                        report_path=destination.with_suffix(".creative-report.json")
+                        if report_path.exists() and not args.force:
+                            raise ProjectError(f"Report exists: {report_path} (use --force)")
                         destination.parent.mkdir(parents=True,exist_ok=True)
                         destination.write_text(
                             json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",
                             encoding="utf-8")
-                        report_path=destination.with_suffix(".creative-report.json")
-                        if report_path.exists() and not args.force:
-                            raise ProjectError(f"Report exists: {report_path} (use --force)")
                         report_path.write_text(
                             json.dumps({"plan":plan,"qa":qa},ensure_ascii=False,indent=2)+"\n",
                             encoding="utf-8")

@@ -26,6 +26,7 @@ jobs:
             /src/
             /tests/
             /examples/advanced-transition-demo.json
+            /examples/object-driven-transition-demo.json
             /pyproject.toml
       - uses: actions/setup-python@v5
         with:
@@ -58,11 +59,29 @@ jobs:
           assert (v["width"],v["height"])==(540,960)
           print("Verified 378 frames and 6 advanced transitions")
           PY
+      - name: Render and verify object-driven transitions
+        run: |
+          reels-maker studio-inspect examples/object-driven-transition-demo.json > object-inspect.json
+          reels-maker studio-render examples/object-driven-transition-demo.json --output object-demo.mp4 --supersample 1 > object-render.json
+          ffprobe -v error -show_entries stream=width,height,nb_frames,codec_name -of json object-demo.mp4 > object-ffprobe.json
+          python - <<'PY'
+          import json
+          d=json.load(open("object-render.json"))
+          assert d["ok"] and d["frames"]==345, d
+          p=json.load(open("object-ffprobe.json"))
+          v=next(x for x in p["streams"] if x["codec_name"]=="h264")
+          assert int(v["nb_frames"])==345
+          assert (v["width"],v["height"])==(540,960)
+          print("Verified object-driven transitions: 345 frames")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: advanced-transition-demo
           path: |
             advanced-demo.mp4
+            object-demo.mp4
+            object-render.json
+            object-ffprobe.json
             render.json
             ffprobe.json
           retention-days: 7

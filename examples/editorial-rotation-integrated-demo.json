@@ -45,10 +45,10 @@
       "editorial_media": [
         {
           "asset": "assets/rotation-01.jpg",
-          "x": 0.11,
-          "y": 0.59,
-          "w": 0.78,
-          "h": 0.32,
+          "x": 0.1,
+          "y": 0.65,
+          "w": 0.8,
+          "h": 0.29,
           "rotation": {
             "family": "tilt-settle",
             "angle": 7,
@@ -80,10 +80,10 @@
       "editorial_media": [
         {
           "asset": "assets/rotation-02.jpg",
-          "x": 0.11,
-          "y": 0.59,
-          "w": 0.78,
-          "h": 0.32,
+          "x": 0.16,
+          "y": 0.65,
+          "w": 0.74,
+          "h": 0.29,
           "rotation": {
             "family": "counter-rotation",
             "angle": -7,
@@ -102,15 +102,15 @@
         "kind": "solid",
         "color": "#F5F2EA"
       },
-      "headline": "FIND YOUR ANGLE",
+      "headline": "NEW ANGLE",
       "subtitle": "03 / DIAGONAL HOLD",
       "editorial_media": [
         {
           "asset": "assets/rotation-03.jpg",
-          "x": 0.11,
-          "y": 0.59,
-          "w": 0.78,
-          "h": 0.32,
+          "x": 0.08,
+          "y": 0.65,
+          "w": 0.84,
+          "h": 0.29,
           "rotation": {
             "family": "diagonal-hold",
             "angle": 5,
@@ -143,10 +143,10 @@
       "editorial_media": [
         {
           "asset": "assets/rotation-01.jpg",
-          "x": 0.11,
-          "y": 0.59,
-          "w": 0.78,
-          "h": 0.32,
+          "x": 0.14,
+          "y": 0.65,
+          "w": 0.74,
+          "h": 0.29,
           "rotation": {
             "family": "rotation-to-layout",
             "angle": -8,

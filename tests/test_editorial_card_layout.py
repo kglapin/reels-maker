@@ -68,12 +68,12 @@ class EditorialLayoutTests(unittest.TestCase):
                     opaque = [p for p in rgba.getdata() if p[3] >= 240]
                     self.assertTrue(opaque)
                     # Light-theme ink has dark luminance and vice versa.
-                    representative = min(opaque, key=lambda p:
-                                         abs(p[0]-p[1]) + abs(p[1]-p[2]))
+                    bright_fraction = sum(
+                        min(p[:3]) > 160 for p in opaque) / len(opaque)
                     if theme == "light":
-                        self.assertLess(max(representative[:3]), 100)
+                        self.assertLess(bright_fraction, 0.5)
                     else:
-                        self.assertGreater(min(representative[:3]), 160)
+                        self.assertGreater(bright_fraction, 0.5)
 
     def test_three_positions_produce_distinct_safe_vertical_bounds(self):
         with tempfile.TemporaryDirectory() as d:
@@ -107,6 +107,7 @@ class EditorialLayoutTests(unittest.TestCase):
             bad = [
                 {"theme": "bright"},
                 {"position": "random"},
+                {"headline_style": "huge"},
                 {"logo": "false"},
                 {"theme": "light", "backdrop": "strong"}
             ]

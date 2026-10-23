@@ -42,17 +42,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: System dependency preflight
-        timeout-minutes: 4
-        run: |
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! ldconfig -p | grep -q 'libcairo.so'; then
-            timeout 100s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=0 -o Acquire::http::Timeout=10 -o DPkg::Lock::Timeout=15 install -y --no-install-recommends ffmpeg libcairo2
-          fi
-          command -v ffmpeg
-          command -v ffprobe
       - name: Install renderer
         timeout-minutes: 5
         run: python -m pip --disable-pip-version-check install --retries 2 --timeout 15 -e '.[icons]'
+      - name: Prepare portable FFmpeg without apt packages
+        timeout-minutes: 4
+        run: |
+          python -m pip install --retries 2 --timeout 15 static-ffmpeg==3.0
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as f:
+              f.write(str(Path(ffmpeg).parent)+"\\n")
+          print("FFmpeg:", ffmpeg, "FFprobe:", ffprobe)
+          PY
       - name: Test rotation integration and geometry
         run: |
           python -m unittest discover -s tests -p 'test_editorial_rotation_integration.py' -v

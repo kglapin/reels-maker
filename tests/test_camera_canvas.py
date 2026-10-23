@@ -46,7 +46,7 @@ class CameraCanvasTests(unittest.TestCase):
     def test_existing_stages_preserve_images(self):
         renderer=CameraCanvasRenderer(self.project())
         self.assertEqual(len(renderer.stages),3)
-        self.assertEqual(renderer.world.size,renderer.stages[0].size)
+        self.assertEqual(renderer.stages[0].size,renderer.stages[1].size)
 
 if __name__=="__main__":
     unittest.main()

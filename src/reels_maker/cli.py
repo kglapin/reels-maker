@@ -147,6 +147,18 @@ def main(argv: list[str] | None = None) -> int:
     brandbook.add_argument("--root", type=Path, default=ROOT)
     brandbook.add_argument("--output", type=Path)
     brandbook.add_argument("--json", action="store_true")
+    plan = commands.add_parser("plan",
+        help="Convert a reviewed brief into an explainable studio manifest draft; "
+             "VALIDATE WITH studio-qa (studio manifests are file-optional)")
+    plan.add_argument("brief", type=Path, help="Brief JSON path")
+    plan.add_argument("--root", type=Path, default=ROOT,
+                      help="Repository root containing brands/")
+    plan.add_argument("--brand", help="Brand slug; overrides brief['brand']")
+    plan.add_argument("--write-manifest", action="store_true",
+                      help="Save the manifest into brands/<slug>/projects/")
+    plan.add_argument("--force", action="store_true",
+                      help="Overwrite an existing draft manifest")
+    plan.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -263,6 +275,34 @@ def main(argv: list[str] | None = None) -> int:
                                  "message": "studio-qa reported blocking errors"}},
                       error=True)
                 return 2
+        elif args.command == "plan":
+            from .planning import PlanningError, plan_brief
+            try:
+                brief = json.loads(args.brief.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ProjectError(
+                    f"Cannot read brief {args.brief}: {exc}") from exc
+            manifest, report = plan_brief(brief, root=args.root,
+                                          brand=args.brand)
+            result = {"status": "ok", "manifest": manifest, "report": report}
+            if args.write_manifest:
+                brand = manifest["brand"]
+                projects = brand_directory(brand, args.root) / "projects"
+                projects.mkdir(parents=True, exist_ok=True)
+                destination = projects / f"{manifest['name']}.json"
+                if destination.exists() and not args.force:
+                    raise ProjectError(
+                        f"Draft manifest already exists: {destination} "
+                        "(use --force to replace it)")
+                destination.write_text(
+                    json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+                report_path = projects / f"{manifest['name']}.plan-report.json"
+                report_path.write_text(
+                    json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+                result["manifest_path"] = str(destination)
+                result["report_path"] = str(report_path)
         elif args.command == "brandbook":
             try:
                 from .brandbook import generate_brandbook

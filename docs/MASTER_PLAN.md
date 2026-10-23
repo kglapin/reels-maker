@@ -133,7 +133,7 @@ privacy blocker is open.
 | MD-04 Motion direction | P1 | Partial | Add only reference-backed gaps (shape morph/match cut/parallax/spring as justified); validate rhythmic variety and minimum read holds on actual footage. No speculative catalog growth before MD-01/03 review. |
 | MD-05 Product visuals/assets | P1 | Partial | Build a reviewed, licensed product/icon/Lottie library with source, resolution, topic and license metadata; test product relevance and avoid duplicate shots. Lottie/dotLottie rendering is not implemented. |
 | MD-06 Narration/audio | P1 | Partial; rights blocked | Spot and record manually verified word onsets for a real licensed narrator, produce a music/SFX mix, verify cue drift/loudness/true peak and listen on phone. Current SFX integration was tested only with generated tones. |
-| MD-07 Narrative scene selection | P1 | Partial | Convert a brief/transcript into an explainable story role and composition plan; select only approved, non-repeating assets deterministically; test varied topics and durations without hidden claim invention. |
+| MD-07 Narrative scene selection | P1 | Partial; explainable planner delivered | `reels_maker/planning.py` + `reels-maker plan` convert a reviewed brief into a deterministic studio-manifest draft with story roles (hook/context/benefit/process/proof/stats/cta), clamped frame-aligned duration allocation and an explicit reasoning report. Copy, metrics and contact fields must come from the brief (missing data stop the plan with actionable errors; template-default catching verified by tests). Assets must be reviewed clean sources; repeated media can never be used silently and pool exhaustion is named. Two synthetic briefs build and pass studio QA. Remaining: real ASTA brief after owner-supplied approved copy/claims, and stylistic variety review on footage the owner approves. |
 | MD-08 Visual regression QA | P0 | Partial; safe/collision and 3-aspect geometry tests pass | Add studio golden frames and transition/motion-strip regression fixtures; expand the render matrix across profiles and real brand footage; retain reports with exact scene/time/frame and human review notes. Negative text deliberately raises a phone-review warning. |
 | MD-09 Performance/reliability | P0 | Partial | Add reusable layer/frame cache with invalidation, cold/warm and changed-scene benchmarks, high-motion/full-resolution stress tests and recovery evidence. Current 91.24s render is one measurement, not a benchmark. |
 | MD-10 Multi-brand acceptance | P0 | Partial; synthetic isolation test passed | Three temporary brand palettes/styles are tested for cross-contamination. Remaining: three real brand manifests/assets and human-approved footage/logo/typography renders. |
@@ -141,8 +141,10 @@ privacy blocker is open.
 
 ### Next unblocked local task
 
-Continue **MD-02** with audio and representative brand-profile parity tests,
-then audit whether the adapters can replace duplicate paths without changing
-legacy outputs. Both new routes stay opt-in until parity and human visual
+Continue **MD-08** with studio golden-frame and transition/motion-strip
+regression fixtures, then assess MD-04 reference-backed motion gaps against
+`docs/REFERENCE_BOARD.md`. The MD-07 planner exists locally but still needs an
+owner-reviewed brief with real approved copy before a real-brand run.
+Both new routes stay opt-in until parity and human visual
 review pass. Synthetic aspect-matrix evidence does not close MD-03; phone
 review of approved real-footage frames remains required.

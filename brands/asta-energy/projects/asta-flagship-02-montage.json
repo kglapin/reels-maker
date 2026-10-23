@@ -1,0 +1,140 @@
+{
+  "name": "asta-flagship-fast-montage",
+  "version": 1,
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25
+  },
+  "scenes": [
+    {
+      "file": "media/footage/9_ dron-pv-dla-firm-asta-pila-49kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "ASTA ",
+              "scale": 1.2,
+              "color": "accent"
+            },
+            {
+              "text": "ENERGY",
+              "scale": 1.2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "media/footage/2_dron-pv-dla-firm-asta.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/10_tracker-pv.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "156 PANELI",
+              "scale": 1.1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "media/footage/3_pila-elektronarzedzia-39,6kwp.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/14_Pi\u0142a-pv-39,96-kwp.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "39,96 kWp",
+              "scale": 1.1,
+              "color": "accent"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "media/footage/4_Copy of mini max-reels .mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/11_chodzie\u017c-2x39,59kwp-fotowoltaika-asta.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/6_fotowoltaika - poudnie czy wschod zachod.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/15_fotowoltaika-spoldzielnia.mp4",
+      "start": 0,
+      "duration": 1.98,
+      "title": {
+        "headline": {
+          "runs": [
+            {
+              "text": "ZERO "
+            },
+            {
+              "text": "EMISJI",
+              "scale": 1.2,
+              "color": "accent"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "media/footage/1_fotowoltaika-25wp-budzyn.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/12_pv na bloku.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/7_pila-pv-30,50 kWp - przedszkole.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/13_Copy of asta - konstrukcja tracker.mp4",
+      "start": 0,
+      "duration": 1.98
+    },
+    {
+      "file": "media/footage/6_fotowoltaika - poudnie czy wschod zachod.mp4",
+      "start": 0,
+      "duration": 1.98
+    }
+  ],
+  "music": {
+    "file": "media/audio/mewwwwwww-rush-433449.mp3",
+    "start": 10.635,
+    "volume": 0.75,
+    "fade_out": 1.2
+  },
+  "branding": {},
+  "output": "renders/asta-energy/flagship-fast-montage.mp4",
+  "brand": "asta-energy"
+}

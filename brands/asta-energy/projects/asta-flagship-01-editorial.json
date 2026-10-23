@@ -1,0 +1,43 @@
+{
+  "name": "asta-flagship-editorial-benefit",
+  "version": 1,
+  "video": {"width": 1080, "height": 1920, "fps": 25},
+  "scenes": [
+    {
+      "file": "media/footage/2_dron-pv-dla-firm-asta.mp4",
+      "start": 0,
+      "duration": 4.0,
+      "title": {"kicker": "ASTA ENERGY", "headline": {"runs": [{"text": "CZYSTA ENERGIA"}]}, "body": "Professional solar for business"},
+      "motion": {"preset": "rise_soft", "duration_frames": 7, "stagger_frames": 2, "distance_px": 18, "cue_seconds": {"kicker": 0.3, "headline-0": 0.6, "body": 1.2}}
+    },
+    {
+      "file": "media/footage/10_tracker-pv.mp4",
+      "start": 0,
+      "duration": 4.0,
+      "title": {"headline": {"runs": [{"text": "WIĘCEJ ", "scale": 0.8, "color": "white"}, {"text": "OSZCZĘDNOŚCI", "scale": 1.3, "color": "accent"}, {"text": " dla firmy", "scale": 0.8, "color": "white", "break_before": true}]}, "body": "Tracker systems maximize solar yield"}
+    },
+    {
+      "file": "media/footage/1_fotowoltaika-25wp-budzyn.mp4",
+      "start": 0,
+      "duration": 3.5,
+      "title": {"headline": "30% TAŃSZEJ ENERGII", "body": "Join 500+ companies"},
+      "transition_in": {"type": "dissolve", "frames": 8}
+    },
+    {
+      "file": "media/footage/12_pv na bloku.mp4",
+      "start": 0,
+      "duration": 3.5,
+      "title": {"headline": "ZAINSTALUJ TERAZ", "body": "Free consultation"}
+    },
+    {
+      "file": "media/footage/14_Piła-pv-39,96-kwp.mp4",
+      "start": 0,
+      "duration": 3.0,
+      "title": {"kicker": "ASTA ENERGY", "headline": "asta-energy.pl"}
+    }
+  ],
+  "music": {"file": "media/audio/mewwwwwww-vamos-porra-591078.mp3", "start": 0, "volume": 0.65, "fade_out": 1.2},
+  "branding": {},
+  "output": "renders/asta-energy/flagship-editorial-benefit.mp4",
+  "brand": "asta-energy"
+}

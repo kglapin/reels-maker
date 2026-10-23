@@ -18,6 +18,9 @@ The studio commands build on the same JSON-first CLI without changing the
 legacy renderer. `studio-inspect` resolves tokens, frame timing, layouts and
 motion. `studio-qa --strict` returns a nonzero exit code on blocking QA errors.
 `studio-render` writes to `renders/<brand>/` unless `--output` is supplied.
+An opt-in `--cache-dir PATH` stores per-scene encoded segments; unchanged
+scenes stream-copy from the cache on the next run (any scene, token, font or
+encoder change invalidates the signature).
 For legacy kinetic manifests, `kinetic-render` keeps Cairo as its default; opt
 into the shared studio engine with `--engine studio` during migration:
 

@@ -67,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
     studio.add_argument("--profile", choices=("preview", "review", "final",
                                               "high-motion"))
     studio.add_argument("--supersample", type=int, choices=(1, 2))
+    studio.add_argument("--cache-dir", type=Path,
+                        help="Opt-in per-scene segment cache directory")
     studio.add_argument("--json", action="store_true")
 
     studio_qa = commands.add_parser(
@@ -234,7 +236,8 @@ def main(argv: list[str] | None = None) -> int:
                                   profile=args.profile)
             result = render_studio(project, output=args.output,
                                    profile=args.profile,
-                                   supersample=args.supersample)
+                                   supersample=args.supersample,
+                                   cache_dir=args.cache_dir)
         elif args.command == "studio-inspect":
             from .studio import load_studio
             project = load_studio(args.manifest, root=args.root,

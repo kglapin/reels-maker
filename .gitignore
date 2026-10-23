@@ -20,3 +20,7 @@ renders/
 
 # Website scan proposals / logo candidates are not approved brand assets
 brands/*/imports/
+
+# QA probes written next to brand media belong in renders/, not here
+brands/*/qa-*.mp4
+brands/*/qa-*.png

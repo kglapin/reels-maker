@@ -32,7 +32,7 @@
         "kind": "solid",
         "color": "#F5F2EA"
       },
-      "headline": "FRAMES IN MOTION",
+      "headline": "FRAMES MOVE",
       "subtitle": "01 / TILT & SETTLE",
       "editorial_rotation": {
         "headline": {
@@ -46,12 +46,12 @@
         {
           "asset": "assets/rotation-01.jpg",
           "x": 0.11,
-          "y": 0.55,
+          "y": 0.59,
           "w": 0.78,
-          "h": 0.33,
+          "h": 0.32,
           "rotation": {
             "family": "tilt-settle",
-            "angle": 8,
+            "angle": 7,
             "duration": 0.9
           }
         }
@@ -81,12 +81,12 @@
         {
           "asset": "assets/rotation-02.jpg",
           "x": 0.11,
-          "y": 0.55,
+          "y": 0.59,
           "w": 0.78,
-          "h": 0.33,
+          "h": 0.32,
           "rotation": {
             "family": "counter-rotation",
-            "angle": -8,
+            "angle": -7,
             "duration": 1
           }
         }
@@ -102,18 +102,18 @@
         "kind": "solid",
         "color": "#F5F2EA"
       },
-      "headline": "A DIFFERENT ANGLE",
+      "headline": "FIND YOUR ANGLE",
       "subtitle": "03 / DIAGONAL HOLD",
       "editorial_media": [
         {
           "asset": "assets/rotation-03.jpg",
           "x": 0.11,
-          "y": 0.55,
+          "y": 0.59,
           "w": 0.78,
-          "h": 0.33,
+          "h": 0.32,
           "rotation": {
             "family": "diagonal-hold",
-            "angle": -7,
+            "angle": 5,
             "settle_angle": -7,
             "start": 1,
             "duration": 0.35
@@ -131,7 +131,7 @@
         "kind": "solid",
         "color": "#F5F2EA"
       },
-      "headline": "REFRAME THE STORY",
+      "headline": "REFRAME",
       "subtitle": "04 / REFRAME",
       "editorial_rotation": {
         "headline": {
@@ -144,12 +144,12 @@
         {
           "asset": "assets/rotation-01.jpg",
           "x": 0.11,
-          "y": 0.55,
+          "y": 0.59,
           "w": 0.78,
-          "h": 0.33,
+          "h": 0.32,
           "rotation": {
             "family": "rotation-to-layout",
-            "angle": -7,
+            "angle": -8,
             "settle_angle": 0,
             "duration": 1
           }

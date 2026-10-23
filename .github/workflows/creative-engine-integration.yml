@@ -1,0 +1,93 @@
+name: Creative Engine v1 integration
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/reels_maker/creative/**'
+      - 'src/reels_maker/cli.py'
+      - 'src/reels_maker/components/scenes.py'
+      - 'src/reels_maker/renderers/camera_canvas.py'
+      - 'tests/test_creative_engine.py'
+      - 'examples/creative-engine-editorial-demo.json'
+      - '.github/workflows/creative-engine-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: creative-engine-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-and-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /examples/creative-engine-editorial-demo.json
+            /examples/generate_editorial_rotation_assets.py
+            /archives/asta-energy/intermediates/subsidy_ad/card_01.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_04.png
+            /archives/asta-energy/intermediates/subsidy_ad/card_07.png
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python renderer
+        timeout-minutes: 5
+        run: python -m pip install --disable-pip-version-check --retries 2 --timeout 15 -e '.[icons]' static-ffmpeg==3.0
+      - name: Prepare portable FFmpeg
+        timeout-minutes: 4
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg,ffprobe=get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"],"a",encoding="utf-8") as f:
+              print(str(Path(ffmpeg).parent),file=f)
+          PY
+      - name: Run Creative Engine unit and regression tests
+        run: |
+          python -m unittest discover -s tests -p 'test_creative_engine.py' -v
+          python -m unittest discover -s tests -p 'test_camera_canvas.py' -v
+          python -m unittest discover -s tests -p 'test_editorial_rotation_integration.py' -v
+      - name: Prepare photographic fixtures
+        run: python examples/generate_editorial_rotation_assets.py
+      - name: LLM spec to executable Studio manifest
+        run: |
+          reels-maker creative-capabilities --json > creative-capabilities.json
+          reels-maker creative-validate examples/creative-engine-editorial-demo.json --json > creative-validation.json
+          reels-maker creative-compile examples/creative-engine-editorial-demo.json --output examples/creative-engine.generated.studio.json --json > creative-compilation.json
+      - name: Render real MP4 through Creative Engine
+        run: |
+          reels-maker creative-render examples/creative-engine-editorial-demo.json --output creative-engine-demo.mp4 --storyboard creative-engine-storyboard.png --json > creative-render.json
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,nb_frames -of json creative-engine-demo.mp4 > creative-ffprobe.json
+          python - <<'PY'
+          import json
+          report=json.load(open("creative-render.json"))
+          assert report["ok"] and report["render"]["ok"],report
+          assert report["qa"]["ok"] and report["qa"]["errors"]==0,report
+          stream=json.load(open("creative-ffprobe.json"))["streams"][0]
+          assert (stream["codec_name"],stream["width"],stream["height"])==("h264",540,960),stream
+          assert int(stream["nb_frames"])==int(report["render"]["frames"]),stream
+          print("PASS Creative Spec -> compiled manifest -> audited MP4:",stream["nb_frames"],"frames")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creative-engine-v1-demo
+          path: |
+            creative-engine-demo.mp4
+            creative-engine-storyboard.png
+            creative-render.json
+            creative-ffprobe.json
+            creative-capabilities.json
+            creative-validation.json
+            creative-compilation.json
+            examples/creative-engine.generated.studio.json
+          retention-days: 7

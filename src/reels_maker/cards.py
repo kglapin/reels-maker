@@ -68,7 +68,7 @@ def resolve_title_style(project: Project, title: dict) -> dict:
     preset = profiles[name]
     if not isinstance(preset, dict):
         raise RenderError(f"Invalid editorial title profile: {name!r}")
-    allowed = {"theme", "position", "headline_style", "backdrop", "logo"}
+    allowed = {"theme", "position", "headline_style", "backdrop", "logo", "accent_rule"}
     if set(preset) - allowed:
         raise RenderError("Editorial title profile has unsupported settings")
     return {**preset, **title}
@@ -151,8 +151,22 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
     # shorter canvas side rather than assuming a 9:16 output.
     # Editorial hero numbers need a larger but bounded primary headline.
     # The safe-zone check still fails rather than allowing clipped lettering.
-    headline_base = 102 if title.get("headline_style") == "hero" else 74
+    headline_base = 186 if title.get("headline_style") == "hero" else 74
     size = [round(v * scale) for v in (32, headline_base, 49, 29)]
+    if (title.get("headline_style") == "hero"
+            and isinstance(title.get("headline"), str)
+            and title["headline"].strip()):
+        # Premium hero numbers fill the text column without wrapping the amount
+        # across different baselines. Keep at least standard headline size.
+        probe_size = max(9, size[1])
+        face = _font(probe_size, True, project.branding.get("font_bold"),
+                     project.branding.get("font_family"))
+        usable = w - 2 * margin - round(30 * scale)
+        maximum = max((draw.textlength(line, font=face)
+                       for line in title["headline"].splitlines()), default=0)
+        if maximum > usable and usable > 0:
+            size[1] = max(round(74 * scale),
+                          int(probe_size * usable / maximum * .98))
     faces = [
         _font(max(9, n), i < 2,
               project.branding.get("font_bold" if i < 2 else "font_regular"),
@@ -230,10 +244,12 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
                 "shorten copy, reduce emphasis or adjust project safe areas")
         layer_draw.text(xy, value, fill=ink, stroke_width=stroke,
                         stroke_fill="#07110D", **params)
-    if any(lines):
+    if any(lines) and title.get("accent_rule", True):
         accent_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        ImageDraw.Draw(accent_layer).rectangle(
-            (margin, y, margin + round(6 * scale), bottom), fill=accent)
+        ImageDraw.Draw(accent_layer).rounded_rectangle(
+            (margin, y, margin + max(3, round(6 * scale)),
+             y + max(15, round(70 * scale))),
+            radius=max(1, round(3 * scale)), fill=accent)
         store_layer(accent_layer, "accent")
     for i, (group, face, step, ink) in enumerate(zip(lines, faces, spacing, colors)):
         if i and group:

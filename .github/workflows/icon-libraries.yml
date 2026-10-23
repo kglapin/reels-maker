@@ -1,0 +1,42 @@
+name: Backend SVG icon libraries
+
+on:
+  push:
+    branches:
+      - feat/icon-libraries-lucide-heroicons-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  icon-library-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/test_icon_library.py
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e '.[icons]'
+      - name: Compile Python sources
+        run: python -m compileall -q src/reels_maker tests/test_icon_library.py
+      - name: Test safe icon backend
+        run: python -m unittest discover -s tests -p test_icon_library.py -v
+      - name: Load icons from real pinned upstream releases
+        run: |
+          python - <<'PY'
+          from reels_maker.icon_library import asset, raster
+          for library, name in (("lucide", "sun"), ("heroicons", "home")):
+              path = asset(library, name)
+              icon = raster(library, name, 96, "#47A013")
+              assert path.is_file() and icon.getbbox()
+              print("Verified", library, name, path)
+          PY

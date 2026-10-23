@@ -101,6 +101,26 @@ class EditorialLayoutTests(unittest.TestCase):
             self.assertLess(rectangles["headline-1"][3],
                             rectangles["body"][1])
 
+    def test_profile_can_apply_light_style_and_be_overridden(self):
+        from reels_maker.cards import resolve_title_style
+        p = project({"accent": "#47A013", "editorial_profiles": {
+            "light-information": {
+                "theme": "light", "position": "upper",
+                "headline_style": "hero", "logo": False,
+                "backdrop": "none"
+            }
+        }})
+        preset = resolve_title_style(p, {
+            "profile": "light-information", "headline": "19 000 zł"})
+        self.assertEqual(preset["theme"], "light")
+        self.assertEqual(preset["headline_style"], "hero")
+        self.assertFalse(preset["logo"])
+        changed = resolve_title_style(p, {
+            "profile": "light-information", "position": "middle"})
+        self.assertEqual(changed["position"], "middle")
+        with self.assertRaisesRegex(Exception, "Unknown editorial"):
+            resolve_title_style(p, {"profile": "does-not-exist"})
+
     def test_bad_theme_settings_rejected_at_manifest_load(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/"bad.json"

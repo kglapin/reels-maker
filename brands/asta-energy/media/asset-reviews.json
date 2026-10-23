@@ -93,7 +93,7 @@
     "media/stock/agrivoltaics_heggelbach_05.webm": {
       "type": "clean_source",
       "burned_in": [],
-      "notes": "Inspected frames at 1s and 3s: aerial PV array over farmland, no burned-in logos or captions. CC0 1.0; see licensing/stock_credits.txt.",
+      "notes": "Inspected decoded frames at 1s, 2s, 3s and 4s: aerial PV array over farmland, no burned-in logos or captions. CC0 1.0; see licensing/stock_credits.txt.",
       "license": "CC0 1.0"
     }
   }

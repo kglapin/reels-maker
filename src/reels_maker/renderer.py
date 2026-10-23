@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .brand import apply_brand
 from .cards import draw_card
-from .ffmpeg import RenderError, execute, probe
+from .ffmpeg import RenderError, execute, probe, require_tool
 from .media import preflight as inspect_media
 from .paths import ROOT
 from .spec import Project
@@ -25,7 +25,7 @@ from .quality import review_project
 from .transitions import assemble, timeline_frames, transition_plan
 from .export_quality import verify_metadata
 
-CACHE_SCHEMA = 4
+CACHE_SCHEMA = 5
 SUPPORTED_ENCODER = "libx264"
 
 
@@ -46,7 +46,8 @@ def _frame_counts(project: Project) -> list[int]:
 
 
 def _scene_key(source: Path, scene: dict, project: Project,
-               branding_files: list[Path]) -> str:
+               branding_files: list[Path], *,
+               title_engine: str = "legacy") -> str:
     def fingerprint(p: Path) -> tuple[str, int, int]:
         st = p.stat()
         # Stat-based signatures avoid hashing large video inputs on every render.
@@ -62,6 +63,7 @@ def _scene_key(source: Path, scene: dict, project: Project,
         "encoder": SUPPORTED_ENCODER,
         "preset": "veryfast",
         "crf": 20,
+        "title_engine": title_engine,
     }
     raw = json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
@@ -89,7 +91,8 @@ def preflight(project: Project, root: Path = ROOT) -> dict:
 
 
 def _encode_scene(source: Path, scene: dict, project: Project,
-                  logo: Path | None, dest: Path, scratch: Path) -> None:
+                  logo: Path | None, dest: Path, scratch: Path, *,
+                  title_engine: str = "legacy", scene_index: int = 0) -> None:
     w, h, fps = project.width, project.height, project.fps
     crop = (f"scale={w}:{h}:force_original_aspect_ratio=increase,"
             f"crop={w}:{h},setsar=1")
@@ -108,6 +111,12 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     # Light cards may suppress a light/white brand mark instead of showing an
     # invisible logo on white footage. The original brand asset is not recolored.
     effective_logo = logo if title.get("logo", True) else None
+    if title_engine == "studio" and (effective_logo or any(
+            title.get(key) for key in ("kicker", "headline", "body", "footer"))):
+        _encode_studio_overlay(
+            source, scene, project, effective_logo, dest, fps=fps, frames=frames,
+            vf=vf, scene_index=scene_index)
+        return
     show_card = draw_card(project, title, effective_logo, card,
                           layers=layers)
     args = ["-ss", str(scene.get("start", 0)), "-i", str(source)]
@@ -129,6 +138,57 @@ def _encode_scene(source: Path, scene: dict, project: Project,
     execute(args)
 
 
+def _encode_studio_overlay(source: Path, scene: dict, project: Project,
+                           logo: Path | None, dest: Path, *, fps: int,
+                           frames: int, vf: str, scene_index: int) -> None:
+    """Composite shared scene-graph title layers over the original video."""
+    from .components.title_overlay import build_title_overlay
+    from .renderers.scene import RenderOptions, SceneRenderer
+
+    duration = frames / fps
+    built = build_title_overlay(project, scene, index=scene_index,
+                                duration=duration, logo=logo)
+    if built is None:
+        raise RenderError("Studio title renderer received an empty title scene")
+    renderer = SceneRenderer(
+        project.width, project.height, built.context.tokens,
+        built.context.fonts, options=RenderOptions(supersample=1))
+    command = [
+        "-ss", str(scene.get("start", 0)), "-i", str(source),
+        "-f", "rawvideo", "-pix_fmt", "rgba",
+        "-s", f"{project.width}x{project.height}", "-r", str(fps), "-i", "-",
+        "-filter_complex",
+        f"[0:v]{vf}[base];[1:v]format=rgba[title];"
+        "[base][title]overlay=0:0:shortest=1:format=auto,"
+        "format=yuv420p[v]",
+        "-map", "[v]", "-frames:v", str(frames),
+        "-an", "-c:v", SUPPORTED_ENCODER, "-preset", "veryfast",
+        "-crf", "20", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", str(dest),
+    ]
+    args = [require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y", *command]
+    import subprocess
+    process = subprocess.Popen(args, stdin=subprocess.PIPE,
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.PIPE)
+    try:
+        for frame in range(frames):
+            overlay = renderer.render_overlay(built, frame / fps)
+            process.stdin.write(overlay.tobytes("raw", "RGBA"))
+        process.stdin.close()
+        stderr = process.stderr.read().decode("utf-8", "replace")
+        if process.wait():
+            raise RenderError("Studio overlay FFmpeg error: " + stderr[-2000:])
+    except Exception:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        raise
+    finally:
+        if process.stderr:
+            process.stderr.close()
+
+
 def _join(parts: list[Path], destination: Path, scratch: Path) -> None:
     # FFmpeg concat demuxer: stream-copy when segments have identical video settings.
     manifest = scratch / "segments.txt"
@@ -141,8 +201,11 @@ def _join(parts: list[Path], destination: Path, scratch: Path) -> None:
 
 def render(project: Project, *, root: Path = ROOT,
            output: Path | None = None, cache_dir: Path | None = None,
-           cache: bool = True, jobs: int = 2) -> dict:
+           cache: bool = True, jobs: int = 2,
+           title_engine: str = "legacy") -> dict:
     """Produce an H.264 MP4. Returns machine-readable details for agents."""
+    if title_engine not in ("legacy", "studio"):
+        raise RenderError("title_engine must be 'legacy' or 'studio'")
     started_at = perf_counter()
     root = Path(root).resolve()
     creative_review = review_project(project, root=root)
@@ -168,7 +231,8 @@ def render(project: Project, *, root: Path = ROOT,
         hits = 0
         for i, (source, original_scene) in enumerate(zip(inputs["sources"], project.scenes)):
             scene = {**original_scene, "_frames": frames[i]}
-            key = _scene_key(source, scene, project, inputs["branding_files"])
+            key = _scene_key(source, scene, project, inputs["branding_files"],
+                             title_engine=title_engine)
             cached = cache_root / f"{key}.mp4"
             if cache and cached.is_file() and cached.stat().st_size > 0:
                 parts[i] = cached
@@ -177,13 +241,15 @@ def render(project: Project, *, root: Path = ROOT,
             if key not in pending:
                 scratch_scene = scratch / f"scene-{i}"
                 scratch_scene.mkdir()
-                pending[key] = (source, scene, scratch_scene, cached, [])
+            pending[key] = (source, scene, scratch_scene, cached, [])
             pending[key][-1].append(i)
 
         def encode_task(task):
             source, scene, scene_dir, cached, indices = task
             part = scene_dir / "scene.mp4"
-            _encode_scene(source, scene, project, inputs["logo"], part, scene_dir)
+            _encode_scene(source, scene, project, inputs["logo"], part, scene_dir,
+                          title_engine=title_engine,
+                          scene_index=indices[0] if indices else 0)
             return part, cached, indices
 
         # Independent scenes encode concurrently. Duplicate shots are encoded once.
@@ -249,6 +315,7 @@ def render(project: Project, *, root: Path = ROOT,
         "cache_hit_rate": round(hits / len(parts), 4),
         "transitions": transitions,
         "quality": creative_review,
+        "title_engine": title_engine,
         "transition_overlaps_frames": sum(t["frames"] for t in transitions),
         "assembly_mode": ("xfade" if any(t["type"] != "cut" for t in transitions)
                           else "stream_copy"),

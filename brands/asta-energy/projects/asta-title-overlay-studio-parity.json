@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "ASTA Studio Title Overlay Parity Test",
+  "brand": "asta-energy",
+  "video": {"width": 720, "height": 1280, "fps": 30},
+  "output": "renders/asta-energy/qa/studio-title-overlay-parity.mp4",
+  "scenes": [
+    {
+      "file": "media/stock/agrivoltaics_heggelbach_05.webm",
+      "start": 1.0,
+      "duration": 3.4,
+      "framing": "crop",
+      "motion": {
+        "preset": "editorial_reveal",
+        "duration_frames": 8,
+        "stagger_frames": 2,
+        "distance_px": 18,
+        "cue_seconds": {"headline": 0.32}
+      },
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "headline_style": "hero",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": false,
+        "kicker": "ASTA ENERGY",
+        "headline": "ENERGIA DLA FIRM",
+        "body": "Materiał testowy CC0"
+      }
+    }
+  ]
+}

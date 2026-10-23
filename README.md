@@ -62,6 +62,8 @@ reels-maker studio-inspect brands/asta-energy/projects/asta-motion-system-demo.j
 reels-maker studio-qa brands/asta-energy/projects/asta-motion-system-demo.json --profile review --strict --json
 reels-maker studio-render brands/asta-energy/projects/asta-motion-system-demo.json --profile final --supersample 1 --json
 reels-maker storyboard brands/asta-energy/projects/asta-motion-system-demo.json --video renders/asta-energy/asta-motion-system-demo-final.mp4 --output renders/asta-energy/qa/asta-motion-system-demo.png --json
+reels-maker render brands/asta-energy/projects/asta-rush-demo.json --title-engine studio --json
+reels-maker kinetic-render brands/asta-energy/projects/legacy-kinetic.json --engine studio --json
 ```
 
 Profiles: `preview` (360×640/20 fps), `review` (720×1280/30 fps), `final`
@@ -71,6 +73,12 @@ manifest contract and QA limits. The included ASTA demo is a design-system
 sample with explicitly illustrative numbers, not an approved advertisement.
 Its stock clips are rights-documented; music is omitted until its publication
 licence is verified. An automated QA pass is not human creative approval.
+`kinetic-render` still defaults to its legacy backend; `--engine studio` opts a
+legacy kinetic manifest into the new shared scene/layout/QA engine while parity
+work proceeds. Classic video `render` can opt into studio-generated animated
+title overlays with `--title-engine studio`; FFmpeg still decodes and preserves
+the original moving footage. Both legacy renderers remain defaults until
+visual parity is reviewed.
 
 **Read** `AGENTS.md`, `docs/CLI.md`, and
 `brands/asta-energy/BRAND.md` before producing video.

@@ -18,13 +18,27 @@ The studio commands build on the same JSON-first CLI without changing the
 legacy renderer. `studio-inspect` resolves tokens, frame timing, layouts and
 motion. `studio-qa --strict` returns a nonzero exit code on blocking QA errors.
 `studio-render` writes to `renders/<brand>/` unless `--output` is supplied.
+For legacy kinetic manifests, `kinetic-render` keeps Cairo as its default; opt
+into the shared studio engine with `--engine studio` during migration:
 
 ```sh
 reels-maker studio-inspect brands/asta-energy/projects/asta-motion-system-demo.json --profile review --json
 reels-maker studio-qa brands/asta-energy/projects/asta-motion-system-demo.json --profile review --strict --json
 reels-maker studio-render brands/asta-energy/projects/asta-motion-system-demo.json --profile final --supersample 1 --json
 reels-maker storyboard brands/asta-energy/projects/asta-motion-system-demo.json --video renders/asta-energy/asta-motion-system-demo-final.mp4 --output renders/asta-energy/qa/studio-storyboard.png --json
+reels-maker render brands/asta-energy/projects/asta-rush-demo.json --title-engine studio --json
+reels-maker kinetic-render brands/asta-energy/projects/legacy-kinetic.json --engine studio --json
 ```
+
+The kinetic adapter is explicitly opt-in because it changes composition and
+motion; global legacy header/logo placement may need per-scene adjustment.
+The default `kinetic-render` invocation continues to use Cairo.
+
+Classic video `render --title-engine studio` generates animated transparent
+title overlays from the scene graph and composites them over original moving
+footage. FFmpeg still owns trim, format normalization, transitions, cache and
+audio. Legacy Pillow title cards remain the default until visual parity is
+reviewed.
 
 Studio export profiles are `preview` (360×640/20 fps), `review`
 (720×1280/30 fps), `final` (1080×1920/30 fps) and `high-motion`

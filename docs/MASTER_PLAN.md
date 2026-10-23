@@ -117,3 +117,32 @@ deliveries or any G0–G11 acceptance gate. Its sample output is explicitly
 illustrative and silent because supplied music publication rights are not
 verified. Keep it local until the repository privacy blocker and owner review
 are resolved; do not characterize automated QA as creative approval.
+
+## 11. Motion-design overhaul — remaining task list
+
+This checklist maps the user's full motion-design brief to work that still
+needs acceptance. “Partial” means code exists but the stated acceptance is not
+met; no task is complete from implementation alone. Work stays local while the
+privacy blocker is open.
+
+| ID | Prio | State | Remaining work and acceptance evidence |
+|---|---|---|---|
+| MD-01 Reference benchmark | P0 | Partial | Study and annotate 15–20 licensed/public professional ads; deliver a timestamped reference board, design grammar and explicit negative examples. Compare the original 35.55s ASTA reel against the new system. |
+| MD-02 Shared-engine migration | P0 | Partial; opt-in adapters and CC0 footage comparison pass | `kinetic-render --engine studio` adapts kinetic scenes; `render --title-engine studio` animates scene-graph overlays on original moving video. Legacy/studio contact sheets, logo and backdrop were inspected on the same reviewed CC0 clip. Remaining: broader brand/manifest/audio parity and default-path migration; no default switch yet. |
+| MD-03 Responsive layout/type | P0 | Partial; automated aspect matrix passed | All 13 demo scenes build and pass geometry QA in portrait, square and landscape; square/landscape MP4 sheets were inspected. Remaining: human phone review, varied copy and evidence from approved real-footage projects. |
+| MD-04 Motion direction | P1 | Partial | Add only reference-backed gaps (shape morph/match cut/parallax/spring as justified); validate rhythmic variety and minimum read holds on actual footage. No speculative catalog growth before MD-01/03 review. |
+| MD-05 Product visuals/assets | P1 | Partial | Build a reviewed, licensed product/icon/Lottie library with source, resolution, topic and license metadata; test product relevance and avoid duplicate shots. Lottie/dotLottie rendering is not implemented. |
+| MD-06 Narration/audio | P1 | Partial; rights blocked | Spot and record manually verified word onsets for a real licensed narrator, produce a music/SFX mix, verify cue drift/loudness/true peak and listen on phone. Current SFX integration was tested only with generated tones. |
+| MD-07 Narrative scene selection | P1 | Partial | Convert a brief/transcript into an explainable story role and composition plan; select only approved, non-repeating assets deterministically; test varied topics and durations without hidden claim invention. |
+| MD-08 Visual regression QA | P0 | Partial; safe/collision and 3-aspect geometry tests pass | Add studio golden frames and transition/motion-strip regression fixtures; expand the render matrix across profiles and real brand footage; retain reports with exact scene/time/frame and human review notes. Negative text deliberately raises a phone-review warning. |
+| MD-09 Performance/reliability | P0 | Partial | Add reusable layer/frame cache with invalidation, cold/warm and changed-scene benchmarks, high-motion/full-resolution stress tests and recovery evidence. Current 91.24s render is one measurement, not a benchmark. |
+| MD-10 Multi-brand acceptance | P0 | Partial; synthetic isolation test passed | Three temporary brand palettes/styles are tested for cross-contamination. Remaining: three real brand manifests/assets and human-approved footage/logo/typography renders. |
+| MD-11 Release/owner gates | P0 | Blocked | Owner must resolve repository visibility (currently PUBLIC), confirm source/music/SFX rights, recheck marketing claims, view the outputs on a phone, score the editorial rubric and approve any release/push/merge. |
+
+### Next unblocked local task
+
+Continue **MD-02** with audio and representative brand-profile parity tests,
+then audit whether the adapters can replace duplicate paths without changing
+legacy outputs. Both new routes stay opt-in until parity and human visual
+review pass. Synthetic aspect-matrix evidence does not close MD-03; phone
+review of approved real-footage frames remains required.

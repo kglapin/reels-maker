@@ -185,6 +185,14 @@ def load_studio(path: str | Path, *, root: str | Path | None = None,
         raise StudioError(f"Cannot read manifest: {exc}") from exc
     if not isinstance(data, dict):
         raise StudioError("Manifest must be a JSON object")
+    return _load_studio_data(path, data, root=root, profile=profile)
+
+
+def _load_studio_data(path: Path, data: dict, *,
+                      root: str | Path | None = None,
+                      profile: str | None = None) -> StudioProject:
+    """Resolve an already parsed manifest (also used by legacy adapters)."""
+    path = Path(path).resolve()
     if root is None:
         if "brands" in path.parts:
             position = path.parts.index("brands")
@@ -243,7 +251,7 @@ def load_studio(path: str | Path, *, root: str | Path | None = None,
     audio = data.get("audio") or {}
     if not isinstance(audio, dict):
         raise StudioError("audio must be an object")
-    warnings: list[dict] = []
+    warnings: list[dict] = list(data.get("_initial_warnings") or [])
     # Resolve audio paths.
     for key in ("voiceover", "music"):
         value = audio.get(key)
@@ -340,6 +348,117 @@ def load_studio(path: str | Path, *, root: str | Path | None = None,
         tokens=tokens, fonts=fonts, asset_manager=asset_manager,
         cue_plan=cue_plan, warnings=warnings)
     return project
+
+
+KINETIC_TYPES = {
+    "amount", "breakdown", "announcement", "donut", "comparison",
+    "heat", "europe", "deadline", "urgency", "cta",
+}
+
+
+def load_kinetic_studio(path: str | Path, *,
+                        root: str | Path | None = None
+                        ) -> tuple[StudioProject, Path | None]:
+    """Adapt the legacy kinetic manifest into the shared studio engine.
+
+    The existing Cairo implementation remains the default compatibility
+    renderer. This opt-in bridge keeps its manifest fields while routing scene
+    construction, layout, choreography, QA and export through the studio.
+    """
+    path = Path(path).resolve()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise StudioError(f"Cannot read kinetic manifest: {exc}") from exc
+    if not isinstance(data, dict):
+        raise StudioError("Kinetic manifest must be a JSON object")
+    scenes = data.get("scenes")
+    if not isinstance(scenes, list) or not scenes:
+        raise StudioError("Kinetic manifest requires a nonempty scenes list")
+    for index, scene in enumerate(scenes):
+        if not isinstance(scene, dict) or scene.get("type") not in KINETIC_TYPES:
+            raise StudioError(
+                f"Kinetic scene {index + 1} has an unsupported legacy type")
+        if "duration" not in scene:
+            raise StudioError(f"Kinetic scene {index + 1} requires duration")
+
+    if root is None:
+        if "brands" in path.parts:
+            position = path.parts.index("brands")
+            root = Path(*path.parts[:position]) if position else Path("/")
+        else:
+            root = Path.cwd()
+    root = Path(root).resolve()
+    identity = data.get("identity") or {}
+    if not isinstance(identity, dict):
+        raise StudioError("Kinetic identity must be an object")
+    video = dict(data.get("video") or {})
+    video.setdefault("width", 720)
+    video.setdefault("height", 1280)
+    video.setdefault("fps", 25)
+    audio: dict = {}
+    voice = data.get("voiceover")
+    if voice:
+        audio["voiceover"] = {"file": voice} if isinstance(voice, str) else dict(voice)
+    music = data.get("music")
+    if music:
+        music_config = {"file": music, "volume": .22} if isinstance(music, str) \
+            else dict(music)
+        music_config.setdefault("volume", .22)
+        music_config.setdefault("ducking", "sidechain" if voice else "off")
+        audio["music"] = music_config
+    if data.get("transcript"):
+        audio["transcript"] = data["transcript"]
+
+    adapted_scenes = [dict(scene) for scene in scenes]
+    warnings = [{
+        "code": "legacy_kinetic_restyle",
+        "message": ("Studio renderer uses the shared modern layout and motion "
+                    "system; exact Cairo-frame parity is not guaranteed. "
+                    "Legacy global header/logo placement may need per-scene review."),
+    }]
+    logo = data.get("logo")
+    if logo:
+        cta_scenes = [scene for scene in adapted_scenes
+                      if scene.get("type") == "cta"]
+        for scene in cta_scenes:
+            scene.setdefault("logo", logo)
+        warnings.append({
+            "code": "legacy_logo_restyle",
+            "message": ("The legacy kinetic header repeated its logo on every "
+                        "scene; the studio adapter places it on CTA scenes only."),
+        })
+        if not cta_scenes:
+            warnings.append({
+                "code": "legacy_logo_placement_review",
+                "message": ("Legacy kinetic header logos do not map to every "
+                            "studio scene; add an explicit scene logo after review."),
+            })
+
+    overrides = {}
+    if identity.get("accent"):
+        overrides["palette"] = {"accent": identity["accent"]}
+    adapted = {
+        "name": data.get("name") or path.stem,
+        "brand": data.get("brand"),
+        "style": data.get("style") or "kinetic-advertising",
+        "video": video,
+        "scenes": adapted_scenes,
+        "audio": audio,
+        "export": {"codec": "libx264", "crf": 20, "preset": "veryfast"},
+        "design_overrides": overrides,
+        "_initial_warnings": warnings,
+    }
+    if not adapted["brand"]:
+        adapted.pop("brand")
+    project = _load_studio_data(path, adapted, root=root)
+    legacy_output = data.get("output")
+    if legacy_output:
+        target = Path(legacy_output)
+        legacy_output_path = target.resolve() if target.is_absolute() else (root / target).resolve()
+    else:
+        legacy_output_path = None
+    return project, legacy_output_path
 
 
 def resolve_render_size(project: StudioProject, profile: str | None) -> tuple[int, int, int]:

@@ -4,6 +4,19 @@ The studio renderer is a reusable, brand-aware composition layer alongside the
 existing FFmpeg scene renderer. It does not fork the CLI, rewrite legacy
 manifests, or make a computer-generated design automatically “approved.”
 
+Legacy kinetic manifests can opt into the shared scene graph through
+`kinetic-render --engine studio`. The adapter maps their scene types, accent,
+audio paths and output path, but intentionally uses the new compositions and
+choreography; exact Cairo-frame parity is not promised. The original Cairo
+backend remains the default until the classic video `render` path and visual
+parity are migrated and accepted.
+
+Classic moving-footage projects can opt into studio-generated title overlays
+with `render --title-engine studio`. The scene graph renders transparent RGBA
+entrances while the existing FFmpeg pipeline continues to trim and composite
+the original video. Legacy Pillow title cards remain the default until parity,
+logo placement, backdrop and audio behavior are validated.
+
 ## Architecture
 
 ```text
@@ -157,5 +170,12 @@ human gates.
 - Measured local render time: 91.24 seconds (13.81 rendered fps) at
   supersample 1. This is a single-machine measurement, not a before/after
   benchmark.
+- Shared-engine migration smoke: a reviewed CC0 moving clip was rendered with
+  both legacy title cards and studio title overlays including the actual ASTA
+  logo and a strong contextual backdrop. Both MP4s passed export metadata
+  verification, and the actual-frame contact sheets were inspected:
+  `renders/asta-energy/qa/studio-title-overlay-parity-legacy.png` and
+  `renders/asta-energy/qa/studio-title-overlay-parity-studio.png`. The visual
+  treatments differ; studio mode remains opt-in pending owner review.
 - The file is intentionally silent pending music-rights verification. Human
   phone playback, editorial scoring, and publication approval are still open.

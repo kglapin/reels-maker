@@ -375,10 +375,13 @@ class LayoutEngine:
 
     def _statement(self, measure, has_visual: bool) -> dict[str, Rect]:
         safe = self.safe
-        headline = _height(measure, "headline", safe.h * .5)
-        body = _height(measure, "body", self.tokens.type_size("body") * 1.4)
+        body = min(_height(measure, "body", self.tokens.type_size("body") * 1.4),
+                   safe.h * .22)
+        headline = min(_height(measure, "headline", safe.h * .5),
+                       max(self.tokens.type_size("title"),
+                           safe.h - body - self.gap * 2))
         total = headline + self.gap + body
-        start = safe.y + (safe.h - total) / 2
+        start = safe.y + max(0.0, (safe.h - total) / 2)
         return {
             "headline": Rect(safe.x, start, safe.w, headline),
             "body": Rect(safe.x, start + headline + self.gap, safe.w, body),

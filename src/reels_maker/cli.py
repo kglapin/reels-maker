@@ -43,6 +43,9 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--no-cache", action="store_true")
             command.add_argument("--jobs", type=int, default=2,
                                  help="Concurrent scene encodes (default: 2)")
+            command.add_argument("--title-engine", choices=("legacy", "studio"),
+                                 default="legacy",
+                                 help="Render title overlays with legacy cards or the shared studio scene graph")
             command.add_argument("--strict-quality", action="store_true",
                                  help="Refuse to render when editorial warnings remain")
     kinetic = commands.add_parser("kinetic-render",
@@ -50,6 +53,9 @@ def main(argv: list[str] | None = None) -> int:
     kinetic.add_argument("manifest", type=Path)
     kinetic.add_argument("--root", type=Path)
     kinetic.add_argument("--output", type=Path)
+    kinetic.add_argument("--engine", choices=("legacy", "studio"),
+                         default="legacy",
+                         help="Use shared studio primitives (legacy Cairo remains default)")
     kinetic.add_argument("--json", action="store_true")
 
     studio = commands.add_parser(
@@ -197,8 +203,18 @@ def main(argv: list[str] | None = None) -> int:
                 "warnings": audit["warnings"], "applied": False,
             }
         elif args.command == "kinetic-render":
-            from .kinetic_video import render_kinetic
-            result = render_kinetic(args.manifest, root=args.root, output=args.output)
+            if args.engine == "studio":
+                from .studio import load_kinetic_studio
+                from .renderers.studio import render_studio
+                project, default_output = load_kinetic_studio(
+                    args.manifest, root=args.root)
+                result = render_studio(
+                    project, output=args.output or default_output)
+                result["engine"] = "studio"
+            else:
+                from .kinetic_video import render_kinetic
+                result = render_kinetic(args.manifest, root=args.root,
+                                        output=args.output)
         elif args.command == "studio-render":
             from .studio import load_studio
             from .renderers.studio import render_studio
@@ -321,7 +337,8 @@ def main(argv: list[str] | None = None) -> int:
                         return 2
                 result = render(project, root=args.root, output=args.output,
                                 cache_dir=args.cache_dir,
-                                cache=not args.no_cache, jobs=args.jobs)
+                                cache=not args.no_cache, jobs=args.jobs,
+                                title_engine=args.title_engine)
         if args.command == "validate":
             quality = review_project(project, root=args.root)
             result["quality"] = quality

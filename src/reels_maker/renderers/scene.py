@@ -70,6 +70,20 @@ class SceneRenderer:
                                  Image.Resampling.LANCZOS)
         return image.convert("RGB")
 
+    def render_overlay(self, scene: BuiltScene, time: float) -> Image.Image:
+        """Render scene nodes onto transparent RGBA for video composition."""
+        if not math.isfinite(time):
+            raise ValueError("Render time must be finite")
+        if time < 0 or time > scene.duration + 1e-6:
+            raise ValueError("Render time is outside the scene")
+        image = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        for node in scene.at(time):
+            self._draw_node(image, node)
+        if self.ss > 1:
+            image = image.resize((self.width, self.height),
+                                 Image.Resampling.LANCZOS)
+        return image
+
     def frame_bytes(self, scene: BuiltScene, time: float) -> bytes:
         return self.render(scene, time).convert("RGBA").tobytes("raw", "BGRA")
 

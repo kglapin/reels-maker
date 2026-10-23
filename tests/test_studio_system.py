@@ -1,12 +1,17 @@
 """Regression coverage for the reusable Pillow motion-design studio."""
 from __future__ import annotations
 
+import copy
+import contextlib
+import io
 import json
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
+from PIL import Image, ImageChops
 
 from reels_maker.audiokit.cues import load_transcript, plan_cues
 from reels_maker.components.base import SceneContext
@@ -18,7 +23,7 @@ from reels_maker.ffmpeg import RenderError
 from reels_maker.qa.report import _audio_report, audit
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.renderers.studio import probe_output, render_studio
-from reels_maker.studio import StudioError, load_studio
+from reels_maker.studio import StudioError, load_kinetic_studio, load_studio
 from reels_maker.textkit.typesetter import FontBook, Run
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +109,45 @@ class StudioDesignTests(unittest.TestCase):
             with self.assertRaisesRegex(StudioError, "escapes brand scope"):
                 load_studio(project, root=base)
 
+    def test_three_brand_profiles_keep_palette_and_style_isolated(self):
+        brands = (
+            ("energy", "#47A013", "editorial-premium"),
+            ("technology", "#2864DC", "product-cinematic"),
+            ("services", "#A24670", "social-native"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            resolved = []
+            for slug, accent, style in brands:
+                brand_root = root / "brands" / slug
+                projects = brand_root / "projects"
+                projects.mkdir(parents=True)
+                (brand_root / "brand.json").write_text(json.dumps({
+                    "id": slug,
+                    "branding": {"accent": accent},
+                    "identity": {"palette": {
+                        "primary": accent, "background": "#111820",
+                        "text": "#FFFFFF", "neutral": "#233040"}},
+                }), encoding="utf-8")
+                manifest = projects / "demo.json"
+                manifest.write_text(json.dumps({
+                    "brand": slug, "style": style,
+                    "video": {"width": 360, "height": 640, "fps": 20},
+                    "scenes": [{"type": "statement", "duration": 2,
+                                "headline": f"{slug.upper()}", "decor": False}],
+                }), encoding="utf-8")
+                project = load_studio(manifest, root=root, profile="preview")
+                built = project.build()
+                resolved.append((project.brand, project.style,
+                                 project.tokens.palette.as_hex()["accent"],
+                                 built[0].meta["headline"]))
+            self.assertEqual([item[0] for item in resolved],
+                             [item[0] for item in brands])
+            self.assertEqual([item[1] for item in resolved],
+                             [item[2] for item in brands])
+            self.assertEqual([item[2] for item in resolved],
+                             [item[1] for item in brands])
+
     def test_demo_builds_all_scene_compositions_and_qa_passes(self):
         project = load_studio(DEMO, root=ROOT, profile="review")
         timeline = project.timeline()
@@ -125,6 +169,46 @@ class StudioDesignTests(unittest.TestCase):
         report = audit(project, scenes, timeline, renderer=renderer, strict=True)
         self.assertTrue(report["ok"], report["issues"])
         self.assertEqual(report["summary"]["errors"], 0)
+        self.assertIn("negative_text_review",
+                      {issue["code"] for issue in report["issues"]})
+
+    def test_qa_detects_collision_and_safe_area_regressions(self):
+        project = load_studio(DEMO, root=ROOT, profile="review")
+        timeline = project.timeline()
+        built = project.build(timeline)
+        scene = built[0]
+        scene.elements["body"].meta["bounds"] = scene.elements["headline"].meta["bounds"]
+        report = audit(project, built, timeline, samples_per_scene=4)
+        self.assertIn("element_collision",
+                      {issue["code"] for issue in report["issues"]})
+
+        built = project.build(timeline)
+        built[0].elements["body"].meta["bounds"] = (-10, -10, 100, 30)
+        report = audit(project, built, timeline, samples_per_scene=4)
+        self.assertIn("safe_area_violation",
+                      {issue["code"] for issue in report["issues"]})
+
+    def test_demo_layouts_build_and_pass_geometry_in_three_aspects(self):
+        source = json.loads(DEMO.read_text(encoding="utf-8"))
+        source.pop("export", None)
+        for scene in source["scenes"]:
+            scene.pop("photo", None)
+            scene.pop("photo_time", None)
+        for label, (width, height) in (
+                ("portrait", (1080, 1920)),
+                ("square", (1080, 1080)),
+                ("landscape", (1920, 1080))):
+            with self.subTest(aspect=label), tempfile.TemporaryDirectory() as directory:
+                data = copy.deepcopy(source)
+                data["video"] = {"width": width, "height": height, "fps": 30}
+                manifest = Path(directory) / f"{label}.json"
+                manifest.write_text(json.dumps(data, ensure_ascii=False),
+                                    encoding="utf-8")
+                project = load_studio(manifest, root=ROOT)
+                timeline = project.timeline()
+                built = project.build(timeline)
+                report = audit(project, built, timeline, samples_per_scene=4)
+                self.assertTrue(report["ok"], report["issues"])
 
     def test_audio_report_keeps_resolved_track_path_and_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -142,6 +226,36 @@ class StudioDesignTests(unittest.TestCase):
             project = load_studio(manifest, root=ROOT, profile="preview")
             report = _audio_report(project, project.timeline())
             self.assertEqual(report["music"]["path"], str(audio.resolve()))
+
+    def test_legacy_kinetic_manifest_adapts_to_shared_scene_graph(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            manifest = base / "legacy-kinetic.json"
+            manifest.write_text(json.dumps({
+                "name": "legacy compatibility",
+                "identity": {"name": "Example", "accent": "#336699"},
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [{"type": "amount", "duration": 1.5,
+                            "value": 16000, "kicker": "DOTACJA",
+                            "subtitle": "PRZYKŁADOWA DANA",
+                            "visual": "none"}],
+            }), encoding="utf-8")
+            project, default_output = load_kinetic_studio(manifest, root=ROOT)
+            self.assertIsNone(default_output)
+            self.assertEqual(project.style, "kinetic-advertising")
+            self.assertEqual(project.tokens.palette.as_hex()["accent"], "#336699")
+            self.assertEqual(project.build()[0].meta["value"], 16000)
+
+    def test_legacy_kinetic_cli_backend_remains_the_default(self):
+        from reels_maker.cli import main
+        stdout = io.StringIO()
+        with patch("reels_maker.kinetic_video.render_kinetic",
+                   return_value={"ok": True}) as legacy_render:
+            with contextlib.redirect_stdout(stdout):
+                code = main(["kinetic-render", "old-project.json", "--json"])
+        self.assertEqual(code, 0)
+        legacy_render.assert_called_once()
+        self.assertEqual(json.loads(stdout.getvalue())["status"], "ok")
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
@@ -223,6 +337,121 @@ class StudioRenderIntegrationTests(unittest.TestCase):
                               supersample=1)
             self.assertEqual(output.read_bytes(), previous)
             self.assertEqual(list(base.glob(".reels-studio-*")), [])
+
+    def test_kinetic_cli_can_opt_into_shared_studio_engine(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            manifest = base / "legacy-kinetic.json"
+            output = base / "kinetic-studio.mp4"
+            manifest.write_text(json.dumps({
+                "name": "kinetic adapter smoke",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [{"type": "amount", "duration": 1.5,
+                            "value": 16000, "visual": "none"}],
+            }), encoding="utf-8")
+            completed = subprocess.run([
+                str(ROOT / ".venv/bin/reels-maker"), "kinetic-render",
+                str(manifest), "--root", str(ROOT), "--output", str(output),
+                "--engine", "studio", "--json",
+            ], text=True, capture_output=True, check=False)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["engine"], "studio")
+            self.assertEqual(probe_output(output)["codec"], "h264")
+
+    def test_classic_video_render_can_opt_into_studio_title_overlays(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source.mp4"
+            music = base / "tone.wav"
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i",
+                "color=c=0x335577:s=320x240:r=20:d=2",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(source),
+            ], check=True, capture_output=True)
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i", "sine=frequency=330:duration=2",
+                "-ac", "2", "-ar", "48000", str(music),
+            ], check=True, capture_output=True)
+            manifest = base / "classic.json"
+            manifest.write_text(json.dumps({
+                "name": "shared-overlay-smoke",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "music": {"file": "tone.wav", "volume": .1,
+                          "fade_out": .2, "ducking": "off"},
+                "scenes": [{
+                    "file": "source.mp4", "start": 0, "duration": 1.8,
+                    "framing": "crop",
+                    "motion": {"preset": "rise_soft", "duration_frames": 4,
+                               "stagger_frames": 2, "distance_px": 12,
+                               "cue_seconds": {"headline": .15, "body": .42}},
+                    "title": {"theme": "dark", "backdrop": "soft",
+                              "logo": False, "kicker": "ASTA ENERGY",
+                              "headline": "WSPÓLNY SILNIK",
+                              "body": "Tekst na ruchomym obrazie"},
+                }],
+            }), encoding="utf-8")
+            output = base / "classic-studio-title.mp4"
+            completed = subprocess.run([
+                str(ROOT / ".venv/bin/reels-maker"), "render", str(manifest),
+                "--root", str(base), "--output", str(output), "--jobs", "1",
+                "--no-cache", "--title-engine", "studio", "--json",
+            ], text=True, capture_output=True, check=False)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["title_engine"], "studio")
+            metadata = probe_output(output)
+            self.assertEqual((metadata["width"], metadata["height"]), (360, 640))
+            self.assertEqual(metadata["frames"], 36)
+            self.assertEqual(metadata["audio_codec"], "aac")
+            first, last = base / "first.png", base / "last.png"
+            for timestamp, frame in ((.15, first), (1.55, last)):
+                subprocess.run([
+                    shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                    "-ss", str(timestamp), "-i", str(output),
+                    "-frames:v", "1", str(frame),
+                ], check=True, capture_output=True)
+            with Image.open(first) as first_frame, Image.open(last) as last_frame:
+                difference = ImageChops.difference(
+                    first_frame.convert("RGB"), last_frame.convert("RGB"))
+                self.assertIsNotNone(difference.getbbox())
+
+    def test_classic_title_engine_choice_invalidates_cached_scene(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source.mp4"
+            subprocess.run([
+                shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i", "color=c=0x335577:s=320x240:r=20:d=1.5",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(source),
+            ], check=True, capture_output=True)
+            manifest = base / "classic-cache.json"
+            manifest.write_text(json.dumps({
+                "name": "title-engine-cache",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [{"file": "source.mp4", "duration": 1.2,
+                            "title": {"theme": "dark", "logo": False,
+                                      "headline": "CACHE TEST"}}],
+            }), encoding="utf-8")
+            cache = base / "shared-cache"
+            executable = str(ROOT / ".venv/bin/reels-maker")
+            outputs = []
+            for engine in ("legacy", "studio", "studio"):
+                output = base / f"{engine}-{len(outputs)}.mp4"
+                command = [executable, "render", str(manifest), "--root",
+                           str(base), "--output", str(output), "--cache-dir",
+                           str(cache), "--jobs", "1", "--json"]
+                if engine != "legacy":
+                    command += ["--title-engine", engine]
+                completed = subprocess.run(command, text=True,
+                                           capture_output=True, check=False)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                outputs.append(json.loads(completed.stdout))
+            self.assertEqual(outputs[0]["cache_misses"], 1)
+            self.assertEqual(outputs[1]["cache_misses"], 1)
+            self.assertEqual(outputs[2]["cache_hits"], 1)
 
 
 if __name__ == "__main__":

@@ -3,12 +3,12 @@
   "status": "BLOCKED - live GitHub check reports PUBLIC (privacy policy requires private); human creative/licensing approval remains pending",
   "next_action": "Local: extend studio overlay parity to audio and more brand profiles; keep legacy defaults until review; Owner: resolve repository privacy and complete creative/licensing gates",
   "current_branch": "feat/motion-design-system-20261023 (local prototype; not pushed)",
-  "latest_commit": "76ebbae feat: bridge classic video titles to scene graph (local, unpushed)",
+  "latest_commit": "docs: REFERENCE_BOARD.md (MD-01) — local, unpushed",
   "branch_up_to_date": false,
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
   "ci_status": "Latest observed workflows on feat/kinetic-motion-primitives-20261023 succeeded; no CI run for the current local prototype branch",
-  "local_tests": "154 passed in 48.81s",
+  "local_tests": "154 passed in 49.38s (re-run after asset-reviews.json label correction, 2026-10-23)",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
@@ -79,7 +79,7 @@
     "remaining": "wider brand/profile parity, real audio and default-path migration review"
   },
   "motion_design_backlog": [
-    {"id": "MD-01", "priority": "P0", "status": "partial", "task": "15-20 annotated, licensed reference ads and before/after benchmark"},
+    {"id": "MD-01", "priority": "P0", "status": "partial_reference_board_delivered", "task": "docs/REFERENCE_BOARD.md: 18 annotated references with verified links, 10-rule design grammar, 10 negative examples; before/after benchmark blocked on owner-supplied ~35.55s original ASTA reel"},
     {"id": "MD-02", "priority": "P0", "status": "partial_real_footage_overlay_pass", "task": "Opt-in kinetic adapter and classic moving-video title overlay; reviewed CC0 legacy/studio comparison and synthetic AAC/cache tests pass; default migration remains"},
     {"id": "MD-03", "priority": "P0", "status": "partial_aspect_matrix_passed", "task": "Portrait/square/landscape build, geometry QA and real MP4 contact sheets passed; phone/real-footage review pending"},
     {"id": "MD-04", "priority": "P1", "status": "partial", "task": "Reference-backed motion gaps and choreography acceptance"},

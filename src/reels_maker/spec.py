@@ -91,6 +91,8 @@ def load_project(path: str | Path) -> Project:
             raise ProjectError(f"scene {index}: title.theme must be light or dark")
         if title.get("position", "lower") not in ("upper", "middle", "lower"):
             raise ProjectError(f"scene {index}: title.position must be upper, middle or lower")
+        if title.get("headline_style", "standard") not in ("standard", "hero"):
+            raise ProjectError(f"scene {index}: title.headline_style must be standard or hero")
         if type(title.get("logo", True)) is not bool:
             raise ProjectError(f"scene {index}: title.logo must be boolean")
         if title.get("backdrop", "none" if title.get("theme") == "light" else "soft") not in ("soft", "strong", "none"):

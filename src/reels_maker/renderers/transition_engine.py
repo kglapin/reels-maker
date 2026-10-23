@@ -9,7 +9,9 @@ from __future__ import annotations
 import math
 from PIL import Image, ImageDraw, ImageFilter
 
-EFFECTS = frozenset({"color-takeover", "radial-reveal", "whip-pan", "zoom-through"})
+EFFECTS = frozenset({"color-takeover", "radial-reveal", "whip-pan", "zoom-through",
+                     "diagonal-wipe", "iris-close-open", "stripe-reveal",
+                     "split-slide", "spin-zoom", "pixel-dissolve"})
 
 
 def _ease(t: float) -> float:
@@ -41,6 +43,73 @@ def transition_frame(outgoing: Image.Image, incoming: Image.Image,
     w, h = outgoing.size
     a = outgoing.convert("RGB")
     b = incoming.convert("RGB")
+    if effect == "diagonal-wipe":
+        mask = Image.new("L", (w, h), 0)
+        d = ImageDraw.Draw(mask)
+        extent = w + h
+        cutoff = -h + t * (extent + h)
+        d.polygon([(0, 0), (max(0, cutoff), 0),
+                   (max(0, cutoff-h), h), (0, h)], fill=255)
+        return Image.composite(b, a, mask)
+    if effect == "stripe-reveal":
+        mask = Image.new("L", (w, h), 0)
+        d = ImageDraw.Draw(mask)
+        stripes = 9
+        for i in range(stripes):
+            start = i / stripes * .33
+            p = _ease((t-start)/.67)
+            if p <= 0:
+                continue
+            y0, y1 = round(i*h/stripes), round((i+1)*h/stripes)
+            extent = round(w*p)
+            if i % 2:
+                d.rectangle((w-extent, y0, w, y1), fill=255)
+            else:
+                d.rectangle((0, y0, extent, y1), fill=255)
+        return Image.composite(b, a, mask)
+    if effect == "split-slide":
+        frame = b.copy()
+        offset = round((1-t)*w/2)
+        upper = a.crop((0, 0, w//2, h))
+        lower = a.crop((w//2, 0, w, h))
+        frame.paste(upper, (-round(t*w/2), 0))
+        frame.paste(lower, (w//2+round(t*w/2), 0))
+        return frame
+    if effect == "iris-close-open":
+        x, y = round(w*anchor[0]), round(h*anchor[1])
+        radius = math.hypot(max(x,w-x), max(y,h-y))
+        mask = Image.new("L", (w,h), 0)
+        d = ImageDraw.Draw(mask)
+        if t < .5:
+            r = radius * (1-_ease(t*2))
+            d.ellipse((x-r,y-r,x+r,y+r), fill=255)
+            return Image.composite(a, Image.new("RGB",(w,h),color), mask)
+        r = radius * _ease((t-.5)*2)
+        d.ellipse((x-r,y-r,x+r,y+r), fill=255)
+        return Image.composite(b, Image.new("RGB",(w,h),color), mask)
+    if effect == "spin-zoom":
+        # Rotated outgoing card shrinks to reveal the incoming scene.
+        scale = max(.04, 1-.96*t)
+        cw, ch = max(1,round(w*scale)), max(1,round(h*scale))
+        card = a.resize((cw,ch), Image.Resampling.BICUBIC)
+        card = card.rotate(105*t, resample=Image.Resampling.BICUBIC,
+                           expand=True)
+        frame = b.copy()
+        frame.paste(card, (round(w*anchor[0]-card.width/2),
+                           round(h*anchor[1]-card.height/2)))
+        return frame
+    if effect == "pixel-dissolve":
+        # Deterministic ordered Bayer dither, no frame-to-frame randomness.
+        bayer = ((0,8,2,10),(12,4,14,6),(3,11,1,9),(15,7,13,5))
+        mask = Image.new("L",(w,h),0)
+        d = ImageDraw.Draw(mask)
+        block = max(8,round(min(w,h)*.022))
+        threshold = t*16
+        for row,y0 in enumerate(range(0,h,block)):
+            for col,x0 in enumerate(range(0,w,block)):
+                if bayer[row%4][col%4] < threshold:
+                    d.rectangle((x0,y0,min(w,x0+block),min(h,y0+block)),fill=255)
+        return Image.composite(b,a,mask)
     if effect in ("color-takeover", "radial-reveal"):
         mask = Image.new("L", (w, h), 0)
         draw = ImageDraw.Draw(mask)

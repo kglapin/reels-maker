@@ -37,7 +37,7 @@ class RotationalTypographyTests(unittest.TestCase):
         node = Node(kind="panel", props={"x": 100, "y": 100, "w": 400, "h": 100})
         original = node.world_bounds()
         node.rotation = 30
-        rotated = node.bounds()
+        rotated = node.world_bounds()
         self.assertIsNotNone(original)
         self.assertIsNotNone(rotated)
         self.assertGreater(rotated[3] - rotated[1], original[3] - original[1])

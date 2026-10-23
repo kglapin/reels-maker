@@ -125,7 +125,10 @@ def draw_card(project: Project, title: dict, logo: Path | None, target: Path,
               for k in ("kicker", "headline", "body", "footer")]
     # Supporting copy must remain readable on a phone. Scale via the
     # shorter canvas side rather than assuming a 9:16 output.
-    size = [round(v * scale) for v in (32, 74, 49, 29)]
+    # Editorial hero numbers need a larger but bounded primary headline.
+    # The safe-zone check still fails rather than allowing clipped lettering.
+    headline_base = 102 if title.get("headline_style") == "hero" else 74
+    size = [round(v * scale) for v in (32, headline_base, 49, 29)]
     faces = [
         _font(max(9, n), i < 2,
               project.branding.get("font_bold" if i < 2 else "font_regular"),

@@ -23,18 +23,22 @@ scenes stream-copy from the cache on the next run (any scene, token, font or
 encoder change invalidates the signature).
 ## Pixabay audio (music / sound-effects)
 
-Automated access to pixabay.com is blocked by Cloudflare and the CDN MP3
-delivery returns 403 without browser context (verified 2026-10-23), so the
-module is explicit about it:
+MP3 files are served by the content CDN without a Cloudflare challenge
+(verified 2026-10-23: valid MP3 frames from cdn.pixabay.com), so once the MP3
+URLs are known the downloads run fully unattended. Only the pixabay.com
+pages and bootstrap JSON are challenged, and that is what the bridges cover:
 
-- `reels-maker pixabay "query"` tries the direct fetch and, when blocked,
-  prints exact guidance instead of retrying blindly.
+- `reels-maker pixabay "query"` tries the direct fetch and, when the
+  Cloudflare challenge appears, prints exact guidance instead of retrying
+  blindly.
 - `--page-file saved.html` parses a page saved from the browser (search
   results or any rendered response served with the page).
 - `--tracks-file urls.txt` works from a plain list of CDN MP3 urls copied
-  from the browser DevTools network tab (one per line, `#` comments allowed).
+  from the browser network tab (one per line, optional `# title` comment);
+  because the CDN serves MP3s unattended, this path runs end-to-end without
+  a browser.
 - `--cookies "cf_clearance=...; ..."` passes the operator's browser cookie
-  header for fetching and downloading.
+  header for page fetching.
 - Downloads require `--pick 2,3` or `--all` and land in
   `brands/<slug>/imports/audio/` — the same git-ignored quarantine area the
   brand scan uses; files inside `media/` are refused.

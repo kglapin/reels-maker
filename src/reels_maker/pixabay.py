@@ -1,9 +1,12 @@
 """Pixabay music/sound-effects acquisition (MD-06 support, quarantine-first).
 
 Pixabay has no public API for audio (the documented API covers images and
-videos only, checked 2026-10-23) and the audio pages sit behind a Cloudflare
-challenge (verified: HTTP 403 "Just a moment..." for plain programmatic
-requests). This module therefore offers two explicit paths:
+videos only) and the pixabay.com pages sit behind a Cloudflare challenge
+(verified 2026-10-23: HTTP 403 "Just a moment..." for plain programmatic
+requests, including the bootstrap JSON). The content CDN — cdn.pixabay.com —
+is separate and already serves the MP3 files to plain HTTP clients (verified
+the same day: 200, valid MP3 frames). This module therefore offers explicit
+acquisition paths:
 
 1. **Direct** — try to fetch the search page programmatically. When the site
    shows the challenge, the error message tells the operator exactly what to
@@ -11,6 +14,9 @@ requests). This module therefore offers two explicit paths:
 2. **Page file** — the operator opens the Pixabay search page in their own
    browser, saves the HTML and passes it with ``--page-file``; the parser
    extracts candidate tracks (bootstrap JSON or the CDN MP3 fallback).
+3. **Track list** — ``--tracks-file`` with CDN MP3 URLs taken from the
+   browser DevTools network tab (one per line, optional "# title" comment);
+   downloads from the open CDN then run fully unattended.
 
 Downloads are never automatic: a fetched candidate list is printed and only
 explicitly picked entries (``--pick 1,3``) are saved to
@@ -147,13 +153,15 @@ def parse_tracks(source: str, base_url: str = "") -> list[dict]:
         payload = json.loads(http_get(full).decode("utf-8", "replace"))
         for item in _iter_values(payload):
             url = None
-            for key in ("audio_url", "audioUrl", "mp3_url", "mp3Url",
+            if not isinstance(item, dict):
+                continue
+            for key in ("src", "audio_url", "audioUrl", "mp3_url", "mp3Url",
                         "audio", "stream_url", "streamUrl"):
-                value = item.get(key) if isinstance(item, dict) else None
+                value = item.get(key)
                 if isinstance(value, str) and "cdn.pixabay.com/audio" in value:
                     url = value.split("?")[0]
                     break
-            if url is None and isinstance(item, dict):
+            if url is None:
                 for value in item.values():
                     if (isinstance(value, str)
                             and value.startswith("https://cdn.pixabay.com/audio/")
@@ -162,10 +170,14 @@ def parse_tracks(source: str, base_url: str = "") -> list[dict]:
                         break
             if not url:
                 continue
-            title = (item.get("title") or item.get("name")
-                     or _pick(Path(urlsplit(url).path).stem))
+            # Real bootstrap items carry a readable `filename` like
+            # 'spy-always-dies-along-93740.mp3'; the download route they
+            # advertise requires an account, the CDN src does not.
+            name = item.get("filename") or item.get("title") or \
+                item.get("name") or Path(urlsplit(url).path).stem
+            title = _pick(re.sub(r"\.mp3$", "", str(name)))
             tracks[url] = {
-                "title": str(title),
+                "title": title,
                 "url": url,
                 "page": (f"{base_url}#{item.get('id')}" if base_url
                          else "unknown-page"),
@@ -199,20 +211,27 @@ def parse_track_list(source: str, *, base_page: str = "") -> list[dict]:
     """Build candidates from a plain list of CDN MP3 URLs (one per line).
 
     Copy the URLs from the browser DevTools network tab while playing the
-    track (cdn.pixabay.com/media requests are not Cloudflare-challenged —
-    verified 2026-10-23). Title is derived from the file name.
+    track (cdn.pixabay.com serves MP3s to plain HTTP clients — verified
+    2026-10-23). Optionally give each line a title after an internal
+    comment: ``https://cdn.pixabay.com/... # Spy Always Dies``; the title is
+    otherwise derived from the file name.
     """
     tracks: list[dict] = []
     for line in source.splitlines():
-        url = line.strip()
-        if not url or url.startswith("#"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        url, _, comment = line.partition("#")
+        url = url.strip()
+        if not url:
             continue
         if ".pixabay.com" not in url or not url.endswith(".mp3"):
-            raise PixabayError(f"Track list lines must be Pixabay MP3 urls: "
-                               f"{url[:80]!r}")
+            raise PixabayError(
+                f"Track list lines must be Pixabay MP3 urls: {url[:80]!r}")
         stem = Path(urlsplit(url).path).stem
+        title = comment.strip() or _pick(stem)
         tracks.append({
-            "title": _pick(stem),
+            "title": title,
             "url": url.split("?")[0],
             "page": base_page or "unknown-page",
             "duration": None,
@@ -227,9 +246,9 @@ def download_candidates(tracks: list[dict], destination: Path, picks: str,
                         *, kind: str, cookies: str | None = None) -> dict:
     """Download only explicitly picked candidates into the quarantine area.
 
-    MP3 delivery from cdn.pixabay.com verified 403 for plain requests
-    (2026-10-23), so pass the operator's browser cookie header via
-    ``cookies`` when the CDN expects it.
+    MP3 delivery from cdn.pixabay.com requires no challenge (verified
+    2026-10-23: 200 with valid MP3 frames), so pass ``cookies`` only when a
+    page fetch needs the operator's browser context.
     """
     selection = []
     for token in picks.split(","):

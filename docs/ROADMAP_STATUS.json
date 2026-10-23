@@ -8,7 +8,7 @@
   "worktree_clean": false,
   "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
   "ci_status": "Latest observed workflows on feat/kinetic-motion-primitives-20261023 succeeded; no CI run for the current local prototype branch",
-  "local_tests": "197 passed in 54.88s (nine pixabay acquisition tests added; 2026-10-23)",
+  "local_tests": "199 passed in 51.61s (pixabay live-verified end-to-end: agent discovery + autonomous CDN download; 2026-10-23)",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
@@ -85,14 +85,14 @@
     {"id": "MD-03", "priority": "P0", "status": "partial_aspect_matrix_passed", "task": "Portrait/square/landscape build, geometry QA and real MP4 contact sheets passed; phone/real-footage review pending"},
     {"id": "MD-04", "priority": "P1", "status": "partial_exit_choreography", "task": "Hold-preserving pure-fade exits planned in choreography with reading-hold QA measured to fade onset; morph/match-cut/parallax deliberately deferred; footage acceptance still owner-owned"},
     {"id": "MD-05", "priority": "P1", "status": "partial_library_validator", "task": "asset-library.json validator (mandatory license/resolution/topics/review metadata, duplicate-shot and lottie guards) plus a first CC0-only ASTA library; external sourcing and Lottie support remain blocked"},
-    {"id": "MD-06", "priority": "P1", "status": "partial_pixabay_acquisition", "task": "reels-maker pixabay searches/downloads music/SFX into the imports quarantine with Pixabay Content License metadata (Cloudflare/CDN access limits encoded via page-file, tracks-file and cookie bridges); licensed narrator recording and approved mix remain blocked"},
+    {"id": "MD-06", "priority": "P1", "status": "partial_pixabay_verified", "task": "reels-maker pixabay verified end-to-end: agent-assisted discovery (Cloudflare on pages/bootstrap) + autonomous CDN MP3 download into the imports quarantine with Pixabay Content License metadata; licensed narrator recording and approved mix remain blocked"},
     {"id": "MD-07", "priority": "P1", "status": "partial_planner_delivered", "task": "reels-maker plan: explainable deterministic brief-to-manifest planner with copy/contact/metric invention guards and reviewed-media-only selection; real-brand brief still needs owner-approved copy"},
     {"id": "MD-08", "priority": "P0", "status": "partial_golden_frames", "task": "Studio golden-strip fixtures (5 demo scenes x entry/settle/exit, exact-pixel verify + mutation negative), transition-cycle and preview audit tests; MP4-level transition strips and more profiles remain"},
     {"id": "MD-09", "priority": "P0", "status": "partial_per_scene_cache", "task": "Opt-in per-scene segment cache with signature invalidation, corrupt-cache atomic recovery and final-profile 1080x1920 smoke; owner-footage benchmark suite remains"},
     {"id": "MD-10", "priority": "P0", "status": "partial_brand_init_scaffold", "task": "brand-init scaffolds immediately usable brand directories (accent-driven palette, no media, never silently overwritten) on top of synthetic isolation tests; real brand renders and human review pending"},
     {"id": "MD-11", "priority": "P0", "status": "partial_code_release_authorized", "task": "Owner authorized code push to GitHub main on 2026-10-23; per-delivery media rights, claims and phone/rubric review remain owner gates"}
   ],
-  "test_count": 197,
+  "test_count": 199,
   "files_added": 12,
   "current_date": "2026-10-23",
   "version": "1.0"

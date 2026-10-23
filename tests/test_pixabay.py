@@ -54,6 +54,38 @@ class PixabayParsingTests(unittest.TestCase):
                          ["Calm Sunrise", "Uplift Pop"])
         self.assertFalse(tracks[1]["url"].endswith("?x=1"))
 
+    def test_real_bootstrap_shape_src_and_filename(self):
+        """Verified live shape: items carry 'src' + readable 'filename'."""
+        original = pixabay.http_get
+        payload = json.dumps({"data": [
+            {"src": "https://cdn.pixabay.com/audio/2022/03/15/audio_a7.mp3",
+             "filename": "spy-always-dies-along-93740.mp3",
+             "downloadUrl": "/pl/music/download/id-93740.mp3",
+             "waveformUrl": "/pl/music/93740/waveform.json"},
+            {"src": "https://cdn.pixabay.com/audio/2022/xx/audio_9z.mp3?x=1"},
+        ]}).encode()
+
+        def fake_http_get(url, *, cookies=None, timeout=30):
+            return payload
+
+        pixabay.http_get = fake_http_get
+        try:
+            tracks = parse_tracks(BOOTSTRAP_HTML.replace("bootstrap.json",
+                                                         "ok.json"))
+        finally:
+            pixabay.http_get = original
+        titles = [t["title"] for t in tracks]
+        self.assertEqual(titles[0], "spy always dies along 93740")
+        self.assertTrue(titles[1].startswith("audio 9z"))
+        self.assertFalse(tracks[1]["url"].endswith("?x=1"))
+
+    def test_track_list_tolerates_title_comments(self):
+        source = ("# copied from devtools\n"
+                  "https://cdn.pixabay.com/audio/2022/03/15/audio_a7.mp3 "
+                  "# Spy Always Dies\n")
+        tracks = pixabay.parse_track_list(source)
+        self.assertEqual(tracks[0]["title"], "Spy Always Dies")
+
     def test_challenge_page_is_rejected_with_guidance(self):
         with self.assertRaises(PixabayError) as ctx:
             parse_tracks("<title>Just a moment...</title>")

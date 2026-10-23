@@ -303,6 +303,15 @@ def _load_studio_data(path: Path, data: dict, *,
     # Resolve scene media; videos become a deterministic still + camera move.
     still_cache: dict[tuple, Path] = {}
     for index, scene in enumerate(scenes):
+        for media in scene.get("editorial_media") or []:
+            if not isinstance(media, dict) or not media.get("asset"):
+                raise StudioError("editorial_media items require asset paths")
+            source = _resolve_asset(str(media["asset"]), brand_root, root)
+            if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+                raise StudioError("editorial_media currently supports still images only")
+            if not source.is_file():
+                raise StudioError(f"Missing editorial_media asset: {source}")
+            media["asset"] = str(source)
         photo = scene.get("photo")
         background = scene.get("background")
         asset_value = photo or (background.get("asset")

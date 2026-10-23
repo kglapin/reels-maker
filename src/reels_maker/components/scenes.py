@@ -207,9 +207,12 @@ def _background(ctx: SceneContext, scene: dict, theme: dict) -> dict:
 
 
 def _decor(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
-    index = ctx.scene_index
-    if scene.get("decor") is False:
+    # Editorial default: no automatically injected ornaments. Decorative
+    # bars, dots, rings and floating blobs must be an explicit art-direction
+    # choice, never a scene-index-dependent template flourish.
+    if scene.get("decor") is not True:
         return []
+    index = ctx.scene_index
     w, h = ctx.width, ctx.height
     accent = theme["accent"]
     pattern = index % 4
@@ -381,6 +384,36 @@ def _extra_icons(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
     return nodes
 
 
+def _icon_collisions(icon: Node, occupied: list[Node], gap: float) -> list[str]:
+    """Collision detection on static layout bounds, excluding panel backgrounds."""
+    from ..core.scene_graph import boxes_overlap
+    bounds = icon.base_bounds()
+    if bounds is None:
+        return []
+    clashes = []
+    for node in occupied:
+        if node.kind not in ("icon", "text", "number"):
+            continue
+        other = node.base_bounds()
+        if other is not None and boxes_overlap(bounds, other, padding=gap):
+            clashes.append(node.role)
+    return clashes
+
+
+def _validate_icon_spacing(ctx: SceneContext, nodes: list[Node]) -> None:
+    """Fail before rendering when icon glyphs collide with text or each other."""
+    leaves = [n for root in nodes for n in root.flatten()
+              if n.kind in ("icon", "text", "number")]
+    gap = max(2.0, ctx.tokens.space("xs") * .5)
+    for icon in (n for n in leaves if n.kind == "icon"):
+        occupied = [n for n in leaves if n is not icon]
+        clashes = _icon_collisions(icon, occupied, gap)
+        if clashes:
+            raise ValueError(
+                f"Icon {icon.role!r} overlaps {clashes!r}; adjust spacing "
+                "or decrease icon size before export")
+
+
 def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             elements: dict[str, Node], specs: Iterable[ElementSpec],
             decor: list[Node] | None = None, meta: dict | None = None) -> BuiltScene:
@@ -396,6 +429,8 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
         specs, style=ctx.style, scene_index=ctx.scene_index,
         scene_duration=ctx.duration, tokens=ctx.tokens,
         cues=cues)
+    from ..design.editorial_quality import audit_editorial_style
+    plan.warnings.extend(audit_editorial_style(scene))
     if dropped:
         plan.warnings.append({
             "code": "cue_without_element",
@@ -412,9 +447,12 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
         exit_entry = plan.exits.get(role)
         if exit_entry:
             apply_exit(node, exit_entry.onset, exit_entry.duration, ctx.tokens)
+    final_nodes = (decor or []) + list(elements.values()) + _extra_icons(
+        ctx, scene, _theme(ctx, scene))
+    _validate_icon_spacing(ctx, final_nodes)
     return BuiltScene(
         index=ctx.scene_index, scene=scene, context=ctx, layout=layout,
-        background=background, nodes=(decor or []) + list(elements.values()) + _extra_icons(ctx, scene, _theme(ctx, scene)),
+        background=background, nodes=final_nodes,
         elements=elements, choreography=plan, meta={
             "headline": _headline(scene), "body": _subtitle(scene),
             "theme": "light" if _is_light(ctx, scene) else "dark",
@@ -1362,10 +1400,11 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
                                 region.center_y, icon_size, theme["accent"])
                  or icons.check(region.x + icon_size / 2 + ctx.tokens.px(6),
                                 region.center_y, icon_size, theme["accent"]))
-        text_region = Rect(region.x + icon_size + ctx.tokens.space("md"),
-                           region.y + row_h * .12,
-                           region.w - icon_size - ctx.tokens.space("md"),
-                           row_h * .76)
+        # Match the check's left inset and reserve a full design-token gap.
+        left_inset = ctx.tokens.px(6)
+        text_x = region.x + left_inset + icon_size + ctx.tokens.space("md")
+        text_region = Rect(text_x, region.y + row_h * .12,
+                           max(1, region.right - text_x), row_h * .76)
         label = text_node(f"item-{index}", str(item), item_style, text_region,
                           ctx.fonts, valign="center")
         group = Node(kind="group", role=f"item-{index}",
@@ -1548,8 +1587,16 @@ def build_energy(ctx: SceneContext, scene: dict) -> BuiltScene:
                               valign="center")}
     diagram = layout.region("diagram")
     cy = diagram.center_y
-    size = min(diagram.w * .22, diagram.h * .26)
-    xs = [diagram.x + diagram.w * ratio for ratio in (.14, .40, .66, .90)]
+    # Keep glyphs and arrows in separate, non-overlapping slots.  The old
+    # 22%-width glyphs left only 4% for a 13.6%-width arrow: collisions.
+    xs = [diagram.x + diagram.w * ratio for ratio in (.12, .37, .63, .88)]
+    slot = min(xs[i + 1] - xs[i] for i in range(3))
+    clearance = max(ctx.tokens.space("sm"), diagram.w * .018)
+    size = min(diagram.w * .125, diagram.h * .20,
+               (slot - 2 * clearance) * .60)
+    arrow_size = min(diagram.w * .065, slot - size - 2 * clearance)
+    if arrow_size <= 0:
+        raise ValueError("Energy diagram too narrow for icons and arrows")
     sun = (_external_icon(scene, "sun", xs[0], cy, size, theme["accent"])
            or icons.sun(xs[0], cy, size, theme["accent"]))
     panel = (_external_icon(scene, "house", xs[1], cy, size, theme["ink"])
@@ -1561,9 +1608,9 @@ def build_energy(ctx: SceneContext, scene: dict) -> BuiltScene:
     house = (_external_icon(scene, "house", xs[3], cy, size, theme["ink"])
              or icons.house(xs[3], cy, size, theme["ink"]))
     arrows = [(_external_icon(scene, "arrow",
-                             (xs[i] + xs[i + 1]) / 2, cy, size * .62,
+                             (xs[i] + xs[i + 1]) / 2, cy, arrow_size,
                              theme["muted"])
-               or icons.arrow((xs[i] + xs[i + 1]) / 2, cy, size * .62,
+               or icons.arrow((xs[i] + xs[i + 1]) / 2, cy, arrow_size,
                               theme["muted"])) for i in range(3)]
     group = Node(kind="group", role="diagram",
                  children=[sun, panel, battery, house] + arrows,

@@ -222,9 +222,9 @@ class LayoutEngine:
         start = safe.y + max(self.gap, (available - content_h) * .44)
         regions = {
             "kicker": Rect(safe.x, start, safe.w, kicker),
-            "headline": Rect(safe.x, start + kicker + self.gap * .7,
+            "headline": Rect(safe.x, start + kicker + self.gap,
                              safe.w, hero),
-            "body": Rect(safe.x, start + kicker + self.gap * .7 + hero + self.gap * .55,
+            "body": Rect(safe.x, start + kicker + self.gap + hero + self.gap,
                          safe.w, subtitle),
         }
         if has_visual:

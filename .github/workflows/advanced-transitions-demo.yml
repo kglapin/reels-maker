@@ -1,0 +1,87 @@
+name: Advanced transitions demo
+
+on:
+  push:
+    branches:
+      - feat/object-driven-transitions-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: advanced-transitions-demo
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /examples/advanced-transition-demo.json
+            /examples/object-driven-transition-demo.json
+            /pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libcairo2
+          python -m pip install -e '.[icons]'
+      - name: Validate editorial and transition regression tests
+        run: python -m unittest discover -s tests -p 'test_editorial_quality.py' && python -m unittest discover -s tests -p 'test_transition_engine.py'
+      - name: Test stock API adapters and editorial crop planner
+        run: python -m unittest discover -s tests -p 'test_stock_media.py'
+      - name: Test explainable composition optimizer
+        run: python -m unittest discover -s tests -p 'test_composition_optimizer.py'
+      - name: Render actual studio demo
+        run: |
+          reels-maker studio-inspect examples/advanced-transition-demo.json > inspect.json
+          reels-maker studio-render examples/advanced-transition-demo.json --output advanced-demo.mp4 --supersample 1 > render.json
+          ffprobe -v error -show_entries stream=width,height,nb_frames,codec_name -of json advanced-demo.mp4 > ffprobe.json
+      - name: Verify duration and transition frames
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open("render.json"))
+          assert d["ok"] and d["frames"]==378, d
+          p=json.load(open("ffprobe.json"))
+          v=next(x for x in p["streams"] if x["codec_name"]=="h264")
+          assert int(v["nb_frames"])==378
+          assert (v["width"],v["height"])==(540,960)
+          print("Verified 378 frames and 6 advanced transitions")
+          PY
+      - name: Render and verify object-driven transitions
+        run: |
+          reels-maker studio-inspect examples/object-driven-transition-demo.json > object-inspect.json
+          reels-maker studio-render examples/object-driven-transition-demo.json --output object-demo.mp4 --supersample 1 > object-render.json
+          ffprobe -v error -show_entries stream=width,height,nb_frames,codec_name -of json object-demo.mp4 > object-ffprobe.json
+          python - <<'PY'
+          import json
+          d=json.load(open("object-render.json"))
+          assert d["ok"] and d["frames"]==345, d
+          p=json.load(open("object-ffprobe.json"))
+          v=next(x for x in p["streams"] if x["codec_name"]=="h264")
+          assert int(v["nb_frames"])==345
+          assert (v["width"],v["height"])==(540,960)
+          print("Verified object-driven transitions: 345 frames")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: advanced-transition-demo
+          path: |
+            advanced-demo.mp4
+            object-demo.mp4
+            object-render.json
+            object-ffprobe.json
+            render.json
+            ffprobe.json
+          retention-days: 7

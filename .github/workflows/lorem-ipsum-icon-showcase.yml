@@ -1,0 +1,133 @@
+name: Lorem Ipsum / Icon Libraries Showcase
+
+on:
+  push:
+    branches:
+      - feat/lorem-ipsum-icon-refresh-20261023
+  workflow_dispatch:
+
+concurrency:
+  group: lorem-showcase-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render-showcase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout current reels-maker
+        uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/test_icon_spacing.py
+            /pyproject.toml
+            /examples/lorem-ipsum-icon-showcase.json
+            /examples/generate_lorem_assets.py
+          lfs: false
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual repository renderer and asset dependencies
+        run: python -m pip install -e '.[icons]' 'numpy>=1.26,<3'
+      - name: Check icon and typography spacing regressions
+        run: python -m unittest discover -s tests -p test_icon_spacing.py -v
+      - name: Check FFmpeg availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            python -m pip install 'static-ffmpeg==3.0'
+            python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as handle:
+              handle.write(str(Path(ffmpeg).parent)+"\n")
+          PY
+          fi
+          if ! command -v ffmpeg >/dev/null; then
+            export PATH="$(python -c 'from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise as r; from pathlib import Path; print(Path(r()[0]).parent)'):$PATH"
+          fi
+          ffmpeg -version | sed -n '1p'
+      - name: Generate original abstract visuals and audio sources
+        run: python examples/generate_lorem_assets.py
+      - name: Validate manifest and render scene QA
+        run: |
+          mkdir -p renders/studio
+          reels-maker studio-inspect examples/lorem-ipsum-icon-showcase.json --profile final --json > renders/studio/inspect.json
+          reels-maker studio-qa examples/lorem-ipsum-icon-showcase.json --profile final --samples 3 --json > renders/studio/qa-summary.json
+      - name: Render full HD MP4 with native studio renderer
+        run: |
+          set -o pipefail
+          reels-maker studio-render examples/lorem-ipsum-icon-showcase.json \
+            --profile final --supersample 1 \
+            --output renders/studio/lorem-ipsum-icon-showcase.mp4 \
+            --json | tee renders/studio/render-result.json
+      - name: Verify MP4 and produce contact-sheet
+        run: |
+          set -o pipefail
+          reels-maker storyboard examples/lorem-ipsum-icon-showcase.json \
+            --profile final --video renders/studio/lorem-ipsum-icon-showcase.mp4 \
+            --output renders/studio/lorem-ipsum-icon-storyboard.png \
+            --motion-strip --json | tee renders/studio/storyboard-result.json
+          ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,avg_frame_rate \
+            -of json renders/studio/lorem-ipsum-icon-showcase.mp4 \
+            > renders/studio/ffprobe.json
+      - name: Check scene diversity in the actual encoded MP4
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import subprocess
+          from pathlib import Path
+
+          project = json.loads(Path("examples/lorem-ipsum-icon-showcase.json").read_text())
+          video = "renders/studio/lorem-ipsum-icon-showcase.mp4"
+          positions = []
+          cursor = 0.0
+          for scene in project["scenes"]:
+              positions.append(cursor + scene["duration"] * .58)
+              cursor += scene["duration"]
+
+          fingerprints = []
+          for t in positions:
+              proc = subprocess.run([
+                  "ffmpeg", "-hide_banner", "-loglevel", "error",
+                  "-ss", f"{t:.4f}", "-i", video, "-frames:v", "1",
+                  "-vf", "scale=72:128", "-pix_fmt", "rgb24",
+                  "-f", "rawvideo", "-"
+              ], check=True, capture_output=True)
+              assert len(proc.stdout) == 72 * 128 * 3, f"Frame unavailable at {t}"
+              fingerprints.append(hashlib.sha256(proc.stdout).hexdigest())
+          unique = len(set(fingerprints))
+          print(f"Sampled {len(positions)} scene midpoints, {unique} unique frames")
+          assert unique >= 10, "Scene variety too low: suspected repeated-segment export"
+          assert all(a != b for a,b in zip(fingerprints, fingerprints[1:])), (
+              "Adjacent scenes contain identical frames"
+          )
+          PY
+      - name: Upload demonstrator (MP4 + preview + QA)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lorem-ipsum-icon-showcase-mp4
+          path: |
+            renders/studio/lorem-ipsum-icon-showcase.mp4
+            renders/studio/lorem-ipsum-icon-storyboard.png
+            renders/studio/*motion-strip*.png
+            renders/studio/inspect.json
+            renders/studio/qa-summary.json
+            renders/studio/render-result.json
+            renders/studio/storyboard-result.json
+            renders/studio/ffprobe.json
+            renders/studio/qa/
+          if-no-files-found: warn
+          retention-days: 14

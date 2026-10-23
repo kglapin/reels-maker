@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "name": "advanced-transition-demo",
+  "style": "kinetic-advertising",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 30
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 20,
+    "preset": "veryfast"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#10101B",
+      "surface": "#FFFFFF",
+      "ink": "#FFFFFF",
+      "muted": "#C5C1D2",
+      "accent": "#B598FF"
+    }
+  },
+  "audio": {},
+  "scenes": [
+    {
+      "id": "01-opening",
+      "composition": "statement",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "background": {
+        "kind": "gradient",
+        "from": "#0C0B16",
+        "to": "#231A3C"
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "LOREM",
+            "scale": 0.95,
+            "color": "white"
+          },
+          {
+            "text": "IPSUM",
+            "scale": 1.02,
+            "color": "accent",
+            "break_before": true,
+            "weight": "bold"
+          }
+        ]
+      },
+      "subtitle": "A STUDY IN MOTION / 001",
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "03-counter",
+      "composition": "amount",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F4F1EA"
+      },
+      "kicker": "02 / KINETIC NUMBERS",
+      "value": 98765,
+      "format": {
+        "suffix": "+",
+        "decimals": 0,
+        "thousands": " "
+      },
+      "subtitle": "LOREM IPSUM / DOLOR SIT",
+      "visual": "battery",
+      "icon_library": "lucide",
+      "icon_style": "outline",
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "04-bars",
+      "composition": "bars",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5F0"
+      },
+      "headline": "ADIPISCING ELIT",
+      "bars": [
+        {
+          "label": "LOREM",
+          "value": 38,
+          "suffix": "%"
+        },
+        {
+          "label": "IPSUM",
+          "value": 72,
+          "suffix": "%"
+        },
+        {
+          "label": "DOLOR",
+          "value": 96,
+          "suffix": "%"
+        }
+      ],
+      "subtitle": "SYNTHETIC DEMO DATA",
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "06-ring",
+      "composition": "donut",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#100F19"
+      },
+      "headline": "TEMPOR INCIDIDUNT",
+      "value": 84,
+      "label": "IPSUM",
+      "subtitle": "UT LABORE ET DOLORE",
+      "transition_out": {
+        "type": "iris-close-open",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "09-stats",
+      "composition": "stats",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#19142C"
+      },
+      "headline": "METRICS IN MOTION",
+      "stats": [
+        {
+          "label": "LOREM",
+          "value": 24,
+          "suffix": "K"
+        },
+        {
+          "label": "IPSUM",
+          "value": 78,
+          "suffix": "%"
+        },
+        {
+          "label": "DOLOR",
+          "value": 12,
+          "suffix": "X"
+        },
+        {
+          "label": "AMET",
+          "value": 360,
+          "suffix": "°"
+        }
+      ],
+      "transition_out": {
+        "type": "spin-zoom",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "10-energy",
+      "composition": "energy",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F5F2ED"
+      },
+      "headline": "CONSECTETUR ELIT",
+      "subtitle": "SEQUENCES / CONNECTION / FLOW",
+      "icon_library": "lucide",
+      "icon_style": "outline",
+      "icon_names": {
+        "sun": "sun",
+        "house": "house",
+        "battery": "battery-charging",
+        "arrow": "arrow-right"
+      },
+      "transition_out": {
+        "type": "pixel-dissolve",
+        "duration": 0.58,
+        "color": "#47A013",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "11-checklist",
+      "composition": "checklist",
+      "duration": 1.8,
+      "transition_in": "cut",
+      "background": {
+        "kind": "solid",
+        "color": "#161122"
+      },
+      "headline": "BUILT TO MOVE",
+      "items": [
+        "LOREM IPSUM DOLOR",
+        "SIT AMET CONSECTETUR",
+        "ADIPISCING TEMPOR",
+        "MAGNA ALIQUA"
+      ],
+      "icon_library": "heroicons",
+      "icon_style": "outline",
+      "icon_names": {
+        "check": "check-circle"
+      }
+    }
+  ]
+}

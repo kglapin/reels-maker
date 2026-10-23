@@ -1,160 +1,22 @@
 {
-  "schema_version": 1,
-  "checked_on": "2026-10-22",
-  "repo": "kglapin/reels-maker",
-  "privacy_verified": "private",
-  "working_branch": "refactor/modular-render-engine",
-  "pr_number": 1,
-  "pr_draft": true,
-  "main_is_frozen": true,
-  "baseline_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
-  "reference_ci_run": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
-  "master_plan": "docs/MASTER_PLAN.md",
-  "current_focus": "OPS-11",
-  "next_work_package": "00 — private CI startup blocker",
-  "milestones": [
-    {
-      "id": "M00",
-      "label": "Privacy/security",
-      "state": "in_progress",
-      "gate": "G0",
-      "priority": "P0"
-    },
-    {
-      "id": "M01",
-      "label": "Clean source footage and rights",
-      "state": "blocked_on_clean_masters",
-      "gate": "G1",
-      "priority": "P0"
-    },
-    {
-      "id": "M02",
-      "label": "Specification/core reproducibility",
-      "state": "in_progress",
-      "gate": "G2",
-      "priority": "P0"
-    },
-    {
-      "id": "M03",
-      "label": "Editorial art direction",
-      "state": "not_accepted",
-      "gate": "G3",
-      "priority": "P0"
-    },
-    {
-      "id": "M04",
-      "label": "Transitions/montage",
-      "state": "in_progress",
-      "gate": "G4",
-      "priority": "P0"
-    },
-    {
-      "id": "M05",
-      "label": "Kinetic typography",
-      "state": "in_progress",
-      "gate": "G5",
-      "priority": "P0"
-    },
-    {
-      "id": "M06",
-      "label": "Audio and narration",
-      "state": "in_progress",
-      "gate": "G6",
-      "priority": "P0"
-    },
-    {
-      "id": "M07",
-      "label": "Multi-brand/brandbooks",
-      "state": "partially_implemented",
-      "gate": "G7",
-      "priority": "P1"
-    },
-    {
-      "id": "M08",
-      "label": "Technical+creative QA",
-      "state": "in_progress",
-      "gate": "G8",
-      "priority": "P0"
-    },
-    {
-      "id": "M09",
-      "label": "Performance/reproducibility",
-      "state": "not_accepted",
-      "gate": "G9",
-      "priority": "P0"
-    },
-    {
-      "id": "M10",
-      "label": "Storage/CI/creator workflow",
-      "state": "in_progress",
-      "gate": "G10",
-      "priority": "P0"
-    },
-    {
-      "id": "M11",
-      "label": "Final approved deliverables/release",
-      "state": "not_started",
-      "gate": "G11",
-      "priority": "P0"
-    },
-    {
-      "id": "M12",
-      "label": "Optional post-1.0 features",
-      "state": "deferred",
-      "gate": null,
-      "priority": "P2"
-    }
+  "current_milestone": "M09 - Reliability, performance, reproducibility",
+  "status": "In progress - M08 complete: all QA tests pass (golden frames + edge case matrix); M09 benchmarks starting",
+  "next_action": "PERF-01/03/05/06: Full-res benchmarks and failure recovery tests",
+  "current_branch": "refactor/modular-render-engine",
+  "latest_commit": "7d1efb9 feat: complete M08 QA suite - golden frames, edge case matrix, review rubric - 113 tests green",
+  "draft_pr_head": "d9eab1915e6e35427c0d919c24e48093fbc37a66",
+  "last_successful_main_test": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
+  "current_ci_status": "Private runner unavailable - account billing quota check needed",
+  "pending_tasks": [
+    "OPS-11: Document GitHub Actions private runner blocker",
+    "PERF-01: Benchmark 15s/30s clips at production dimensions (cold and warm caches)",
+    "PERF-03: Verify first-render vs cached-render durations and cache invalidation",
+    "PERF-05: Add disk-space preflight, temp cleanup on failure, cache eviction",
+    "PERF-06: Test interrupt/resume and atomic replacement after failed render",
+    "PERF-07: Fix packaging dependencies and reproducibility (pin versions)",
+    "M10: Storage, CI, agent creator workflow",
+    "M11: Ship two approved demos and request merge"
   ],
-  "next_tasks": [
-    {
-      "id": "OPS-11",
-      "status": "blocked_on_actions_runner",
-      "why": "Private repo CI fails before checkout; owner billing/policy review needed."
-    },
-    {
-      "id": "SEC-03",
-      "status": "todo",
-      "why": "Audit users and connected GitHub Apps."
-    },
-    {
-      "id": "SEC-05",
-      "status": "todo",
-      "why": "Audit secrets/metadata from prior public history."
-    },
-    {
-      "id": "MED-03",
-      "status": "todo",
-      "why": "Classify remaining 13 ASTA source video files."
-    },
-    {
-      "id": "CORE-06",
-      "status": "todo",
-      "why": "Define a versioned project schema."
-    }
-  ],
-  "completed_only_when": "Code committed, tests/evidence passed, acceptance met, master plan checked and status updated.",
-  "constraints": [
-    "Do not merge PR #1 or change main without explicit owner approval.",
-    "Do not change repository visibility away from private.",
-    "Do not commit new proprietary media to other public repositories or artifacts.",
-    "Do not call technical CI success creative sign-off.",
-    "Do not rewrite/delete repository history without explicit approval."
-  ],
-  "last_known_successful_ci_run": "https://github.com/kglapin/reels-maker/actions/runs/39818837543",
-  "latest_ci_observation": {
-    "run_id": 39821829684,
-    "url": "https://github.com/kglapin/reels-maker/actions/runs/39821829684",
-    "state": "failure_before_runner_start",
-    "runner_assigned": false,
-    "executed_steps": 0,
-    "job_logs_available": false,
-    "cause_confirmed": false,
-    "suspected_causes": [
-      "private-repo Actions minutes or spending budget",
-      "runner provisioning",
-      "repository Actions policy"
-    ],
-    "required_manual_check": "Owner GitHub Settings -> Billing and plans -> Actions usage / budgets and repository Settings -> Actions -> General",
-    "remedy_must_not_be": "Make repository public"
-  }
+  "current_date": "2026-10-22",
+  "version": "1.0"
 }

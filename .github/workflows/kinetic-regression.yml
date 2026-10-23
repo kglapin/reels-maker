@@ -98,15 +98,15 @@ jobs:
       - name: Render actual MP4 with repository engine
         run: |
           reels-maker render editorial-demo.json --root . --jobs 2 --strict-quality --json
-          reels-maker verify editorial-demo.json --video renders/asta-energy/editorial-profile-qa.mp4 --json
-          reels-maker storyboard editorial-demo.json --video renders/asta-energy/editorial-profile-qa.mp4 --output renders/asta-energy/editorial-profile-qa.png --json
+          reels-maker verify editorial-demo.json --video renders/asta-energy/kinetic-native-demo.mp4 --json
+          reels-maker storyboard editorial-demo.json --video renders/asta-energy/kinetic-native-demo.mp4 --output renders/asta-energy/kinetic-native-demo.png --json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: asta-editorial-profile-qa
+          name: asta-kinetic-native-demo
           path: |
-            renders/asta-energy/editorial-profile-qa.mp4
-            renders/asta-energy/editorial-profile-qa.png
+            renders/asta-energy/kinetic-native-demo.mp4
+            renders/asta-energy/kinetic-native-demo.png
             editorial-demo.json
           if-no-files-found: ignore
           retention-days: 7

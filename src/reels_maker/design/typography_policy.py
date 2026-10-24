@@ -149,6 +149,44 @@ def audit_typography_blocks(blocks, *, width: int, height: int) -> list[dict]:
     return found
 
 
+def audit_typography_spacing(placements, *, width: int, height: int) -> list[dict]:
+    """Warn on cramped vertical stacks based on actual settled text-node bounds.
+
+    Ignore side-by-side elements, intersecting boxes (existing collision QA),
+    and small chart/caption labels that belong to a data component.
+    """
+    if min(width, height) <= 0:
+        raise ValueError("Canvas must be positive")
+    important = {"headline", "display", "hero", "title", "subtitle", "body", "kicker"}
+    items = []
+    for role, bounds in placements:
+        canonical = _canonical_role(role)
+        if canonical not in important or not isinstance(bounds, (tuple, list)) or len(bounds) != 4:
+            continue
+        x0, y0, x1, y1 = (float(v) for v in bounds)
+        if x1 > x0 and y1 > y0:
+            items.append((str(role), (x0, y0, x1, y1)))
+    issues = []
+    min_gap = 12.0 * (min(width, height) / 1080.0)
+    for index, (first_role, a) in enumerate(items):
+        for second_role, b in items[index + 1:]:
+            horizontal_overlap = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+            smaller_width = min(a[2] - a[0], b[2] - b[0])
+            if horizontal_overlap < smaller_width * 0.3:
+                continue
+            gap = max(a[1], b[1]) - min(a[3], b[3])
+            if 0 <= gap < min_gap:
+                issues.append({
+                    "code": "typography_cramped_stack", "severity": "warning",
+                    "role": f"{first_role}/{second_role}",
+                    "message": f"Related text blocks have only {gap:.1f}px vertical space "
+                               f"(minimum review threshold {min_gap:.1f}px).",
+                    "suggestion": "Increase the vertical gap using system spacing tokens; "
+                                  "keep related items grouped and inspect settled frames.",
+                })
+    return issues
+
+
 def audit_typography_tokens(tokens) -> list[dict]:
     """Check configured design scales *before* scene creation."""
     sizes = [tokens.typography.size(role) for role in

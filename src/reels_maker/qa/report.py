@@ -20,6 +20,7 @@ from ..core.scene_graph import collect_qa_elements, Node
 from ..core.timeline import Timeline
 from ..design.color import contrast_ratio, relative_luminance
 from ..design.tokens import DesignTokens
+from ..design.typography_policy import audit_typography_blocks, audit_typography_tokens
 from ..motionkit.choreography import variety_report
 from ..core.transforms import Affine2D, Space
 from ..textkit.safe_geometry import SafePolygon, check_text_block
@@ -219,6 +220,12 @@ def audit(project, built_scenes, timeline: Timeline, *,
                     "text_empty", "warning", f"Text {role!r} is empty.",
                     built.index + 1, 0.0, [role],
                     "Remove the empty layer from the composition."))
+        # Enforce typography policy on the real typeset/ink geometry, not guessed copy lengths.
+        for finding in audit_typography_blocks(
+                _text_blocks(root), width=project.width, height=project.height):
+            scene_issues.append(Issue(
+                finding["code"], finding["severity"], finding["message"],
+                built.index + 1, None, [finding["role"]], finding["suggestion"]))
         # -------------------------------------------------------------- timing
         for role, entry in built.choreography.entries.items():
             exit_entry = built.choreography.exits.get(role)
@@ -269,6 +276,10 @@ def audit(project, built_scenes, timeline: Timeline, *,
             })
         issues.extend(scene_issues)
 
+    for finding in audit_typography_tokens(project.tokens):
+        issues.append(Issue(
+            finding["code"], finding["severity"], finding["message"],
+            None, None, [finding["role"]], finding["suggestion"]))
     variety = variety_report(built.choreography for built in built_scenes)
     composition_counts: dict[str, int] = {}
     for recipe in compositions:
@@ -828,6 +839,16 @@ def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6
             if sig not in seen:
                 seen.add(sig)
                 issues.append(issue)
+    # Reuse measured type rules in storyboard candidate QA and layout repair.
+    for finding in audit_typography_blocks(
+            _text_blocks(Node(kind="group", children=built.at(0.0))),
+            width=round(1080 * built.tokens.scale) if hasattr(built, "tokens") else
+                  round(built.layout.safe.right - built.layout.safe.x),
+            height=round(1920 * built.tokens.scale) if hasattr(built, "tokens") else
+                   round(built.layout.safe.bottom - built.layout.safe.y)):
+        issues.append(Issue(
+            finding["code"], finding["severity"], finding["message"],
+            built.index + 1, None, [finding["role"]], finding["suggestion"]))
     issues.extend(_data_checks(built))
     return issues
 

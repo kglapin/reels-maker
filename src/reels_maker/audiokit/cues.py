@@ -347,9 +347,12 @@ def plan_audio_dramaturgy(
             phase, energy = "climax", 0.95
             accent = True
         else:
-            phase, energy = "build", 0.65 + 0.15 * (idx / max(1, n - 1))
-            # Deliberately skip accent hits on intermediate build cuts to avoid wall-of-SFX
-            accent = False
+            phase = "build"
+            energy = 0.65 + 0.15 * (idx / max(1, n - 1))
+            # Spread accent hits across long build sections so the rhythm has
+            # breathing room; a wall of SFX on every cut is what the guard
+            # exists to prevent.
+            accent = (n >= 8) and (idx % 3 == 0)
         if accent:
             accented_cuts += 1
         stages.append({

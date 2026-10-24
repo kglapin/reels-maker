@@ -4,16 +4,29 @@ Timing is driven by explicit narration cues when available and otherwise by a
 deterministic, importance-weighted stagger. The planner actively avoids
 repeating the same preset in consecutive scenes, which was the main reason the
 previous generator felt templated.
+
+The optional ``intent``, ``personality`` and ``beat`` arguments wire the
+art-direction layer (``reels_maker.art``) into choreography.  When omitted the
+behaviour is unchanged — existing callers need no modification.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Iterable, Mapping
 
+from ..art.dramaturgy import SceneBeat
+from ..art.intent import SceneIntent
+from ..art.motion_personality import MotionPersonality
 from ..core.scene_graph import Node
 from ..design.styles import STYLE_SYSTEMS
 from ..design.tokens import DesignTokens
-from .presets import PRESETS, apply_entrance, apply_exit, canonical_preset
+from .presets import (
+    PRESETS,
+    apply_entrance,
+    apply_exit,
+    canonical_preset,
+    select_text_mechanism,
+)
 
 
 @dataclass(frozen=True)
@@ -107,12 +120,32 @@ class Choreography:
         }
 
 
-def _choose_preset(spec: ElementSpec, style: str, scene_index: int,
-                   position: int, previous: Iterable[str]) -> str:
+def _choose_preset(
+    spec: ElementSpec,
+    style: str,
+    scene_index: int,
+    position: int,
+    previous: Iterable[str],
+    *,
+    intent: SceneIntent | None = None,
+    personality: MotionPersonality | None = None,
+) -> str:
     if spec.hint:
         return canonical_preset(spec.hint)
     system = STYLE_SYSTEMS[style]
-    menu = system.motions
+    if intent is not None:
+        # Intent families are mechanism names (e.g. "curtain-mask"), not preset
+        # names.  Resolve them through select_text_mechanism so an intent
+        # never produces an unknown-preset crash.
+        family_presets = []
+        for family in intent.preset_families:
+            try:
+                family_presets.append(select_text_mechanism(family))
+            except ValueError:
+                continue
+        menu = tuple(dict.fromkeys(family_presets)) or system.motions
+    else:
+        menu = system.motions
     start = (scene_index * 2 + position + spec.order) % len(menu)
     avoid = list(previous)[-2:]
     for offset in range(len(menu)):
@@ -135,11 +168,25 @@ def _duration_for(spec: ElementSpec, preset: str, tokens: DesignTokens) -> float
     return max(.16, round(base, 4))
 
 
-def plan_choreography(elements: Iterable[ElementSpec], *,
-                      style: str, scene_index: int, scene_duration: float,
-                      tokens: DesignTokens,
-                      cues: Mapping[str, float] | None = None) -> Choreography:
-    """Build a deterministic entrance plan and explain every compromise."""
+def plan_choreography(
+    elements: Iterable[ElementSpec],
+    *,
+    style: str,
+    scene_index: int,
+    scene_duration: float,
+    tokens: DesignTokens,
+    cues: Mapping[str, float] | None = None,
+    intent: SceneIntent | None = None,
+    personality: MotionPersonality | None = None,
+    beat: SceneBeat | None = None,
+) -> Choreography:
+    """Build a deterministic entrance plan and explain every compromise.
+
+    Optional art-direction arguments (``intent``, ``personality``, ``beat``)
+    influence preset family choice, duration scale, stagger tightness and exit
+    restraint.  When omitted the behaviour is identical to the pre-existing
+    planner; existing callers need no change.
+    """
     specs = list(elements)
     if not specs:
         return Choreography({}, [], scene_index)
@@ -168,14 +215,26 @@ def plan_choreography(elements: Iterable[ElementSpec], *,
     stagger = tokens.motion.stagger
     if tokens.density == "dense":
         stagger *= .84
+    if personality is not None:
+        stagger = personality.scaled_stagger(stagger)
     cursor = min(cues.values()) if cues else .04
     hold = tokens.motion.hold
+    if intent is not None and intent.hold_profile == "airy":
+        hold *= 1.18
     safe_end = max(0.0, scene_duration - hold)
 
     for position, spec in enumerate(ordered):
-        preset = _choose_preset(spec, style, scene_index, position, used_presets)
+        preset = _choose_preset(
+            spec, style, scene_index, position, used_presets,
+            intent=intent,
+        )
         used_presets.append(preset)
         duration = _duration_for(spec, preset, tokens)
+        if intent is not None:
+            duration *= intent.duration_scale
+        if personality is not None:
+            duration *= personality.entrance_duration_scale
+        duration = max(.12, round(duration, 4))
         explicit = spec.role in cues
         onset = float(cues[spec.role]) if explicit else max(0.0, cursor)
         if not explicit and onset + duration > safe_end:
@@ -225,6 +284,8 @@ def plan_choreography(elements: Iterable[ElementSpec], *,
     # the fade onset; otherwise it runs unchanged to the cut.
     exits: dict[str, ExitTiming] = {}
     exit_duration = max(0.0, float(tokens.motion.exit))
+    if personality is not None:
+        exit_duration *= personality.exit_restraint
     if exit_duration > 0:
         for spec in specs:
             if spec.kind == "decor":

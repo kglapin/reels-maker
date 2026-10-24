@@ -12,9 +12,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
+from .art.dramaturgy import plan_dramaturgy, resolve_beat_for_scene
+from .art.intent import resolve_scene_intent
+from .art.motion_personality import resolve_motion_personality
 from .assets.manager import AssetManager
 from .audiokit.cues import CuePlan, apply_cue_plan, load_transcript, plan_cues
-from .components.base import BuiltScene, SceneContext
+from .components.base import BuiltScene, SceneContext, resolve_art_context
 from .components.scenes import build_scene
 from .core.timeline import Timeline, build_timeline
 from .design.styles import STYLE_SYSTEMS, canonical_style
@@ -67,14 +70,44 @@ class StudioProject:
 
     def build(self, timeline: Timeline | None = None) -> list[BuiltScene]:
         timeline = timeline or self.timeline()
+        # Narrative arc and brand motion personality are opt-in: the manifest
+        # must declare ``art_direction: true`` (or set per-scene intent hints).
+        # Without that flag the planner behaves exactly as before so existing
+        # renders and golden strips are unchanged.
+        art_enabled = bool(
+            self.brand_data.get("art_direction")
+            or self.audio.get("art_direction")
+            or any(scene.get("art_direction") for scene in self.scenes)
+        )
+        dramaturgy = plan_dramaturgy(
+            [timing.duration for timing in timeline.scenes], style=self.style
+        ) if art_enabled else None
+        personality = (
+            resolve_motion_personality(self.brand_data, style=self.style)
+            if art_enabled else None
+        )
         built = []
         for index, (scene, timing) in enumerate(zip(self.scenes, timeline.scenes)):
+            beat = resolve_beat_for_scene(dramaturgy, index) if dramaturgy else None
             context = SceneContext(
                 width=self.width, height=self.height, fps=self.fps,
                 duration=timing.duration, tokens=self.tokens, style=self.style,
                 fonts=self.fonts, scene_index=index, seed=index * 17 + 3,
-                assets=self.asset_manager, scene=scene)
-            item = build_scene(context, scene)
+                assets=self.asset_manager, scene=scene, beat=beat,
+                personality=personality,
+            )
+            if art_enabled:
+                resolve_art_context(
+                    context, brand_data=self.brand_data, dramaturgy_beat=beat)
+                item = build_scene(context, scene)
+                item.meta["art"] = {
+                    "intent": context.intent.to_dict() if context.intent else None,
+                    "beat": beat.to_dict() if beat else None,
+                    "personality": personality.to_dict() if personality else None,
+                    "dramaturgy": dramaturgy.to_dict() if dramaturgy else None,
+                }
+            else:
+                item = build_scene(context, scene)
             transition = scene.get("transition_in")
             if isinstance(transition, dict):
                 transition = transition.get("type", "cut")

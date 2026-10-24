@@ -473,7 +473,9 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     plan = plan_choreography(
         specs, style=ctx.style, scene_index=ctx.scene_index,
         scene_duration=ctx.duration, tokens=ctx.tokens,
-        cues=cues)
+        cues=cues,
+        intent=ctx.intent, personality=ctx.personality, beat=ctx.beat,
+    )
     from ..design.editorial_quality import audit_editorial_style
     plan.warnings.extend(audit_editorial_style(scene))
     if dropped:
@@ -2920,6 +2922,50 @@ def build_scene(ctx: SceneContext, scene: dict) -> BuiltScene:
     if kind in BUILDERS:
         built = BUILDERS[kind](ctx, scene)
         built.meta.setdefault("type", kind)
+        # Universal brand-logo overlay: only the CTA composition draws
+        # scene["logo"] itself; other compositions get a small centred
+        # mark at the top of the safe area unless they already drew one.
+        logo_value = scene.get("logo")
+        if logo_value and not any(n.role == "logo" for n in built.nodes):
+            logo_path = Path(str(logo_value))
+            if not logo_path.is_absolute() and ctx.assets is not None:
+                logo_path = Path(ctx.assets.brand_root) / logo_path
+            if logo_path.is_file():
+                from PIL import Image
+                with Image.open(logo_path) as logo_image:
+                    aspect = logo_image.width / max(1, logo_image.height)
+                logo_w = min(ctx.layout.safe.w * .30, ctx.tokens.px(260))
+                logo_h = logo_w / max(.1, aspect)
+                if scene.get("center_text"):
+                    logo_y = ctx.layout.safe.y + ctx.tokens.px(18)
+                else:
+                    logo_y = (ctx.layout.safe.bottom - logo_h
+                              - ctx.tokens.px(18))
+                logo_rect = Rect(
+                    ctx.layout.safe.center_x - logo_w / 2,
+                    logo_y, logo_w, logo_h)
+                logo_node = image_node("logo", str(logo_path), logo_rect,
+                                       meta={"asset_role": "brand-logo"})
+                logo_node.track("opacity", Track([
+                    Keyframe(0.0, 0.0, "linear"),
+                    Keyframe(0.15, 0.0, "linear"),
+                    Keyframe(0.45, 1.0, "linear")]))
+                built.nodes.append(logo_node)
+        # Scene-level "center_text": recenter the whole text block on the
+        # safe area vertically (tight, centred captions instead of the
+        # composition's default region anchoring).
+        if scene.get("center_text"):
+            spans = [(n.props["y"], n.props["y"] + n.props.get("h", 0))
+                     for n in built.nodes
+                     if n.kind == "text" and isinstance(
+                         n.props.get("y"), (int, float))]
+            if spans:
+                top = min(s[0] for s in spans)
+                bottom = max(s[1] for s in spans)
+                delta = (ctx.layout.safe.center_y - (top + bottom) / 2)
+                for n in built.nodes:
+                    if n.kind == "text":
+                        n.props["y"] = n.props["y"] + delta
         return built
     composition = scene.get("composition", "stack-center")
     if composition in ("stack-center", "full-bleed-type", "split-editorial",

@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
+from ..art.dramaturgy import SceneBeat
+from ..art.intent import SceneIntent, resolve_scene_intent
+from ..art.motion_personality import MotionPersonality, resolve_motion_personality
 from ..core.scene_graph import Node
 from ..design.format import format_value
 from ..design.tokens import DesignTokens
@@ -30,6 +33,9 @@ class SceneContext:
     seed: int = 0
     assets: object | None = None
     scene: dict = field(default_factory=dict)
+    intent: SceneIntent | None = None
+    beat: SceneBeat | None = None
+    personality: MotionPersonality | None = None
 
     @property
     def layout(self) -> LayoutEngine:
@@ -306,12 +312,39 @@ def measure_text(text: str, style: TextStyle, width: float,
     return (block.width, block.height)
 
 
-def choreograph(ctx: SceneContext, elements: Iterable[ElementSpec],
-                cues: Mapping[str, float] | None = None) -> Choreography:
+def choreograph(
+    ctx: SceneContext,
+    elements: Iterable[ElementSpec],
+    cues: Mapping[str, float] | None = None,
+) -> Choreography:
     return plan_choreography(
         elements, style=ctx.style, scene_index=ctx.scene_index,
         scene_duration=ctx.duration, tokens=ctx.tokens,
-        cues=cues or (ctx.scene.get("cues") or {}))
+        cues=cues or (ctx.scene.get("cues") or {}),
+        intent=ctx.intent, personality=ctx.personality, beat=ctx.beat,
+    )
+
+
+def resolve_art_context(
+    ctx: SceneContext,
+    *,
+    brand_data: dict[str, Any] | None = None,
+    dramaturgy_beat: SceneBeat | None = None,
+) -> SceneContext:
+    """Resolve intent/personality/beat onto a SceneContext in place.
+
+    Safe to call multiple times: already-resolved values are kept.
+    """
+    if ctx.intent is None:
+        ctx.intent = resolve_scene_intent(
+            ctx.scene, beat=ctx.beat or dramaturgy_beat,
+            personality=ctx.personality,
+        )
+    if ctx.personality is None and isinstance(brand_data, dict):
+        ctx.personality = resolve_motion_personality(brand_data, style=ctx.style)
+    if ctx.beat is None and dramaturgy_beat is not None:
+        ctx.beat = dramaturgy_beat
+    return ctx
 
 
 def animate_counter(node: Node, target: float, onset: float,

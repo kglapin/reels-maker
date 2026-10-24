@@ -22,17 +22,27 @@ except ImportError:
 
 
 def _fonts(preferred: str = "") -> tuple[str, str]:
-    open_sans = str(preferred).lower().replace(" ", "") == "opensans"
-    regular = (["/usr/share/fonts/truetype/open-sans/OpenSans-Regular.ttf"] if open_sans else []) + [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/Library/Fonts/Arial Unicode.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
-    bold = (["/usr/share/fonts/truetype/open-sans/OpenSans-Bold.ttf"] if open_sans else []) + [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/Library/Fonts/Arial Bold.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-    ]
+    clean = str(preferred).replace(" ", "")
+    open_sans = clean.lower() == "opensans"
+    home_fonts = Path.home() / "Library/Fonts"
+    regular = (
+        ([str(home_fonts / f"{clean}-Regular.ttf"), f"/Library/Fonts/{clean}-Regular.ttf"] if clean else [])
+        + (["/usr/share/fonts/truetype/open-sans/OpenSans-Regular.ttf"] if open_sans else [])
+        + [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/Library/Fonts/Arial Unicode.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+        ]
+    )
+    bold = (
+        ([str(home_fonts / f"{clean}-Bold.ttf"), f"/Library/Fonts/{clean}-Bold.ttf"] if clean else [])
+        + (["/usr/share/fonts/truetype/open-sans/OpenSans-Bold.ttf"] if open_sans else [])
+        + [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/Library/Fonts/Arial Bold.ttf",
+            "C:/Windows/Fonts/arialbd.ttf",
+        ]
+    )
     found = []
     for family, candidates in (("BrandbookRegular", regular), ("BrandbookBold", bold)):
         fontfile = next((p for p in candidates if Path(p).is_file()), None)
@@ -179,19 +189,20 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     c.setAuthor("Reels Maker")
 
     # Page 1 — identity and practical video preview.
-    c.setFillColor(_rgb("#111F20"))
+    neutral_dark = str(palette.get("neutral", "#111F20"))
+    c.setFillColor(_rgb(neutral_dark))
     c.rect(0, h - 235, w, 235, fill=1, stroke=0)
     c.setFillColor(_rgb(accent))
     c.rect(44, h - 85, 58, 5, fill=1, stroke=0)
     _line(c, 44, h - 62, "BRANDBOOK  /  REELS MAKER",
-          font=bold, size=10, ink="#D8E5DF")
+          font=bold, size=10, ink="#E4E8EB")
     _line(c, 44, h - 128, name, font=bold, size=27,
           ink="#FFFFFF", limit=29)
     _line(c, 44, h - 157, "Wytyczne wizualne dla wideo i materiałów digital",
-          font=regular, size=11, ink="#C5D2D0")
+          font=regular, size=11, ink="#D5DCE2")
     _line(c, 44, h - 194,
           "AUTOMATYCZNY SZKIC - SPRAWDŹ PRZED UŻYCIEM" if draft
-          else "KONFIGURACJA MARKI", font=bold, size=9, ink="#E4F1EB")
+          else "KONFIGURACJA MARKI", font=bold, size=9, ink="#F0F4F8")
 
     # Logo preview background can be chosen per brand for proper contrast.
     logo_settings = profile.get("identity", {}).get("logo", {})
@@ -248,24 +259,30 @@ def make_brandbook(profile: dict, destination: Path, *, assets_root: Path | None
     card_width = (w - 100) / 2
     x_light, x_dark = 44, 56 + card_width
     card_y, card_h = h - 370, 208
-    c.setFillColor(_rgb("#FFFFFF"))
+    c.setFillColor(_rgb(str(palette.get("background", "#FFFFFF"))))
     c.roundRect(x_light, card_y, card_width, card_h, 9, fill=1, stroke=0)
     c.setStrokeColor(_rgb("#DDE3E3"))
     c.roundRect(x_light, card_y, card_width, card_h, 9, fill=0, stroke=1)
-    c.setFillColor(_rgb("#14221A"))
+    c.setFillColor(_rgb(neutral_dark))
     c.roundRect(x_dark, card_y, card_width, card_h, 9, fill=1, stroke=0)
+    dark_logo_rel = profile.get("branding", {}).get("logo_dark_bg")
+    dark_logo_img = ((Path(assets_root) / dark_logo_rel).resolve()
+                     if dark_logo_rel and assets_root and (Path(assets_root) / dark_logo_rel).is_file()
+                     else logo_img)
+    light_preview = str(background).upper() in ("#FFFFFF", "#F7F5FB", "#FFF9F1")
     for x, dark_mode in ((x_light, False), (x_dark, True)):
         c.setFillColor(_rgb(accent))
         c.roundRect(x + 20, card_y + card_h - 40, 45, 4, 2, fill=1, stroke=0)
-        fg = "#FFFFFF" if dark_mode else "#14221A"
-        sub = "#E0E9E1" if dark_mode else "#43525A"
+        fg = "#FFFFFF" if dark_mode else str(palette.get("ink", "#14221A"))
+        sub = "#E0E4EC" if dark_mode else "#43525A"
         _line(c, x + 20, card_y + card_h - 73, name, font=bold,
               size=14, ink=fg, limit=21)
         _line(c, x + 20, card_y + card_h - 97, "Spójny styl marki",
               font=regular, size=10, ink=sub, limit=26)
-        # Show the authentic bright logo on the dark example; a white logo
-        # must not be placed on the light example where it becomes invisible.
-        if dark_mode and logo_img:
+        if dark_mode and dark_logo_img:
+            _draw_logo(c, dark_logo_img, x + 20, card_y + 58,
+                       card_width - 40, 42)
+        elif (not dark_mode) and light_preview and logo_img:
             _draw_logo(c, logo_img, x + 20, card_y + 58,
                        card_width - 40, 42)
         _line(c, x + 20, card_y + 35,

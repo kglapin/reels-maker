@@ -13,7 +13,8 @@ from typing import Iterable
 
 from ..core.scene_graph import Node
 from ..design.color import (
-    darken, ensure_contrast, lighten, mix, parse_hex, relative_luminance,
+    contrast_ratio, darken, ensure_contrast, lighten, mix, parse_hex,
+    relative_luminance,
 )
 from ..design.tokens import DesignTokens
 from ..layout.engine import Rect
@@ -1663,7 +1664,7 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     cell_transitions = scene.get("cell_transitions") or {}
     cell_highlight_style = TextStyle(
         max(12, min(ctx.tokens.px(20), row_height * .52)),
-        theme["accent"], "bold", line_height=1.0,
+        theme["ink"], "bold", line_height=1.0,
     )
 
     for row_index, row in enumerate(parsed_rows):
@@ -2622,19 +2623,25 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                 chart.w * .84, chart.h * .80)
     row_h = plot.h / len(parsed)
     children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "bold", align="center")
     for idx, item in enumerate(parsed):
         share = item["value"] / top_val
         w_bar = max(plot.w * .18, plot.w * share)
         x_bar = plot.center_x - w_bar / 2
         y = plot.y + idx * row_h
+        bar_fill = mix(theme["accent"], theme["surface"], idx * .15)
         children.append(Node(
             kind="round", role=f"funnel-stage-{idx}",
             props={"x": x_bar, "y": y + row_h * .12, "w": w_bar,
                    "h": row_h * .72, "r": ctx.tokens.px(8),
-                   "fill": mix(theme["accent"], theme["surface"], idx * .15)},
+                   "fill": bar_fill},
             qa_class="decor", meta={"stable_row_id": item["id"], "share": round(share, 4)},
         ))
+        lbl_color = ensure_contrast(
+            theme["base"] if contrast_ratio(theme["base"], bar_fill)
+            >= contrast_ratio(theme["ink"], bar_fill)
+            else theme["ink"], bar_fill, 4.5)
+        lbl_style = TextStyle(max(12, ctx.tokens.px(16)), lbl_color, "bold",
+                              align="center")
         lbl = text_node(
             f"funnel-label-{idx}",
             f"{item['label']} ({round(share * 100)}%)",
@@ -2681,7 +2688,15 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
     left_x, right_x = plot.x, plot.right - plot.w * .22
     node_w = plot.w * .22
     children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(15)), theme["ink"], "bold", align="center")
+    def _node_lbl(fill):
+        color = ensure_contrast(
+            theme["base"] if contrast_ratio(theme["base"], fill)
+            >= contrast_ratio(theme["ink"], fill)
+            else theme["ink"], fill, 4.5)
+        return TextStyle(max(12, ctx.tokens.px(15)), color, "bold",
+                         align="center")
+    src_lbl_style = _node_lbl(theme["accent"])
+    dst_lbl_style = _node_lbl(mix(theme["surface"], theme["accent"], .16))
     src_centers: dict[str, float] = {}
     dst_centers: dict[str, float] = {}
     src_h = plot.h / len(sources)
@@ -2694,7 +2709,7 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
                    "h": src_h * .76, "r": ctx.tokens.px(6), "fill": theme["accent"]},
             qa_class="decor",
         ))
-        lbl = text_node(f"sankey-src-label-{idx}", s_name, lbl_style,
+        lbl = text_node(f"sankey-src-label-{idx}", s_name, src_lbl_style,
                         Rect(left_x, y + src_h * .12, node_w, src_h * .76),
                         ctx.fonts, align="center", valign="center", fit=True)
         if lbl:
@@ -2706,10 +2721,11 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"sankey-dst-{idx}",
             props={"x": right_x, "y": y + dst_h * .12, "w": node_w,
-                   "h": dst_h * .76, "r": ctx.tokens.px(6), "fill": theme["surface"]},
+                   "h": dst_h * .76, "r": ctx.tokens.px(6),
+                   "fill": mix(theme["surface"], theme["accent"], .16)},
             qa_class="decor",
         ))
-        lbl = text_node(f"sankey-dst-label-{idx}", t_name, lbl_style,
+        lbl = text_node(f"sankey-dst-label-{idx}", t_name, dst_lbl_style,
                         Rect(right_x, y + dst_h * .12, node_w, dst_h * .76),
                         ctx.fonts, align="center", valign="center", fit=True)
         if lbl:

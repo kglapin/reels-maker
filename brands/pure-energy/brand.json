@@ -1,0 +1,120 @@
+{
+  "id": "pure-energy",
+  "name": "Pure Energy",
+  "version": 1,
+  "website": "https://www.pure-energy.com.pl/",
+  "tagline": "Fotowoltaika i magazyny energii dla firm — Jeden partner. Zero biurokracji. Pełna odpowiedzialność za wynik.",
+  "branding": {
+    "accent": "#FF9600",
+    "secondary_accent": "#2E2064",
+    "logo": "assets/logo.png",
+    "logo_light_bg": "assets/logo-light-bg.png",
+    "logo_dark_bg": "assets/logo-dark-bg.png",
+    "font_regular": "brands/pure-energy/fonts/Baloo2-Medium.ttf",
+    "font_bold": "brands/pure-energy/fonts/Baloo2-Bold.ttf",
+    "font_extrabold": "brands/pure-energy/fonts/Baloo2-ExtraBold.ttf",
+    "editorial_profiles": {
+      "light-information": {
+        "theme": "light",
+        "position": "upper",
+        "headline_style": "hero",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": true
+      },
+      "light-detail": {
+        "theme": "light",
+        "position": "middle",
+        "headline_style": "standard",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": false
+      },
+      "dark-hero": {
+        "theme": "dark",
+        "position": "upper",
+        "headline_style": "hero",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": true
+      },
+      "dark-cta": {
+        "theme": "dark",
+        "position": "middle",
+        "headline_style": "standard",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": false
+      }
+    }
+  },
+  "identity": {
+    "typography": {
+      "primary": "Baloo 2",
+      "regular": "brands/pure-energy/fonts/Baloo2-Regular.ttf",
+      "medium": "brands/pure-energy/fonts/Baloo2-Medium.ttf",
+      "semibold": "brands/pure-energy/fonts/Baloo2-SemiBold.ttf",
+      "bold": "brands/pure-energy/fonts/Baloo2-Bold.ttf",
+      "extrabold": "brands/pure-energy/fonts/Baloo2-ExtraBold.ttf",
+      "fallback": "Open Sans",
+      "status": "Baloo 2 (weights 400/500/600/700/800) installed locally in brands/pure-energy/fonts/ and ~/Library/Fonts/"
+    },
+    "palette": {
+      "primary": "#FF9600",
+      "primary_dark": "#9A5700",
+      "primary_hover": "#FF9F13",
+      "primary_soft": "#FFB44D",
+      "purple": "#2E2064",
+      "purple_secondary": "#433384",
+      "ink": "#181525",
+      "text": "#181525",
+      "body_text_light": "#3B3748",
+      "muted": "#6F6A80",
+      "line": "#E6E0F2",
+      "surface_soft": "#F7F5FB",
+      "surface_warm": "#FFF9F1",
+      "background": "#FFFFFF",
+      "neutral": "#2E2064"
+    },
+    "logo": {
+      "source": "assets/pure-energy-logo.webp",
+      "render_png": "assets/logo.png",
+      "render_dark_bg_png": "assets/logo-dark-bg.png",
+      "preview_background": "#FFFFFF"
+    },
+    "motion": {
+      "style": "editorial-premium / B2B energy — rounded geometry (--pe-radius: 16..30px), high-contrast #181525/#2E2064 dark surfaces with #FF9600 solar orange accents",
+      "audio": "music and SFX only when specified per project"
+    },
+    "company": {
+      "offer": [
+        "Instalacja PV dla firmy",
+        "Farma fotowoltaiczna",
+        "Magazyn energii (BESS)",
+        "Carport fotowoltaiczny",
+        "Modernizacja i rozbudowa",
+        "Własne konstrukcje montażowe PV"
+      ],
+      "usp": [
+        "Jeden partner. Zero biurokracji. Pełna odpowiedzialność za wynik",
+        "25 lat w branży metalowej i OZE",
+        "Własne konstrukcje montażowe",
+        "Polisa OC 5 mln zł",
+        "Reakcja serwisowa 72h",
+        "Działamy w Polsce i Europie"
+      ],
+      "contact": {
+        "phone": "+48 63 220 78 15",
+        "email": "biuro@pure-energy.com.pl",
+        "website": "pure-energy.com.pl"
+      }
+    }
+  },
+  "catalog": {
+    "footage": "media/footage",
+    "stock": "media/stock",
+    "audio": "media/audio",
+    "effects": "media/fx",
+    "references": "references"
+  }
+}

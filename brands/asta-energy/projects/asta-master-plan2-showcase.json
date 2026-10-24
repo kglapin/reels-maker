@@ -1,0 +1,911 @@
+{
+  "schema_version": 1,
+  "name": "ASTA Master Plan 2.0 Showcase",
+  "brand": "asta-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "profile": "final",
+    "codec": "libx264",
+    "crf": 20,
+    "preset": "veryfast"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#101A14",
+      "surface": "#F7F7F2",
+      "ink": "#FFFFFF",
+      "muted": "#C9D2CB",
+      "accent": "#47A013"
+    }
+  },
+  "audio": {
+    "music": {
+      "file": "media/audio/mewwwwwww-rush-433449.mp3",
+      "gain_db": -12.0
+    }
+  },
+  "scenes": [
+    {
+      "id": "01-opening-statement",
+      "composition": "statement",
+      "duration": 3.0,
+      "background": {
+        "kind": "gradient",
+        "from": "#101A14",
+        "to": "#1B3324"
+      },
+      "headline": "ENERGIA, KTÓRA PRACUJE DLA CIEBIE",
+      "subtitle": "FOTOWOLTAIKA · MAGAZYNY ENERGII · ANALITYKA",
+      "typography_motion": "mask-rise",
+      "icon_assets": [
+        {
+          "library": "lucide",
+          "name": "sun",
+          "x": 0.5,
+          "y": 0.11,
+          "size": 0.065,
+          "color": "#47A013",
+          "rotation_motion": {
+            "family": "tilt-settle",
+            "angle": -8,
+            "duration": 0.6,
+            "reason": "arrival"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "color-takeover",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "02-aerial-pv-spotlight",
+      "composition": "spotlight",
+      "duration": 3.2,
+      "photo": "media/stock/agrivoltaics_heggelbach_05.webm",
+      "photo_time": 2.0,
+      "background": {
+        "scrim": 0.688,
+        "tint": "#0A1A10",
+        "tint_amount": 0.18,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.06
+        }
+      },
+      "kicker": "FOTOWOLTAIKA DLA BIZNESU",
+      "headline": "ENERGIA ZE SŁOŃCA",
+      "subtitle": "DLA FIRM, KTÓRE MYŚLĄ DŁUGOTERMINOWO",
+      "typography_motion": "tracking-in",
+      "transition_out": {
+        "type": "radial-reveal",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "03-hero-capacity-counter",
+      "composition": "amount",
+      "duration": 3.0,
+      "background": {
+        "kind": "solid",
+        "color": "#142C1E"
+      },
+      "kicker": "PRZYKŁADOWA MOC INSTALACJI",
+      "value": 39.6,
+      "format": {
+        "suffix": " kWp",
+        "decimals": 1,
+        "thousands": " "
+      },
+      "subtitle": "INSTALACJA DLA PRZEDSIĘBIORSTWA",
+      "visual": "none",
+      "typography_motion": "pop-settle",
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.45,
+        "direction": "left"
+      }
+    },
+    {
+      "id": "04-seasonal-line-chart",
+      "type": "line_chart",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "SEZONOWY PROFIL PRODUKCJI PV",
+      "subtitle": "4 KWARTAŁY · DANE ZWERYFIKOWANE",
+      "x_axis_type": "date",
+      "x_axis_label": "Miesiąc (2026)",
+      "y_axis_label": "Uzysk (kWh)",
+      "y_domain": [
+        0,
+        1400
+      ],
+      "points": [
+        {
+          "label": "2026-03-01",
+          "value": 680
+        },
+        {
+          "label": "2026-06-01",
+          "value": 1240
+        },
+        {
+          "label": "2026-09-01",
+          "value": 890
+        },
+        {
+          "label": "2026-12-01",
+          "value": 260
+        }
+      ],
+      "transition_out": {
+        "type": "pixel-dissolve",
+        "duration": 0.55
+      }
+    },
+    {
+      "id": "05-sorted-animated-table",
+      "type": "table",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "OSZCZĘDNOŚĆ WEDŁUG WARIANTU",
+      "subtitle": "SORTOWANIE · HIGHLIGHT · LICZNIK KOMÓRKI",
+      "columns": [
+        {
+          "id": "tariff",
+          "label": "Wariant",
+          "width": 0.62,
+          "align": "left"
+        },
+        {
+          "id": "savings",
+          "label": "Oszczędność (PLN)",
+          "width": 0.38,
+          "align": "right"
+        }
+      ],
+      "rows": [
+        {
+          "id": "t-3",
+          "values": {
+            "tariff": "Magazyn + EMS",
+            "savings": "6 200 PLN"
+          }
+        },
+        {
+          "id": "t-2",
+          "values": {
+            "tariff": "Magazyn 10 kWh",
+            "savings": "4 650 PLN"
+          }
+        },
+        {
+          "id": "t-1",
+          "values": {
+            "tariff": "Bez magazynu",
+            "savings": "1 800 PLN"
+          }
+        }
+      ],
+      "animate_from_row_ids": [
+        "t-1",
+        "t-2",
+        "t-3"
+      ],
+      "highlight_rows": [
+        "t-3"
+      ],
+      "highlight_cells": [
+        [
+          "t-2",
+          "savings"
+        ]
+      ],
+      "allowed_overlaps": [
+        [
+          "table-cell-0-tariff",
+          "table-cell-1-tariff"
+        ],
+        [
+          "table-cell-0-savings",
+          "table-cell-1-savings"
+        ],
+        [
+          "table-cell-0-tariff",
+          "table-cell-2-tariff"
+        ],
+        [
+          "table-cell-0-savings",
+          "table-cell-2-savings"
+        ],
+        [
+          "table-cell-1-tariff",
+          "table-cell-2-tariff"
+        ],
+        [
+          "table-cell-1-savings",
+          "table-cell-2-savings"
+        ]
+      ],
+      "cell_transitions": {
+        "t-3": {
+          "savings": {
+            "from": 3100,
+            "to": 6200,
+            "suffix": " PLN",
+            "decimals": 0
+          }
+        }
+      },
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "06-table-to-bars-morph",
+      "type": "chart_morph",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "Z TABELI DO WYKRESU",
+      "subtitle": "ZACHOWANE ID OBIEKTÓW I SUMA DANYCH",
+      "from_type": "table",
+      "to_type": "bars",
+      "transition_duration": 1.1,
+      "allowed_overlaps": [
+        [
+          "morph-label-t-3",
+          "morph-label-t-1"
+        ],
+        [
+          "morph-val-t-3",
+          "morph-val-t-1"
+        ],
+        [
+          "morph-label-t-3",
+          "morph-label-t-2"
+        ],
+        [
+          "morph-val-t-3",
+          "morph-val-t-2"
+        ],
+        [
+          "morph-label-t-2",
+          "morph-label-t-1"
+        ],
+        [
+          "morph-val-t-2",
+          "morph-val-t-1"
+        ]
+      ],
+      "items": [
+        {
+          "id": "t-3",
+          "label": "Magazyn + EMS",
+          "from_index": 2,
+          "to_index": 0,
+          "from_value": 1800,
+          "to_value": 6200,
+          "suffix": " PLN"
+        },
+        {
+          "id": "t-2",
+          "label": "Magazyn 10 kWh",
+          "from_index": 1,
+          "to_index": 1,
+          "from_value": 4650,
+          "to_value": 4650,
+          "suffix": " PLN"
+        },
+        {
+          "id": "t-1",
+          "label": "Bez magazynu",
+          "from_index": 0,
+          "to_index": 2,
+          "from_value": 1800,
+          "to_value": 1800,
+          "suffix": " PLN"
+        }
+      ],
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "07-ranked-bars",
+      "type": "bars",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "POZIOM AUTOKONSUMPCJI",
+      "data_order": "descending",
+      "bars": [
+        {
+          "id": "b-ems",
+          "label": "PV + MAGAZYN + EMS",
+          "value": 84,
+          "suffix": "%"
+        },
+        {
+          "id": "b-bat",
+          "label": "PV + MAGAZYN",
+          "value": 68,
+          "suffix": "%"
+        },
+        {
+          "id": "b-pv",
+          "label": "TYLKO PV",
+          "value": 34,
+          "suffix": "%"
+        }
+      ],
+      "subtitle": "RANKING MALEJĄCY",
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.55
+      }
+    },
+    {
+      "id": "08-stacked-bars-100",
+      "type": "stacked_bars_100",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "STRUKTURA ZUŻYCIA ENERGII 100%",
+      "subtitle": "AUTOKONSUMPCJA PV VS SIEĆ",
+      "categories": [
+        {
+          "id": "dom",
+          "label": "Dom",
+          "segments": [
+            {
+              "id": "pv",
+              "label": "PV + Magazyn",
+              "value": 68
+            },
+            {
+              "id": "grid",
+              "label": "Sieć",
+              "value": 32
+            }
+          ]
+        },
+        {
+          "id": "biuro",
+          "label": "Biuro",
+          "segments": [
+            {
+              "id": "pv",
+              "label": "PV + Magazyn",
+              "value": 76
+            },
+            {
+              "id": "grid",
+              "label": "Sieć",
+              "value": 24
+            }
+          ]
+        },
+        {
+          "id": "hala",
+          "label": "Hala",
+          "segments": [
+            {
+              "id": "pv",
+              "label": "PV + Magazyn",
+              "value": 72
+            },
+            {
+              "id": "grid",
+              "label": "Sieć",
+              "value": 28
+            }
+          ]
+        }
+      ],
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "09-waterfall-financial-bridge",
+      "type": "waterfall",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "MOST REDUKCJI RACHUNKU",
+      "subtitle": "BILANS OTWARCIA · DELTY · ZAMKNIĘCIE",
+      "steps": [
+        {
+          "kind": "opening",
+          "label": "Bazowy",
+          "value": 100
+        },
+        {
+          "kind": "delta",
+          "label": "PV",
+          "value": -45
+        },
+        {
+          "kind": "delta",
+          "label": "Magazyn",
+          "value": -20
+        },
+        {
+          "kind": "delta",
+          "label": "EMS",
+          "value": -10
+        },
+        {
+          "kind": "total",
+          "label": "Po OZE",
+          "value": 25
+        }
+      ],
+      "transition_out": {
+        "type": "iris-close-open",
+        "duration": 0.6
+      }
+    },
+    {
+      "id": "10-diverging-bar-chart",
+      "type": "diverging_bar",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "ODCHYLENIE OD PLANU UZYSKU",
+      "subtitle": "WZGLĘDEM PROGNOZY ROCZNEJ (%)",
+      "baseline": 0.0,
+      "items": [
+        {
+          "label": "Wschód-Zachód",
+          "value": 14.5
+        },
+        {
+          "label": "Południe 35°",
+          "value": 22.0
+        },
+        {
+          "label": "Zacieniony",
+          "value": -8.5
+        },
+        {
+          "label": "Tracker PV",
+          "value": 28.0
+        }
+      ],
+      "transition_out": {
+        "type": "spin-zoom",
+        "duration": 0.55
+      }
+    },
+    {
+      "id": "11-bullet-kpi-chart",
+      "type": "bullet",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "REALIZACJA CELÓW KPI",
+      "subtitle": "WYNIK RZECZYWISTY VS CEL",
+      "metrics": [
+        {
+          "label": "Autokonsumpcja",
+          "value": 82,
+          "target": 70,
+          "max": 100
+        },
+        {
+          "label": "Redukcja CO2",
+          "value": 74,
+          "target": 65,
+          "max": 100
+        },
+        {
+          "label": "Niezależność",
+          "value": 78,
+          "target": 75,
+          "max": 100
+        }
+      ],
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.45,
+        "direction": "up"
+      }
+    },
+    {
+      "id": "12-heatmap-matrix",
+      "type": "heatmap",
+      "duration": 3.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "MAPA CIEPLNA UZYSKU",
+      "subtitle": "PORA DNIA A SEZON",
+      "row_labels": [
+        "Rano",
+        "Południe",
+        "Popołudnie"
+      ],
+      "col_labels": [
+        "Wiosna",
+        "Lato",
+        "Jesień"
+      ],
+      "values": [
+        [
+          28,
+          42,
+          18
+        ],
+        [
+          74,
+          96,
+          58
+        ],
+        [
+          36,
+          54,
+          24
+        ]
+      ],
+      "transition_out": {
+        "type": "pixel-dissolve",
+        "duration": 0.55
+      }
+    },
+    {
+      "id": "13-scatter-correlation",
+      "type": "scatter",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "MOC INSTALACJI A ROCZNY UZYSK",
+      "subtitle": "KORELACJA MOCY I PRODUKCJI",
+      "x_domain": [
+        0,
+        50
+      ],
+      "y_domain": [
+        0,
+        55
+      ],
+      "points": [
+        {
+          "x": 10,
+          "y": 10.5
+        },
+        {
+          "x": 20,
+          "y": 21.2
+        },
+        {
+          "x": 30,
+          "y": 32.0
+        },
+        {
+          "x": 40,
+          "y": 42.8
+        },
+        {
+          "x": 49,
+          "y": 51.5
+        }
+      ],
+      "transition_out": {
+        "type": "color-takeover",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "14-funnel-conversion",
+      "type": "funnel",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "ŚCIEŻKA REALIZACJI PROJEKTU",
+      "subtitle": "ETAPY PROCESU INWESTYCYJNEGO",
+      "stages": [
+        {
+          "label": "Zapytanie i profil",
+          "value": 100
+        },
+        {
+          "label": "Audyt energetyczny",
+          "value": 78
+        },
+        {
+          "label": "Projekt techniczny",
+          "value": 62
+        },
+        {
+          "label": "Montaż i odbiór",
+          "value": 54
+        }
+      ],
+      "transition_out": {
+        "type": "radial-reveal",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "15-sankey-energy-flow",
+      "type": "sankey",
+      "duration": 3.4,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "PRZEPŁYW I BILANS ENERGII",
+      "subtitle": "ZACHOWANIE SUMY WEJŚĆ I WYJŚĆ",
+      "links": [
+        {
+          "source": "PV",
+          "target": "Produkcja",
+          "value": 65
+        },
+        {
+          "source": "PV",
+          "target": "Magazyn",
+          "value": 25
+        },
+        {
+          "source": "Sieć",
+          "target": "Produkcja",
+          "value": 10
+        }
+      ],
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "16-product-3d-turntable",
+      "type": "product_3d",
+      "duration": 3.2,
+      "background": {
+        "kind": "gradient",
+        "from": "#101A14",
+        "to": "#1B3324"
+      },
+      "headline": "MAGAZYN ENERGII — WIDOK 3D",
+      "subtitle": "RZUT PERSPEKTYWICZNY · OŚWIETLENIE 3-PUNKTOWE",
+      "product_3d": {
+        "mesh_path": "models/asta-storage-cabinet.glb",
+        "albedo": "#47A013",
+        "camera": {
+          "focal_length_mm": 50.0,
+          "distance": 3.4,
+          "yaw_deg": 20.0,
+          "pitch_deg": 16.0,
+          "turntable_deg_per_s": 42.0
+        },
+        "lighting": {
+          "key_light": {
+            "direction": [
+              0.6,
+              0.7,
+              0.8
+            ],
+            "intensity": 0.95
+          },
+          "fill_light": {
+            "direction": [
+              -0.6,
+              0.3,
+              0.5
+            ],
+            "intensity": 0.45
+          },
+          "rim_light": {
+            "direction": [
+              0.0,
+              0.8,
+              -0.7
+            ],
+            "intensity": 0.4
+          }
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "17-storage-video-negative-type",
+      "composition": "spotlight",
+      "duration": 3.2,
+      "photo": "media/stock/agrivoltaics_heggelbach_01.webm",
+      "photo_time": 1.0,
+      "background": {
+        "scrim": 0.68,
+        "tint": "#0A1A10",
+        "tint_amount": 0.2,
+        "camera": {
+          "direction": "pan-left",
+          "intensity": 0.05
+        }
+      },
+      "kicker": "MAGAZYN ENERGII + VIDEO PIP",
+      "headline": {
+        "runs": [
+          {
+            "text": "ENERGIA, KTÓRA",
+            "scale": 0.9,
+            "color": "white"
+          },
+          {
+            "text": "ZOSTAJE",
+            "scale": 1.18,
+            "color": "white",
+            "weight": "bold",
+            "break_before": true,
+            "effect": "negative"
+          }
+        ]
+      },
+      "subtitle": "PRODUKUJ · MAGAZYNUJ · WYKORZYSTUJ",
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.55
+      }
+    },
+    {
+      "id": "18-live-video-layer",
+      "composition": "spotlight",
+      "duration": 3.2,
+      "background": {"kind": "solid", "color": "#101A14"},
+      "video_layer": {
+        "path": "media/stock/agrivoltaics_heggelbach_01.webm",
+        "role": "agrivoltaics-live",
+        "x": 89,
+        "y": 260,
+        "w": 902,
+        "h": 780,
+        "trim_start": 6.0,
+        "trim_end": 9.2,
+        "crop": [0.06, 0.08, 0.94, 0.92],
+        "mask": "rounded",
+        "radius": 30
+      },
+      "kicker": "WIDEO LIVE · TRIM · MASKA",
+      "headline": "WARSTWA WIDEO NA ŻYWO",
+      "subtitle": "DEKODOWANIE KLATKA PO KLATCE",
+      "transition_out": {"type": "color-takeover", "duration": 0.5}
+    },
+    {
+      "id": "19-energy-icon-diagram",
+      "composition": "energy",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "OD SŁOŃCA DO FIRMY",
+      "subtitle": "IKONY WEKTOROWE SVG · PROWENIENCJA",
+      "icon_pack": "tabler",
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.45,
+        "direction": "left"
+      }
+    },
+    {
+      "id": "20-process-checklist",
+      "composition": "checklist",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "OD AUDYTU DO URUCHOMIENIA",
+      "typography_motion": "word-cascade",
+      "items": [
+        "Audyt zużycia i możliwości",
+        "Projekt instalacji PV",
+        "Dobór magazynu energii",
+        "Montaż i uruchomienie"
+      ],
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "21-four-step-stats",
+      "composition": "stats",
+      "duration": 3.0,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F2F5F0"
+      },
+      "headline": "JAK PRACUJEMY",
+      "typography_motion": "scale-focus",
+      "stats": [
+        {
+          "label": "AUDYT",
+          "value": 1
+        },
+        {
+          "label": "PROJEKT",
+          "value": 2
+        },
+        {
+          "label": "MONTAŻ",
+          "value": 3
+        },
+        {
+          "label": "OPIEKA",
+          "value": 4
+        }
+      ],
+      "transition_out": {
+        "type": "iris-close-open",
+        "duration": 0.6
+      }
+    },
+    {
+      "id": "22-closing-cta",
+      "composition": "cta",
+      "duration": 3.6,
+      "background": {
+        "kind": "solid",
+        "color": "#142C1E"
+      },
+      "headline": "POROZMAWIAJMY O TWOJEJ INSTALACJI",
+      "phone": "NAPISZ DO NAS",
+      "line_one": "ZOBACZ REALIZACJE",
+      "line_two": "asta-energy.pl",
+      "website": "asta-energy.pl",
+      "logo": "assets/logo.png"
+    }
+  ]
+}

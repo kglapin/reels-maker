@@ -1,0 +1,1079 @@
+{
+  "schema_version": 1,
+  "name": "pure-energy-bess-reels",
+  "brand": "pure-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 19,
+    "preset": "medium"
+  },
+  "audio": {
+    "music": {
+      "file": "media/audio/audioera-stylish-trailer-percussion-622881.mp3",
+      "volume": 0.92,
+      "fade_out": 1.4
+    }
+  },
+  "scenes": [
+    {
+      "type": "pe_editorial",
+      "name": "hook",
+      "theme": "light",
+      "duration": 3.28,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.4,
+        "direction": "left"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.15
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/magazyny-energii-dla-firm.webp",
+          "rect": [
+            0.15,
+            0.16,
+            0.7,
+            0.28
+          ],
+          "rotation": -2.5,
+          "onset": 0.25,
+          "spin": 5.0
+        },
+        {
+          "kind": "swap",
+          "role": "swap",
+          "text1": "PŁACISZ ZA DUŻO.",
+          "text2": "PŁACISZ MNIEJ.",
+          "size": 108,
+          "y": 0.6,
+          "color1": "purple",
+          "color2": "amber",
+          "onset": 0.53,
+          "swap_at": 1.85
+        },
+        {
+          "kind": "words",
+          "role": "sub",
+          "text": "za prąd w firmie",
+          "size": 48,
+          "color": "body",
+          "y": 0.715,
+          "onset": 2.45,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "product",
+      "theme": "light",
+      "duration": 3.2,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-kontener-pv.webp",
+          "rect": [
+            0.14,
+            0.17,
+            0.72,
+            0.3
+          ],
+          "rotation": 2.5,
+          "onset": 0.15
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "MAGAZYN ENERGII",
+          "size": 108,
+          "color": "purple",
+          "y": 0.575,
+          "mode": "chars",
+          "onset": 0.05,
+          "stagger": 0.05
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "PRACUJE DLA CIEBIE.",
+          "size": 88,
+          "color": "amber",
+          "y": 0.685,
+          "onset": 1.9,
+          "stagger": 0.24
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "charges",
+      "theme": "dark",
+      "duration": 2.9,
+      "background": {
+        "kind": "photo",
+        "asset": "media/bess/duzy-zaklad-przemyslowy.webp",
+        "scrim": 0.45,
+        "tint": "#2E2064",
+        "tint_amount": 0.12,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.05
+        }
+      },
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "sweep",
+          "role": "sweep",
+          "onset": 0.0,
+          "opacity": 0.12
+        },
+        {
+          "kind": "band",
+          "role": "band1",
+          "rect": [
+            0.0,
+            0.59,
+            1.0,
+            0.115
+          ],
+          "fill": "purple",
+          "opacity": 0.85,
+          "onset": 0.81,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap1",
+          "text": "ŁADUJE SIĘ, GDY PRĄD JEST TANI",
+          "size": 50,
+          "color": "white",
+          "y": 0.628,
+          "onset": 0.95,
+          "stagger": 0.1
+        },
+        {
+          "kind": "band",
+          "role": "band2",
+          "rect": [
+            0.0,
+            0.725,
+            1.0,
+            0.115
+          ],
+          "fill": "purple",
+          "opacity": 0.85,
+          "onset": 1.55,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap2",
+          "text": "ODDAJE W SZCZYCIE",
+          "size": 58,
+          "color": "orange",
+          "y": 0.762,
+          "onset": 1.7,
+          "stagger": 0.14
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "day-night",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "panel",
+          "role": "card-night",
+          "rect": [
+            0.09,
+            0.19,
+            0.38,
+            0.3
+          ],
+          "fill": "white",
+          "r": 26,
+          "shadow": true,
+          "onset": 0.1,
+          "preset": "drop"
+        },
+        {
+          "kind": "panel",
+          "role": "card-day",
+          "rect": [
+            0.53,
+            0.19,
+            0.38,
+            0.3
+          ],
+          "fill": "orange",
+          "r": 26,
+          "shadow": true,
+          "onset": 0.3,
+          "preset": "drop"
+        },
+        {
+          "kind": "words",
+          "role": "night",
+          "text": "NOC",
+          "size": 72,
+          "color": "purple",
+          "y": 0.28,
+          "x": 0.28,
+          "onset": 0.6,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "night-sub",
+          "text": "tani prąd z sieci",
+          "size": 34,
+          "color": "muted",
+          "y": 0.37,
+          "x": 0.28,
+          "onset": 0.9,
+          "preset": "fade",
+          "uppercase": false
+        },
+        {
+          "kind": "words",
+          "role": "day",
+          "text": "DZIEŃ",
+          "size": 72,
+          "color": "ink",
+          "y": 0.28,
+          "x": 0.72,
+          "onset": 1.2,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "day-sub",
+          "text": "twój prąd z magazynu",
+          "size": 34,
+          "color": "ink",
+          "y": 0.37,
+          "x": 0.72,
+          "onset": 1.5,
+          "preset": "fade",
+          "uppercase": false
+        },
+        {
+          "kind": "words",
+          "role": "line",
+          "text": "PŁACISZ MNIEJ CO GODZINĘ.",
+          "size": 76,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.63,
+          "onset": 1.91,
+          "stagger": 0.3
+        },
+        {
+          "kind": "words",
+          "role": "sub",
+          "text": "magazyn robi to automatycznie",
+          "size": 40,
+          "color": "soft",
+          "y": 0.735,
+          "onset": 2.9,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "outage",
+      "theme": "dark",
+      "duration": 4.27,
+      "background": {
+        "kind": "photo",
+        "asset": "media/bess/magazyn-logistyczny.webp",
+        "scrim": 0.48,
+        "tint": "#2E2064",
+        "tint_amount": 0.12,
+        "camera": {
+          "direction": "pull-out",
+          "intensity": 0.05
+        }
+      },
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "sweep",
+          "role": "sweep",
+          "onset": 0.0,
+          "opacity": 0.12
+        },
+        {
+          "kind": "band",
+          "role": "band1",
+          "rect": [
+            0.0,
+            0.565,
+            1.0,
+            0.115
+          ],
+          "fill": "purple",
+          "opacity": 0.85,
+          "onset": 1.91,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap1",
+          "text": "AWARIA SIECI?",
+          "size": 72,
+          "color": "orange",
+          "y": 0.6,
+          "onset": 2.05,
+          "stagger": 0.2
+        },
+        {
+          "kind": "band",
+          "role": "band2",
+          "rect": [
+            0.0,
+            0.7,
+            1.0,
+            0.115
+          ],
+          "fill": "purple",
+          "opacity": 0.85,
+          "onset": 3.0,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap2",
+          "text": "TY PRACUJESZ DALEJ.",
+          "size": 62,
+          "color": "white",
+          "y": 0.737,
+          "onset": 3.15,
+          "stagger": 0.16
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "stat-97",
+      "theme": "light",
+      "duration": 3.64,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "radial-reveal",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "ring",
+          "role": "orbit",
+          "cx": 0.5,
+          "cy": 0.356,
+          "r": 0.305,
+          "width": 10,
+          "color": "purple",
+          "track": "line",
+          "to": 0.97,
+          "onset": 1.5,
+          "dur": 1.0
+        },
+        {
+          "kind": "count",
+          "role": "stat",
+          "value": 97,
+          "format": {
+            "suffix": "%"
+          },
+          "size": 280,
+          "color": "amber",
+          "y": 0.27,
+          "onset": 1.64,
+          "dur": 0.9
+        },
+        {
+          "kind": "words",
+          "role": "label",
+          "text": "energii z dachu",
+          "size": 58,
+          "color": "purple",
+          "y": 0.665,
+          "onset": 2.45,
+          "stagger": 0.14,
+          "uppercase": false
+        },
+        {
+          "kind": "words",
+          "role": "micro",
+          "text": "zamiast 70% bez magazynu",
+          "size": 38,
+          "color": "muted",
+          "y": 0.745,
+          "onset": 2.7,
+          "stagger": 0.08,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "stat-mwh",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-ink.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "words",
+          "role": "stat",
+          "text": "11,9 MWh",
+          "size": 190,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.385,
+          "onset": 2.09,
+          "stagger": 0.3,
+          "uppercase": false
+        },
+        {
+          "kind": "words",
+          "role": "label",
+          "text": "tańszego prądu rocznie",
+          "size": 48,
+          "color": "soft",
+          "y": 0.615,
+          "onset": 2.8,
+          "stagger": 0.12,
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "with-pv",
+      "theme": "light",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "kicker",
+          "text": "Z FOTOWOLTAIKĄ",
+          "size": 52,
+          "colors": [
+            "white"
+          ],
+          "y": 0.165,
+          "x": 0.1,
+          "align": "left",
+          "onset": 0.05,
+          "chips": {
+            "0": "purple"
+          }
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-pv-system-card.webp",
+          "rect": [
+            0.09,
+            0.235,
+            0.82,
+            0.3
+          ],
+          "rotation": 2.0,
+          "onset": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "NADWYŻKA ZE SŁOŃCA",
+          "size": 82,
+          "color": "purple",
+          "y": 0.615,
+          "onset": 2.09,
+          "stagger": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ZOSTAJE U CIEBIE.",
+          "size": 82,
+          "color": "amber",
+          "y": 0.715,
+          "onset": 2.75,
+          "stagger": 0.2
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "without-pv",
+      "theme": "light",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.42,
+        "direction": "right"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "kicker",
+          "text": "BEZ FOTOWOLTAIKI",
+          "size": 52,
+          "colors": [
+            "white"
+          ],
+          "y": 0.165,
+          "x": 0.1,
+          "align": "left",
+          "onset": 0.05,
+          "chips": {
+            "0": "purple"
+          }
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-standalone-card.webp",
+          "rect": [
+            0.09,
+            0.235,
+            0.82,
+            0.3
+          ],
+          "rotation": -2.0,
+          "onset": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "TEŻ DZIAŁA.",
+          "size": 96,
+          "color": "purple",
+          "y": 0.615,
+          "onset": 0.05,
+          "stagger": 0.24
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "kupujesz tanio w nocy, zużywasz dalej",
+          "size": 40,
+          "color": "muted",
+          "y": 0.715,
+          "onset": 1.8,
+          "stagger": 0.1,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "sizing",
+      "theme": "light",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "color-takeover",
+        "duration": 0.5,
+        "color": "#FFF9F1"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-system-techniczny.webp",
+          "rect": [
+            0.13,
+            0.175,
+            0.74,
+            0.32
+          ],
+          "rotation": -1.5,
+          "onset": 0.1
+        },
+        {
+          "kind": "ticks",
+          "role": "ticks",
+          "rect": [
+            0.09,
+            0.135,
+            0.82,
+            0.4
+          ],
+          "color": "purple",
+          "thickness": 5,
+          "onset": 0.35,
+          "stagger": 0.14
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "DOBIERAMY POJEMNOŚĆ",
+          "size": 80,
+          "color": "purple",
+          "y": 0.6,
+          "onset": 0.05,
+          "stagger": 0.24
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "DO TWOICH RACHUNKÓW.",
+          "size": 80,
+          "colors": [
+            "purple",
+            "amber"
+          ],
+          "y": 0.7,
+          "onset": 1.8,
+          "stagger": 0.24
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "proof",
+      "theme": "light",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "stat1",
+          "text": "1000+ INSTALACJI.",
+          "size": 96,
+          "colors": [
+            "amber",
+            "purple"
+          ],
+          "y": 0.285,
+          "onset": 0.05,
+          "stagger": 0.35
+        },
+        {
+          "kind": "words",
+          "role": "stat2",
+          "text": "25 LAT DOŚWIADCZENIA.",
+          "size": 80,
+          "colors": [
+            "amber",
+            "purple"
+          ],
+          "y": 0.44,
+          "onset": 1.5,
+          "stagger": 0.22
+        },
+        {
+          "kind": "words",
+          "role": "micro",
+          "text": "własne ekipy · serwis 72h · ubezpieczenie 5 mln zł",
+          "size": 40,
+          "color": "muted",
+          "y": 0.62,
+          "onset": 2.6,
+          "stagger": 0.08,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "partner",
+      "theme": "dark",
+      "duration": 4.09,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-ink.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "ring",
+          "role": "halo",
+          "cx": 0.86,
+          "cy": 0.18,
+          "r": 0.22,
+          "width": 5,
+          "color": "purple2",
+          "to": 0.8,
+          "onset": 0.3,
+          "dur": 1.2
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "JEDEN PARTNER.",
+          "size": 102,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.37,
+          "onset": 0.05,
+          "stagger": 0.5
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ZERO BIUROKRACJI.",
+          "size": 96,
+          "colors": [
+            "orange",
+            "white"
+          ],
+          "y": 0.545,
+          "onset": 1.9,
+          "stagger": 0.28
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "steps",
+      "theme": "light",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "title",
+          "text": "WDROŻENIE W 3 KROKACH",
+          "size": 50,
+          "color": "purple",
+          "y": 0.205,
+          "onset": 0.05,
+          "tracking": 2
+        },
+        {
+          "kind": "tag",
+          "role": "step1",
+          "num": "01",
+          "text": "ANALIZA · 3–5 DNI",
+          "rect": [
+            0.08,
+            0.295,
+            0.84,
+            0.105
+          ],
+          "onset": 0.5
+        },
+        {
+          "kind": "tag",
+          "role": "step2",
+          "num": "02",
+          "text": "PROJEKT I FORMALNOŚCI",
+          "rect": [
+            0.08,
+            0.435,
+            0.84,
+            0.105
+          ],
+          "onset": 1.1
+        },
+        {
+          "kind": "tag",
+          "role": "step3",
+          "num": "03",
+          "text": "MONTAŻ · 3–5 DNI",
+          "rect": [
+            0.08,
+            0.575,
+            0.84,
+            0.105
+          ],
+          "onset": 1.7
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "cta",
+      "theme": "light",
+      "duration": 7.92,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-cream.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "image",
+          "role": "logo",
+          "src": "assets/logo-light-bg.png",
+          "rect": [
+            0.3,
+            0.19,
+            0.4,
+            0.125
+          ],
+          "onset": 0.0,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "ZAMÓW BEZPŁATNĄ",
+          "size": 88,
+          "color": "purple",
+          "y": 0.435,
+          "onset": 0.6,
+          "stagger": 0.22
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ANALIZĘ MAGAZYNU.",
+          "size": 96,
+          "color": "amber",
+          "y": 0.535,
+          "onset": 1.0,
+          "stagger": 0.22
+        },
+        {
+          "kind": "panel",
+          "role": "cta-pill",
+          "rect": [
+            0.14,
+            0.655,
+            0.72,
+            0.08
+          ],
+          "fill": "orange",
+          "r": 80,
+          "shadow": true,
+          "onset": 3.91,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "phone",
+          "text": "+48 63 220 78 15",
+          "size": 64,
+          "color": "ink",
+          "y": 0.674,
+          "onset": 4.1,
+          "stagger": 0.12
+        },
+        {
+          "kind": "words",
+          "role": "site",
+          "text": "pure-energy.com.pl · biuro@pure-energy.com.pl",
+          "size": 40,
+          "color": "muted",
+          "y": 0.8,
+          "onset": 4.7,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1250 @@
+{
+  "schema_version": 1,
+  "name": "pure-energy-bess-v25-dark-orange-band",
+  "brand": "pure-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 19,
+    "preset": "medium"
+  },
+  "scenes": [
+    {
+      "type": "pe_editorial",
+      "name": "hook",
+      "theme": "dark",
+      "duration": 3.28,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.4,
+        "direction": "left"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.15
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/magazyny-energii-dla-firm.webp",
+          "rect": [
+            0.13,
+            0.155,
+            0.74,
+            0.3
+          ],
+          "rotation": -2.5,
+          "onset": 0.25,
+          "spin": 5.0
+        },
+        {
+          "kind": "words",
+          "role": "hook",
+          "text": "PRĄD WRACA.",
+          "size": 138,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.575,
+          "onset": 0.53,
+          "stagger": 0.75
+        },
+        {
+          "kind": "words",
+          "role": "sub",
+          "text": "gdy kosztuje najwięcej.",
+          "size": 52,
+          "color": "soft",
+          "y": 0.705,
+          "onset": 2.15,
+          "stagger": 0.16,
+          "preset": "rise",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "charge-cheap",
+      "theme": "dark",
+      "duration": 3.2,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "photo",
+          "role": "photo-a",
+          "src": "media/bess/bess-kontener-pv.webp",
+          "rect": [
+            0.06,
+            0.2,
+            0.5,
+            0.26
+          ],
+          "rotation": -3.0,
+          "onset": 0.08
+        },
+        {
+          "kind": "photo",
+          "role": "photo-b",
+          "src": "media/bess/zaklad-produkcyjny.webp",
+          "rect": [
+            0.5,
+            0.155,
+            0.42,
+            0.3
+          ],
+          "rotation": 2.5,
+          "onset": 0.3
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "ŁADUJESZ TANIO.",
+          "size": 76,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.565,
+          "onset": 0.05,
+          "stagger": 0.35
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ZUŻYWASZ W SZCZYCIE.",
+          "size": 88,
+          "colors": [
+            "white",
+            "white",
+            "orange"
+          ],
+          "y": 0.685,
+          "onset": 1.9,
+          "stagger": 0.24
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "night-shift",
+      "theme": "dark",
+      "duration": 2.9,
+      "background": {
+        "kind": "photo",
+        "asset": "media/bess/duzy-zaklad-przemyslowy.webp",
+        "scrim": 0.45,
+        "tint": "#2E2064",
+        "tint_amount": 0.12,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.05
+        }
+      },
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "sweep",
+          "role": "sweep",
+          "onset": 0.0,
+          "opacity": 0.12
+        },
+        {
+          "kind": "band",
+          "role": "band1",
+          "rect": [
+            0.0,
+            0.585,
+            1.0,
+            0.115
+          ],
+          "fill": "orange",
+          "opacity": 0.9,
+          "onset": 0.81,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap1",
+          "text": "2 I 3 ZMIANA",
+          "size": 68,
+          "color": "ink",
+          "y": 0.622,
+          "onset": 0.95,
+          "stagger": 0.18
+        },
+        {
+          "kind": "band",
+          "role": "band2",
+          "rect": [
+            0.0,
+            0.72,
+            1.0,
+            0.115
+          ],
+          "fill": "orange",
+          "opacity": 0.9,
+          "onset": 1.35,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap2",
+          "text": "NA WŁASNYM PRĄDZIE",
+          "size": 56,
+          "color": "ink",
+          "y": 0.757,
+          "onset": 1.5,
+          "stagger": 0.14
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "peak-shave",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "panel",
+          "role": "chart-card",
+          "rect": [
+            0.08,
+            0.17,
+            0.84,
+            0.36
+          ],
+          "fill": "white",
+          "r": 30,
+          "shadow": true,
+          "onset": 0.1,
+          "preset": "drop"
+        },
+        {
+          "kind": "words",
+          "role": "card-title",
+          "text": "POBÓR Z SIECI",
+          "size": 40,
+          "color": "muted",
+          "y": 0.205,
+          "onset": 0.55,
+          "preset": "fade",
+          "tracking": 3
+        },
+        {
+          "kind": "path",
+          "role": "limit",
+          "color": "muted",
+          "width": 3,
+          "points": [
+            [
+              0.13,
+              0.335
+            ],
+            [
+              0.87,
+              0.335
+            ]
+          ],
+          "onset": 0.6,
+          "dur": 0.5,
+          "opacity": 0.55
+        },
+        {
+          "kind": "path",
+          "role": "demand",
+          "color": "purple",
+          "width": 7,
+          "points": [
+            [
+              0.13,
+              0.46
+            ],
+            [
+              0.2,
+              0.44
+            ],
+            [
+              0.28,
+              0.455
+            ],
+            [
+              0.36,
+              0.42
+            ],
+            [
+              0.44,
+              0.36
+            ],
+            [
+              0.5,
+              0.3
+            ],
+            [
+              0.55,
+              0.245
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              0.68,
+              0.4
+            ],
+            [
+              0.76,
+              0.445
+            ],
+            [
+              0.84,
+              0.43
+            ],
+            [
+              0.88,
+              0.445
+            ]
+          ],
+          "onset": 0.7,
+          "dur": 0.9
+        },
+        {
+          "kind": "path",
+          "role": "peak",
+          "color": "orange",
+          "width": 4,
+          "points": [
+            [
+              0.44,
+              0.335
+            ],
+            [
+              0.5,
+              0.3
+            ],
+            [
+              0.55,
+              0.245
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              0.64,
+              0.335
+            ]
+          ],
+          "closed": true,
+          "fill": true,
+          "onset": 1.75,
+          "dur": 0.4,
+          "opacity": 0.9
+        },
+        {
+          "kind": "words",
+          "role": "line",
+          "text": "UTNIJ SZCZYT.",
+          "size": 118,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.615,
+          "onset": 0.95,
+          "stagger": 0.96
+        },
+        {
+          "kind": "words",
+          "role": "sub",
+          "text": "mniejsza moc umowna na fakturze",
+          "size": 44,
+          "color": "soft",
+          "y": 0.745,
+          "onset": 2.7,
+          "stagger": 0.1,
+          "preset": "rise",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "ups-resilience",
+      "theme": "dark",
+      "duration": 4.27,
+      "background": {
+        "kind": "photo",
+        "asset": "media/bess/magazyn-logistyczny.webp",
+        "scrim": 0.48,
+        "tint": "#2E2064",
+        "tint_amount": 0.12,
+        "camera": {
+          "direction": "pull-out",
+          "intensity": 0.05
+        }
+      },
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "sweep",
+          "role": "sweep",
+          "onset": 0.0,
+          "opacity": 0.12
+        },
+        {
+          "kind": "band",
+          "role": "band1",
+          "rect": [
+            0.0,
+            0.565,
+            1.0,
+            0.115
+          ],
+          "fill": "orange",
+          "opacity": 0.9,
+          "onset": 1.91,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap1",
+          "text": "AWARIA SIECI?",
+          "size": 70,
+          "color": "ink",
+          "y": 0.602,
+          "onset": 2.05,
+          "stagger": 0.2
+        },
+        {
+          "kind": "band",
+          "role": "band2",
+          "rect": [
+            0.0,
+            0.7,
+            1.0,
+            0.115
+          ],
+          "fill": "orange",
+          "opacity": 0.9,
+          "onset": 3.0,
+          "direction": "right"
+        },
+        {
+          "kind": "words",
+          "role": "cap2",
+          "text": "PRODUKCJA NIE STOI.",
+          "size": 60,
+          "color": "ink",
+          "y": 0.737,
+          "onset": 3.15,
+          "stagger": 0.16
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "autoconsumption",
+      "theme": "dark",
+      "duration": 3.64,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "radial-reveal",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "ring",
+          "role": "orbit",
+          "cx": 0.5,
+          "cy": 0.4,
+          "r": 0.3,
+          "width": 8,
+          "color": "purple2",
+          "onset": 1.5,
+          "dur": 0.9,
+          "dots": [
+            {
+              "angle": -65,
+              "color": "amber",
+              "r": 12,
+              "onset": 1.8
+            },
+            {
+              "angle": 35,
+              "color": "purple",
+              "r": 10,
+              "onset": 2.0
+            },
+            {
+              "angle": 150,
+              "color": "amber",
+              "r": 9,
+              "onset": 2.2
+            }
+          ]
+        },
+        {
+          "kind": "count",
+          "role": "stat",
+          "value": 97,
+          "format": {
+            "suffix": "%"
+          },
+          "size": 280,
+          "color": "orange",
+          "y": 0.27,
+          "onset": 1.64,
+          "dur": 0.9
+        },
+        {
+          "kind": "words",
+          "role": "label",
+          "text": "AUTOKONSUMPCJI Z PV",
+          "size": 56,
+          "color": "white",
+          "y": 0.665,
+          "onset": 2.45,
+          "stagger": 0.1
+        },
+        {
+          "kind": "words",
+          "role": "micro",
+          "text": "bez magazynu: 70%",
+          "size": 40,
+          "color": "line",
+          "y": 0.745,
+          "onset": 2.6,
+          "preset": "fade",
+          "uppercase": false,
+          "stagger": 0.1
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "shifted-mwh",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "path",
+          "role": "mark-a",
+          "color": "purple2",
+          "width": 5,
+          "points": [
+            [
+              0.1,
+              0.225
+            ],
+            [
+              0.14,
+              0.225
+            ],
+            [
+              0.12,
+              0.205
+            ],
+            [
+              0.12,
+              0.245
+            ]
+          ],
+          "onset": 0.8,
+          "dur": 0.4
+        },
+        {
+          "kind": "path",
+          "role": "mark-b",
+          "color": "purple2",
+          "width": 5,
+          "points": [
+            [
+              0.86,
+              0.225
+            ],
+            [
+              0.9,
+              0.225
+            ],
+            [
+              0.88,
+              0.205
+            ],
+            [
+              0.88,
+              0.245
+            ]
+          ],
+          "onset": 1.0,
+          "dur": 0.4
+        },
+        {
+          "kind": "words",
+          "role": "stat",
+          "text": "11,9 MWh",
+          "size": 190,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.385,
+          "onset": 2.09,
+          "stagger": 0.3,
+          "uppercase": false
+        },
+        {
+          "kind": "words",
+          "role": "label",
+          "text": "ENERGII PRZESUNIĘTEJ W ROKU",
+          "size": 48,
+          "color": "soft",
+          "y": 0.615,
+          "onset": 2.6,
+          "stagger": 0.12
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "strategy-pv-bess",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "kicker",
+          "text": "STRATEGIA 1",
+          "size": 52,
+          "colors": [
+            "white",
+            "white"
+          ],
+          "y": 0.165,
+          "x": 0.1,
+          "align": "left",
+          "onset": 0.05,
+          "stagger": 0.2,
+          "chips": {
+            "0": "purple2"
+          }
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-pv-system-card.webp",
+          "rect": [
+            0.09,
+            0.235,
+            0.82,
+            0.3
+          ],
+          "rotation": 2.0,
+          "onset": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "NADWYŻKA ZE SŁOŃCA",
+          "size": 82,
+          "color": "white",
+          "y": 0.615,
+          "onset": 2.09,
+          "stagger": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ZOSTAJE W FIRMIE.",
+          "size": 82,
+          "color": "orange",
+          "y": 0.715,
+          "onset": 2.75,
+          "stagger": 0.2
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "strategy-standalone",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.42,
+        "direction": "right"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "kicker",
+          "text": "STRATEGIA 2",
+          "size": 52,
+          "colors": [
+            "white",
+            "white"
+          ],
+          "y": 0.165,
+          "x": 0.1,
+          "align": "left",
+          "onset": 0.05,
+          "stagger": 0.2,
+          "chips": {
+            "0": "purple2"
+          }
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-standalone-card.webp",
+          "rect": [
+            0.09,
+            0.235,
+            0.82,
+            0.3
+          ],
+          "rotation": -2.0,
+          "onset": 0.2
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "DZIAŁA TEŻ BEZ PV.",
+          "size": 92,
+          "color": "white",
+          "y": 0.615,
+          "onset": 0.05,
+          "stagger": 0.22
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "prąd kupujesz tanio w nocy.",
+          "size": 46,
+          "color": "line",
+          "y": 0.715,
+          "onset": 1.8,
+          "stagger": 0.16,
+          "preset": "rise",
+          "uppercase": false
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "engineering",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "color-takeover",
+        "duration": 0.5,
+        "color": "#FFF9F1"
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "photo",
+          "role": "photo",
+          "src": "media/bess/bess-system-techniczny.webp",
+          "rect": [
+            0.13,
+            0.175,
+            0.74,
+            0.32
+          ],
+          "rotation": -1.5,
+          "onset": 0.1
+        },
+        {
+          "kind": "ticks",
+          "role": "ticks",
+          "rect": [
+            0.09,
+            0.135,
+            0.82,
+            0.4
+          ],
+          "color": "white",
+          "thickness": 5,
+          "onset": 0.35,
+          "stagger": 0.14
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "POJEMNOŚĆ",
+          "size": 104,
+          "color": "orange",
+          "y": 0.6,
+          "onset": 0.05
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "TO OBLICZENIA.",
+          "size": 104,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.705,
+          "onset": 1.8,
+          "stagger": 0.28
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "proof",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "stat1",
+          "text": "1000+ REALIZACJI.",
+          "size": 96,
+          "colors": [
+            "orange",
+            "white"
+          ],
+          "y": 0.285,
+          "onset": 0.05,
+          "stagger": 0.35
+        },
+        {
+          "kind": "words",
+          "role": "stat2",
+          "text": "80+ MWp MOCY.",
+          "size": 96,
+          "colors": [
+            "orange",
+            "white",
+            "white"
+          ],
+          "y": 0.435,
+          "onset": 1.5,
+          "stagger": 0.28
+        },
+        {
+          "kind": "words",
+          "role": "stat3",
+          "text": "POLISA OC 5 MLN ZŁ.",
+          "size": 62,
+          "color": "white",
+          "y": 0.585,
+          "onset": 2.6,
+          "stagger": 0.1
+        },
+        {
+          "kind": "words",
+          "role": "micro",
+          "text": "własne ekipy · serwis 72h",
+          "size": 40,
+          "color": "line",
+          "y": 0.7,
+          "onset": 2.85,
+          "preset": "fade",
+          "uppercase": false,
+          "stagger": 0.08
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "partner",
+      "theme": "dark",
+      "duration": 4.09,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.45
+      },
+      "elements": [
+        {
+          "kind": "ring",
+          "role": "halo",
+          "cx": 0.86,
+          "cy": 0.18,
+          "r": 0.22,
+          "width": 5,
+          "color": "purple2",
+          "onset": 0.3,
+          "dur": 0.8,
+          "dots": [
+            {
+              "angle": -40,
+              "color": "orange",
+              "r": 10,
+              "onset": 0.8
+            }
+          ]
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "JEDEN PARTNER.",
+          "size": 102,
+          "colors": [
+            "white",
+            "orange"
+          ],
+          "y": 0.37,
+          "onset": 0.05,
+          "stagger": 0.5
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ZERO BIUROKRACJI.",
+          "size": 96,
+          "colors": [
+            "orange",
+            "white"
+          ],
+          "y": 0.545,
+          "onset": 1.9,
+          "stagger": 0.28
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "steps",
+      "theme": "dark",
+      "duration": 4.0,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.5
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "words",
+          "role": "title",
+          "text": "WDROŻENIE W 3 KROKACH",
+          "size": 50,
+          "color": "white",
+          "y": 0.205,
+          "onset": 0.05,
+          "tracking": 2
+        },
+        {
+          "kind": "tag",
+          "role": "step1",
+          "num": "01",
+          "text": "ANALIZA · 3–5 DNI",
+          "rect": [
+            0.08,
+            0.295,
+            0.84,
+            0.105
+          ],
+          "onset": 0.5
+        },
+        {
+          "kind": "tag",
+          "role": "step2",
+          "num": "02",
+          "text": "PROJEKT I FORMALNOŚCI",
+          "rect": [
+            0.08,
+            0.435,
+            0.84,
+            0.105
+          ],
+          "onset": 1.1
+        },
+        {
+          "kind": "tag",
+          "role": "step3",
+          "num": "03",
+          "text": "MONTAŻ · 3–5 DNI",
+          "rect": [
+            0.08,
+            0.575,
+            0.84,
+            0.105
+          ],
+          "onset": 1.7
+        }
+      ]
+    },
+    {
+      "type": "pe_editorial",
+      "name": "cta",
+      "theme": "dark",
+      "duration": 7.92,
+      "background": {
+        "kind": "photo",
+        "asset": "media/textures/paper-purple.png",
+        "scrim": 0.0,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.0
+        }
+      },
+      "elements": [
+        {
+          "kind": "pill",
+          "role": "pill",
+          "onset": 0.0
+        },
+        {
+          "kind": "image",
+          "role": "logo",
+          "src": "assets/logo-light-bg.png",
+          "rect": [
+            0.29,
+            0.2,
+            0.42,
+            0.088
+          ],
+          "onset": 0.0,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "line1",
+          "text": "ZAMÓW BEZPŁATNĄ",
+          "size": 88,
+          "color": "white",
+          "y": 0.435,
+          "onset": 0.6,
+          "stagger": 0.22
+        },
+        {
+          "kind": "words",
+          "role": "line2",
+          "text": "ANALIZĘ BESS.",
+          "size": 104,
+          "color": "orange",
+          "y": 0.535,
+          "onset": 1.0,
+          "stagger": 0.22
+        },
+        {
+          "kind": "panel",
+          "role": "cta-pill",
+          "rect": [
+            0.14,
+            0.655,
+            0.72,
+            0.08
+          ],
+          "fill": "orange",
+          "r": 80,
+          "shadow": true,
+          "onset": 3.91,
+          "preset": "pop"
+        },
+        {
+          "kind": "words",
+          "role": "phone",
+          "text": "+48 63 220 78 15",
+          "size": 64,
+          "color": "ink",
+          "y": 0.674,
+          "onset": 4.1,
+          "stagger": 0.12
+        },
+        {
+          "kind": "words",
+          "role": "site",
+          "text": "pure-energy.com.pl · biuro@pure-energy.com.pl",
+          "size": 40,
+          "color": "line",
+          "y": 0.8,
+          "onset": 4.7,
+          "preset": "fade",
+          "uppercase": false
+        }
+      ]
+    }
+  ],
+  "audio": {
+    "music": {
+      "file": "media/audio/audioera-stylish-trailer-percussion-622881.mp3",
+      "volume": 0.92,
+      "fade_out": 1.4
+    }
+  }
+}

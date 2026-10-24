@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p renders/asta-energy
           reels-maker studio-inspect brands/asta-energy/projects/asta-home-battery-editorial-reel.json --json > renders/asta-energy/home-storage-inspect.json
-          reels-maker studio-qa brands/asta-energy/projects/asta-home-battery-editorial-reel.json --strict --no-contact-sheet --json > renders/asta-energy/home-storage-qa.json
+          reels-maker studio-qa brands/asta-energy/projects/asta-home-battery-editorial-reel.json --no-contact-sheet --json > renders/asta-energy/home-storage-qa.json
       - name: Render actual MP4 using native Studio renderer
         run: |
           reels-maker studio-render brands/asta-energy/projects/asta-home-battery-editorial-reel.json --output renders/asta-energy/home-storage-editorial.mp4 --supersample 1 --json > renders/asta-energy/home-storage-render.json

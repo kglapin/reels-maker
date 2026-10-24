@@ -20,7 +20,9 @@ from ..core.scene_graph import collect_qa_elements, Node
 from ..core.timeline import Timeline
 from ..design.color import contrast_ratio, relative_luminance
 from ..design.tokens import DesignTokens
-from ..design.typography_policy import audit_typography_blocks, audit_typography_tokens
+from ..design.typography_policy import (
+    audit_typography_blocks, audit_typography_spacing, audit_typography_tokens,
+)
 from ..motionkit.choreography import variety_report
 from ..core.transforms import Affine2D, Space
 from ..textkit.safe_geometry import SafePolygon, check_text_block
@@ -223,6 +225,12 @@ def audit(project, built_scenes, timeline: Timeline, *,
         # Enforce typography policy on the real typeset/ink geometry, not guessed copy lengths.
         for finding in audit_typography_blocks(
                 _text_blocks(root), width=project.width, height=project.height):
+            scene_issues.append(Issue(
+                finding["code"], finding["severity"], finding["message"],
+                built.index + 1, None, [finding["role"]], finding["suggestion"]))
+        for finding in audit_typography_spacing(
+                ((node.role, node.meta.get("bounds")) for node in built.elements.values()),
+                width=project.width, height=project.height):
             scene_issues.append(Issue(
                 finding["code"], finding["severity"], finding["message"],
                 built.index + 1, None, [finding["role"]], finding["suggestion"]))
@@ -842,6 +850,12 @@ def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6
     # Reuse measured type rules in storyboard candidate QA and layout repair.
     for finding in audit_typography_blocks(
             _text_blocks(Node(kind="group", children=built.at(0.0))),
+            width=built.context.width, height=built.context.height):
+        issues.append(Issue(
+            finding["code"], finding["severity"], finding["message"],
+            built.index + 1, None, [finding["role"]], finding["suggestion"]))
+    for finding in audit_typography_spacing(
+            ((node.role, node.meta.get("bounds")) for node in built.elements.values()),
             width=built.context.width, height=built.context.height):
         issues.append(Issue(
             finding["code"], finding["severity"], finding["message"],

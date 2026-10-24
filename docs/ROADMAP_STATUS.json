@@ -7,7 +7,7 @@
   "branch_up_to_date": false,
   "worktree_clean": true,
   "draft_pr_state": "PR #1 is MERGED; Plan 2.0 work is local on master-plan-2 and has not been pushed or opened as a PR",
-  "ci_status": "Workflow is triggered on main. Run 40062639538 on a2a6780 failed: 33 errors from absent LFS media, missing .venv subprocess entry point, and one cross-aspect calendar font fit. Local safeguards address these; fresh main run pending.",
+  "ci_status": "Workflow is triggered on main. Run 40062639538 failed on absent LFS media, missing .venv subprocess entry point, and cross-aspect calendar font fit; run 40063518799 passed syntax/brandbook but had one remaining LFS-dependent atomic-render test. Added a targeted skip guard for that test; fresh run after push is pending.",
   "local_tests": "362 tests run in 25.737s: 356 passed, 6 skipped because LFS media/golden review assets are unavailable; the full installed-environment suite passes. Existing golden-frame ResourceWarnings and Pillow deprecations are non-fatal.",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",

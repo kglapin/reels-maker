@@ -155,6 +155,10 @@ class FailureRecoveryTests(unittest.TestCase):
         self.brand_dir = self.repo_root / "brands/asta-energy"
         self.cache_dir = self.repo_root / ".cache" / "reels-maker"
 
+    @unittest.skipUnless(has_real_media(
+        Path(__file__).resolve().parents[1]
+        / "brands/asta-energy/media/footage/2_dron-pv-dla-firm-asta.mp4"),
+        "Atomic render fixture uses LFS media unavailable in offline CI")
     def test_atomic_output_preserves_previous_render(self):
         """PERF-06: A failed render does not corrupt the previous output."""
         project = load_project(

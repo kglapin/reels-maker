@@ -324,6 +324,9 @@ class SceneRenderer:
         if kind == "video":
             self._video(target, node, dx, dy)
             return
+        if kind == "mesh3d":
+            self._mesh3d(target, node, dx, dy)
+            return
         if kind == "text":
             block = props["block"]
             cv.text_block(target, block, (props["x"] + dx, props["y"] + dy),
@@ -422,6 +425,20 @@ class SceneRenderer:
             radius=float(props.get("radius", 0.0)) * s,
         )
         target.alpha_composite(masked, (int(x), int(y)))
+
+    def _mesh3d(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
+        from ..creative.pipeline import render_3d_product_frame
+
+        s = self.ss
+        props = node.props
+        x, y = int(round((props["x"] + dx) * s)), int(round((props["y"] + dy) * s))
+        w, h = int(max(4, round(props["w"] * s))), int(max(4, round(props["h"] * s)))
+        rendered = render_3d_product_frame(
+            dict(props.get("spec") or {}),
+            w, h,
+            time=float(props.get("playback_time", 0.0)),
+        )
+        target.alpha_composite(rendered, (x, y))
 
     # -------------------------------------------------------------- transitions
     def _transition(self, image: Image.Image, name: str, time: float,

@@ -164,22 +164,52 @@ class RotationalTypographyTests(unittest.TestCase):
         from reels_maker.textkit.typesetter import FontBook, TextStyle
 
         with tempfile.TemporaryDirectory() as tmp:
-            img_path = Path(tmp) / "frame.png"
-            Image.new("RGB", (200, 200), (40, 140, 60)).save(img_path)
+            import subprocess
+            # Generate a real 2s MP4 clip whose first 1s is red and second 1s is blue
+            vid_path = Path(tmp) / "color_shift.mp4"
+            subprocess.run([
+                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "-f", "lavfi", "-i", "color=c=red:s=160x160:r=10:d=1",
+                "-f", "lavfi", "-i", "color=c=blue:s=160x160:r=10:d=1",
+                "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(vid_path),
+            ], check=True)
             vnode = video_node(
-                "clip", str(img_path), Rect(20, 30, 160, 160),
-                trim_start=0.2, trim_end=1.8, crop=(0.1, 0.1, 0.9, 0.9),
+                "clip", str(vid_path), Rect(20, 30, 160, 160),
+                trim_start=0.0, trim_end=1.9, crop=(0.1, 0.1, 0.9, 0.9),
                 mask="circle",
             )
-            sampled = vnode.sample(0.5)
-            self.assertAlmostEqual(sampled.props["playback_time"], 0.5)
-            self.assertEqual(sampled.base_bounds(), (20.0, 30.0, 180.0, 190.0))
-            frame = load_video_frame(img_path, 0.5, trim_start=0.2, trim_end=1.8)
-            cropped = crop_region(frame, (0.1, 0.1, 0.9, 0.9))
+            sampled_early = vnode.sample(0.2)
+            sampled_late = vnode.sample(1.3)
+            self.assertAlmostEqual(sampled_early.props["playback_time"], 0.2)
+            self.assertAlmostEqual(sampled_late.props["playback_time"], 1.3)
+            frame_early = load_video_frame(vid_path, 0.2, trim_start=0.0, trim_end=1.9)
+            frame_late = load_video_frame(vid_path, 1.3, trim_start=0.0, trim_end=1.9)
+            r_early, _, b_early, _ = frame_early.getpixel((80, 80))
+            r_late, _, b_late, _ = frame_late.getpixel((80, 80))
+            self.assertGreater(r_early, b_early + 80)
+            self.assertGreater(b_late, r_late + 80)
+            cropped = crop_region(frame_early, (0.1, 0.1, 0.9, 0.9))
             masked = apply_shape_mask(cropped, "circle")
             self.assertEqual(masked.mode, "RGBA")
-            # Corner pixel of circle mask is transparent
             self.assertEqual(masked.getpixel((0, 0))[3], 0)
+
+            # Verify CameraCanvasRenderer dynamically updates video frames over time
+            from types import SimpleNamespace
+            from reels_maker.renderers.camera_canvas import CameraCanvasRenderer
+            cc_proj = SimpleNamespace(
+                width=240, height=320,
+                scenes=[{
+                    "video": str(vid_path),
+                    "headline": "Ruchome wideo",
+                    "duration": 2.0,
+                    "camera_canvas": {"x": 300, "y": 300, "angle": 0, "zoom": 1.0, "layout": "photo-above"},
+                }],
+            )
+            cc_renderer = CameraCanvasRenderer(cc_proj)
+            cc_early = cc_renderer.render(SimpleNamespace(index=0), 0.2)
+            cc_late = cc_renderer.render(SimpleNamespace(index=0), 1.3)
+            self.assertNotEqual(cc_early.tobytes(), cc_late.tobytes())
 
         bg = Node(kind="rect", props={"x": 0, "y": 0, "w": 100, "h": 100})
         fg = Node(kind="rect", props={"x": 20, "y": 20, "w": 40, "h": 40})

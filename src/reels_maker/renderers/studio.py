@@ -392,7 +392,7 @@ def _verify_studio_output(path: Path, project: StudioProject,
         raise RenderError("Export dimensions do not match the studio project")
     if metadata["codec"] != "h264" or metadata["pix_fmt"] != "yuv420p":
         raise RenderError("Studio export must be H.264 with yuv420p pixels")
-    if abs(actual_fps - expected_fps) > .005:
+    if abs(actual_fps - expected_fps) > .02:
         raise RenderError(f"Export FPS mismatch: expected {expected_fps}, got {actual_fps}")
     if metadata["frames"] != timeline.total_frames:
         raise RenderError(

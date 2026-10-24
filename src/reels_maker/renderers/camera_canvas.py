@@ -76,7 +76,7 @@ class CameraCanvasRenderer:
                 return ImageFont.truetype(p,size)
         return ImageFont.load_default()
 
-    def _tile(self,scene,photo):
+    def _tile(self,scene,photo,playback_time: float | None = None):
         w,h=self.w,self.h
         tile=Image.new("RGBA",(w,h),(0,0,0,0))
         layout=scene["camera_canvas"].get("layout","photo-above")
@@ -90,9 +90,14 @@ class CameraCanvasRenderer:
             asset_path = scene.get("video") or scene.get("photo")
             path=Path(asset_path)
             if not path.is_file(): raise ValueError(f"Missing photo: {path}")
+            sample_t = (
+                float(playback_time)
+                if playback_time is not None and scene.get("video")
+                else float(cfg.get("sample_time", 0.0))
+            )
             source = cv.load_video_frame(
                 path,
-                float(cfg.get("sample_time", 0.0)),
+                sample_t,
                 trim_start=float(cfg.get("trim_start", 0.0)),
                 trim_end=cfg.get("trim_end"),
             )
@@ -157,7 +162,17 @@ class CameraCanvasRenderer:
         duration=float(cfg.get("reveal_duration",.55))
         p=ease((time-move-delay)/duration)
         stop=self.camera(i,time)
-        base=self._frame(self.stages[i],stop)
+        stage_world = self.stages[i]
+        if self.scenes[i].get("video"):
+            stage_world = stage_world.copy()
+            live_tile = self._tile(self.scenes[i], photo=True, playback_time=time)
+            self._paste(stage_world, live_tile, self.stops[i])
+        base=self._frame(stage_world,stop)
+        if cfg.get("motion_blur") and i > 0 and time < move:
+            prev_stop = self.stops[i - 1]
+            cur_stop = self.stops[i]
+            vel = math.hypot(cur_stop[0] - prev_stop[0], cur_stop[1] - prev_stop[1]) / max(0.05, move)
+            base = apply_camera_motion_blur(base, vel * 0.08)
         if p<=0:return base.convert("RGB")
 
         # At reveal time camera is settled. Typography is drawn in the

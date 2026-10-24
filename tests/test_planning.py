@@ -190,18 +190,20 @@ class PlanningBriefTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             _brand(root, "energy", {"pv-aerial": "clean_source"})
-            brief = _brief("energy", duration=12.0)
+            brief = _brief("energy", duration=8.0)
+            brief["fps"] = 12
             pv_story = credible_data_story_examples()["pv_generation_annual"]["scenes"]
             out_mp4 = root / "renders" / "e2e.mp4"
             e2e = run_end_to_end_delivery(
                 brief, root=root, output_mp4=out_mp4,
-                extra_data_scenes=pv_story, render=False,
+                extra_data_scenes=pv_story, render=True,
             )
             self.assertTrue(e2e["ok"])
+            self.assertTrue(out_mp4.is_file())
+            self.assertEqual(e2e["probe"]["codec"], "h264")
             self.assertEqual(len(e2e["provenance_ledger"]["data_provenance"]), 1)
 
             project = load_studio(Path(e2e["manifest_path"]), root=root)
-            # Render a fast 1-scene project across portrait/square/landscape matrix
             from dataclasses import replace
             mini_project = replace(project, scenes=project.scenes[:1])
             matrix = render_master_format_matrix(

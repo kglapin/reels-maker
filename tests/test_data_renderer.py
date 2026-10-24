@@ -417,10 +417,27 @@ class DataRendererTests(unittest.TestCase):
                 b = build_scene(ctx, sc)
                 self.assertEqual(audit_data_scene(b), [])
 
-        # DM-104: morph_chart_scenes
+        # DM-104: morph_chart_scenes builds a renderable Studio chart_morph scene and encodes to MP4
         camp_scenes = stories["campaign_conversion_lookup"]["scenes"]
-        morph = morph_chart_scenes(camp_scenes[0], camp_scenes[1])
+        morph = morph_chart_scenes(camp_scenes[0], camp_scenes[1], duration=2.0)
         self.assertTrue(morph["conservation_verified"])
+        self.assertEqual(morph["type"], "chart_morph")
+        built_morph = build_scene(ctx, morph)
+        self.assertEqual(audit_data_scene(built_morph), [])
+        with tempfile.TemporaryDirectory(prefix="chart-morph-mp4-") as temp:
+            root = Path(temp)
+            w_m, h_m, fps_m = 360, 640, 15
+            tok_m = resolve_tokens("editorial-premium", width=w_m, height=h_m)
+            proj_m = StudioProject(
+                path=root / "morph.json", root=root, name="Chart morph",
+                width=w_m, height=h_m, fps=fps_m, style="editorial-premium",
+                scenes=[morph], brand=None, brand_data={}, audio={},
+                export={"codec": "libx264", "crf": 26, "preset": "ultrafast"},
+                tokens=tok_m, fonts=ctx.fonts, asset_manager=None,
+            )
+            out_morph = root / "morph.mp4"
+            rep_m = render_studio(proj_m, output=out_morph, supersample=1)
+            self.assertEqual(rep_m["export_quality"]["status"], "pass")
 
         # DM-105, DM-106, DM-107
         preset = resolve_domain_preset("pv")

@@ -108,18 +108,29 @@ class CreativePipelineTests(unittest.TestCase):
 
     def test_f5_director_revisions_and_f6_contracts(self):
         import copy
+        import tempfile
+        from pathlib import Path
+        from PIL import Image
         from reels_maker.audiokit.cues import plan_audio_dramaturgy, plan_beat_cue_mix
+        from reels_maker.components.base import SceneContext
+        from reels_maker.components.scenes import build_scene
         from reels_maker.creative.director import (
             PreferenceLibrary, generate_and_select_storyboard,
             match_reference_rhythm, rank_video_sources,
         )
         from reels_maker.creative.edit import apply_natural_language_revision
         from reels_maker.creative.pipeline import (
-            build_review_portal_bundle, plan_render_farm_batch,
-            validate_3d_product_scene, validate_depth_composite,
+            build_review_portal_bundle, composite_depth_layers,
+            execute_render_farm_batch, plan_render_farm_batch,
+            render_3d_product_frame, validate_3d_product_scene,
+            validate_depth_composite, write_review_portal_html,
+            write_scene_graph_inspector_html,
         )
+        from reels_maker.design.tokens import resolve_tokens
+        from reels_maker.studio import StudioProject
+        from reels_maker.textkit.typesetter import FontBook
 
-        # MD-505, MD-506, MD-507, MD-508, MD-509, MD-510
+        # MD-505, MD-506, MD-507, MD-508 (with real rendered contact sheets), MD-509, MD-510
         rhythm = match_reference_rhythm([3.2, 2.7, 3.5])
         self.assertTrue(rhythm["has_pacing_contrast"])
         ranked = rank_video_sources([
@@ -133,9 +144,78 @@ class CreativePipelineTests(unittest.TestCase):
         mix_plan = plan_beat_cue_mix([3.0, 3.0], bpm=120.0, voiceover_segments=[(0.5, 2.5)])
         self.assertTrue(mix_plan["buses"]["music"]["sidechain_ducked"])
 
-        sb = generate_and_select_storyboard(spec())
-        self.assertEqual(len(sb["candidates"]), 3)
-        self.assertIn(sb["selected_storyboard_id"], {c["storyboard_id"] for c in sb["candidates"]})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sb = generate_and_select_storyboard(spec(), output_dir=str(root / "storyboards"))
+            self.assertEqual(len(sb["candidates"]), 3)
+            for cand in sb["candidates"]:
+                self.assertEqual(cand["rendered_frames_measured"], 2)
+                self.assertGreater(cand["pixel_contrast_score"], 0.0)
+                self.assertTrue(Path(cand["contact_sheet"]).is_file())
+
+            # MD-601: real 3D mesh perspective + 3-point lighting renderer
+            obj_file = root / "cube.obj"
+            obj_file.write_text(
+                "v -0.6 -0.8 -0.4\nv 0.6 -0.8 -0.4\nv 0.6 0.8 -0.4\nv -0.6 0.8 -0.4\n"
+                "v -0.6 -0.8 0.4\nv 0.6 -0.8 0.4\nv 0.6 0.8 0.4\nv -0.6 0.8 0.4\n"
+                "f 5 6 7 8\nf 2 1 4 3\nf 6 2 3 7\nf 1 5 8 4\n",
+                encoding="utf-8",
+            )
+            spec_3d = {
+                "mesh_path": str(obj_file),
+                "camera": {"focal_length_mm": 50.0, "turntable_deg_per_s": 45.0},
+                "lighting": {"key_light": {}, "fill_light": {}, "rim_light": {}},
+            }
+            f3d_0 = render_3d_product_frame(spec_3d, 200, 200, time=0.0)
+            f3d_1 = render_3d_product_frame(spec_3d, 200, 200, time=0.8)
+            self.assertIsNotNone(f3d_0.getbbox())
+            self.assertNotEqual(f3d_0.tobytes(), f3d_1.tobytes())
+
+            # MD-602: real depth-map compositor
+            fg = Image.new("RGBA", (120, 120), (40, 200, 80, 255))
+            bg = Image.new("RGBA", (120, 120), (20, 30, 50, 255))
+            dmap = Image.new("L", (120, 120), 220)
+            badge = Image.new("RGBA", (30, 30), (255, 200, 0, 255))
+            comp_depth = composite_depth_layers(fg, bg, dmap, tracked_badge=badge)
+            self.assertEqual(comp_depth.size, (120, 120))
+
+            # MD-603 & MD-604: interactive HTML5/SVG apps
+            tokens = resolve_tokens("editorial-premium", width=360, height=640)
+            fonts = FontBook()
+            ctx = SceneContext(360, 640, 15, 1.5, tokens, "editorial-premium", fonts)
+            built_3d = build_scene(ctx, {"type": "product_3d", "duration": 1.5, "headline": "INWERTER 3D", "product_3d": spec_3d})
+            html_ins = write_scene_graph_inspector_html([built_3d], root / "inspector.html")
+            self.assertIn("motion-viewport", Path(html_ins["output_html"]).read_text(encoding="utf-8"))
+
+            portal = build_review_portal_bundle(
+                "asta-demo",
+                renders={"v1": "renders/v1.mp4", "v2": "renders/v2.mp4"},
+                comments=[{"shot": 1, "timecode_s": 1.2, "text": "Approved", "resolved": True}],
+                release_version="2.0.0-rc1",
+            )
+            html_rev = write_review_portal_html(portal, root / "portal.html")
+            self.assertIn("ab-slider", Path(html_rev["output_html"]).read_text(encoding="utf-8"))
+
+            # MD-605: execute_render_farm_batch with shared segment cache
+            p1 = StudioProject(
+                path=root / "j1.json", root=root, name="job-1",
+                width=360, height=640, fps=15, style="editorial-premium",
+                scenes=[{"headline": "WSPÓLNY KADR", "duration": 1.2}],
+                brand="asta", brand_data={}, audio={},
+                export={"codec": "libx264", "crf": 26, "preset": "ultrafast"},
+                tokens=tokens, fonts=fonts, asset_manager=None,
+            )
+            p2 = StudioProject(
+                path=root / "j2.json", root=root, name="job-2",
+                width=360, height=640, fps=15, style="editorial-premium",
+                scenes=[{"headline": "WSPÓLNY KADR", "duration": 1.2}],
+                brand="asta", brand_data={}, audio={},
+                export={"codec": "libx264", "crf": 26, "preset": "ultrafast"},
+                tokens=tokens, fonts=fonts, asset_manager=None,
+            )
+            batch_res = execute_render_farm_batch([p1, p2], root / "farm", budget_usd=2.0)
+            self.assertTrue(batch_res["ok"])
+            self.assertEqual(batch_res["completed_jobs"][1]["cache_hits"], 1)
 
         prefs = PreferenceLibrary()
         with self.assertRaisesRegex(ValueError, "unlicensed"):
@@ -158,37 +238,14 @@ class CreativePipelineTests(unittest.TestCase):
         self.assertEqual(rev_rep["cache_preserved_shot_ids"], ["close"])
         self.assertEqual(rev_rep["cache_invalidated_shot_ids"], ["open"])
 
-        # MD-601..605
         with self.assertRaisesRegex(ValueError, "planar"):
             validate_3d_product_scene({"simulated_planar_rotation": True})
-        ok_3d = validate_3d_product_scene({
-            "mesh_path": "models/inverter.glb",
-            "camera": {"focal_length_mm": 50.0},
-            "lighting": {"key_light": {}, "fill_light": {}, "rim_light": {}},
-        })
-        self.assertTrue(ok_3d["ok"])
-
         ok_depth = validate_depth_composite({
             "depth_model": "depth-anything-v2-Metric-Indoor",
             "depth_map_sha256": "a" * 64,
             "occlusion_mask": "masks/fg.png",
         })
         self.assertTrue(ok_depth["ok"])
-
-        portal = build_review_portal_bundle(
-            "asta-demo",
-            renders={"v1": "renders/v1.mp4", "v2": "renders/v2.mp4"},
-            comments=[{"shot": 1, "timecode_s": 1.2, "text": "Approved", "resolved": True}],
-            release_version="2.0.0-rc1",
-        )
-        self.assertEqual(portal["approval_state"], "ready_for_signoff")
-
-        farm = plan_render_farm_batch([
-            {"id": "j1", "brand": "asta", "style": "editorial-premium", "duration_s": 15.0},
-            {"id": "j2", "brand": "asta", "style": "editorial-premium", "duration_s": 15.0},
-        ], budget_usd=2.0)
-        self.assertTrue(farm["ok"])
-        self.assertTrue(farm["schedule"][1]["warm_brand_cache"])
 
 
 if __name__ == "__main__":

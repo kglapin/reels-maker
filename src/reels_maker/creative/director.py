@@ -183,42 +183,114 @@ def rank_video_sources(
     return ranked
 
 
-def generate_and_select_storyboard(spec: dict) -> dict:
-    """Generate 3 distinct storyboard candidates and choose the winner with measurable evidence (MD-508)."""
+def generate_and_select_storyboard(
+    spec: dict,
+    *,
+    output_dir: str | None = None,
+) -> dict:
+    """Render and compare 3 distinct storyboard candidates with pixel/QA/rhythm evidence (MD-508)."""
     import copy
+    from pathlib import Path
+    from PIL import Image, ImageStat
+    from ..components.base import SceneContext
+    from ..components.scenes import build_scene
+    from ..design.tokens import resolve_tokens
+    from ..qa.report import _evaluate_built_scene_qa
+    from ..renderers.scene import SceneRenderer
+    from ..textkit.typesetter import FontBook
 
     base_shots = spec.get("shots")
     if not isinstance(base_shots, list) or not base_shots:
         raise ValueError("spec requires non-empty shots")
+    video_cfg = spec.get("video") or {}
+    w = int(video_cfg.get("width", 360))
+    h = int(video_cfg.get("height", 640))
+    fps = int(video_cfg.get("fps", 24))
+    fonts = FontBook()
     variants_cfg = (
-        ("editorial-balanced", "editorial-premium", 1.0),
-        ("kinetic-contrast", "kinetic-advertising", 0.90),
-        ("visual-forward", "editorial-premium", 1.08),
+        ("editorial-balanced", "editorial-premium", 1.0, ("statement", "split-editorial", "stack-center")),
+        ("kinetic-contrast", "kinetic-advertising", 0.90, ("full-bleed-type", "statement", "stack-center")),
+        ("visual-forward", "editorial-premium", 1.08, ("stack-center", "statement", "full-bleed-type")),
     )
     candidates = []
-    for var_id, style_name, dur_scale in variants_cfg:
+    out_root = Path(output_dir) if output_dir else None
+    if out_root is not None:
+        out_root.mkdir(parents=True, exist_ok=True)
+
+    for var_id, style_name, dur_scale, comp_cycle in variants_cfg:
         variant_spec = copy.deepcopy(spec)
         if style_name in ("editorial-premium", "kinetic-advertising"):
             variant_spec["style"] = style_name
         for idx, shot in enumerate(variant_spec["shots"]):
             base_d = float(shot.get("duration", 2.8))
             shot["duration"] = round(max(1.5, min(12.0, base_d * (dur_scale if idx % 2 == 0 else 1.0))), 2)
+            if not shot.get("layout") or shot.get("layout") == "auto":
+                shot["layout"] = comp_cycle[idx % len(comp_cycle)]
         shot_plan = plan_shots(variant_spec)
+        tokens = resolve_tokens(style_name, width=w, height=h)
+        renderer = SceneRenderer(w, h, tokens, fonts)
+
+        qa_errors = 0
+        contrast_samples = []
+        rendered_thumbs: list[Image.Image] = []
+        for idx, (shot, planned) in enumerate(zip(variant_spec["shots"], shot_plan)):
+            dur = float(shot["duration"])
+            ctx = SceneContext(
+                width=w, height=h, fps=fps, duration=dur,
+                tokens=tokens, style=style_name, fonts=fonts, scene_index=idx,
+            )
+            comp = planned["layout"]
+            if comp not in ("statement", "stack-center", "split-editorial", "full-bleed-type"):
+                comp = "stack-center"
+            scene_dict = {
+                "composition": comp,
+                "duration": dur,
+                "headline": str(shot.get("headline", "KADR")),
+                "subtitle": str(shot.get("subtitle", "")),
+                "typography_motion": planned["typography_motion"]
+                if planned["typography_motion"] in PRESETS else "fade-up",
+            }
+            built = build_scene(ctx, scene_dict)
+            issues = _evaluate_built_scene_qa(built, fps=fps, samples_per_scene=3)
+            qa_errors += sum(1 for i in issues if i.severity == "error")
+            frame = renderer.render(built, min(dur, max(0.2, dur * 0.65)))
+            rendered_thumbs.append(frame)
+            luma_std = float(ImageStat.Stat(frame.convert("L")).stddev[0])
+            contrast_samples.append(min(1.0, luma_std / 42.0))
+
+        contact_sheet_path = None
+        if out_root is not None and rendered_thumbs:
+            sheet = Image.new("RGB", (w * len(rendered_thumbs), h))
+            for idx, thumb in enumerate(rendered_thumbs):
+                sheet.paste(thumb, (idx * w, 0))
+            cs_file = out_root / f"{var_id}-storyboard.png"
+            sheet.save(cs_file)
+            contact_sheet_path = str(cs_file)
+
         durations = [float(s["duration"]) for s in variant_spec["shots"]]
         rhythm = match_reference_rhythm(durations, style=style_name)
         unique_layouts = len({p["layout"] for p in shot_plan})
         unique_motions = len({p["typography_motion"] for p in shot_plan})
         variety = min(1.0, (unique_layouts + unique_motions) / max(2, len(shot_plan) * 1.5))
-        evidence_score = round(0.55 * rhythm["rhythm_score"] + 0.45 * variety, 4)
+        pixel_contrast = sum(contrast_samples) / max(1, len(contrast_samples))
+        qa_penalty = 0.35 * min(2, qa_errors)
+        evidence_score = round(
+            max(0.0, 0.40 * rhythm["rhythm_score"] + 0.35 * variety + 0.25 * pixel_contrast - qa_penalty),
+            4,
+        )
         candidates.append({
             "storyboard_id": var_id,
             "style": style_name,
             "plan": shot_plan,
             "rhythm": rhythm,
             "variety_score": round(variety, 4),
+            "pixel_contrast_score": round(pixel_contrast, 4),
+            "rendered_frames_measured": len(rendered_thumbs),
+            "qa_errors": qa_errors,
+            "contact_sheet": contact_sheet_path,
             "evidence_score": evidence_score,
         })
-    candidates.sort(key=lambda c: (-c["evidence_score"], c["storyboard_id"]))
+    candidates.sort(key=lambda c: (c["qa_errors"] > 0, -c["evidence_score"], c["storyboard_id"]))
     winner = candidates[0]
     return {
         "selected_storyboard_id": winner["storyboard_id"],

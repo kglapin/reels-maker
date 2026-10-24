@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .compiler import compile_creative_spec
@@ -412,8 +413,349 @@ def plan_render_farm_batch(
     }
 
 
+def _load_or_build_mesh(mesh_path: str) -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    """Load an .obj mesh from disk if it exists, otherwise build a 3D prism/inverter mesh."""
+    path = Path(mesh_path)
+    if path.suffix.lower() == ".obj" and path.is_file():
+        verts: list[tuple[float, float, float]] = []
+        faces: list[tuple[int, ...]] = []
+        for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = raw.strip()
+            if line.startswith("v "):
+                parts = line.split()[1:4]
+                if len(parts) == 3:
+                    verts.append((float(parts[0]), float(parts[1]), float(parts[2])))
+            elif line.startswith("f "):
+                idxs = [int(tok.split("/")[0]) - 1 for tok in line.split()[1:]]
+                if len(idxs) >= 3 and all(0 <= i < len(verts) for i in idxs):
+                    faces.append(tuple(idxs))
+        if len(verts) >= 4 and faces:
+            return verts, faces
+    # Procedural 3D energy-storage / inverter cabinet prism (width 1.4, height 2.0, depth 0.65)
+    hx, hy, hz = 0.70, 1.00, 0.34
+    verts = [
+        (-hx, -hy, -hz), (hx, -hy, -hz), (hx, hy, -hz), (-hx, hy, -hz),
+        (-hx, -hy, hz), (hx, -hy, hz), (hx, hy, hz), (-hx, hy, hz),
+    ]
+    # Counter-clockwise outward-facing quads
+    faces = [
+        (4, 5, 6, 7),  # front (+Z)
+        (1, 0, 3, 2),  # back (-Z)
+        (5, 1, 2, 6),  # right (+X)
+        (0, 4, 7, 3),  # left (-X)
+        (7, 6, 2, 3),  # top (+Y)
+        (0, 1, 5, 4),  # bottom (-Y)
+    ]
+    return verts, faces
+
+
+def render_3d_product_frame(
+    spec: dict,
+    width: int,
+    height: int,
+    time: float = 0.0,
+) -> "Image.Image":
+    """Perspective-project and 3-point Phong-shade a 3D product mesh at ``time`` (MD-601)."""
+    from PIL import Image, ImageDraw
+    from ..design.color import parse_hex
+
+    validate_3d_product_scene(spec)
+    verts, faces = _load_or_build_mesh(str(spec["mesh_path"]))
+    camera = spec.get("camera") or {}
+    focal_mm = float(camera.get("focal_length_mm", 50.0))
+    sensor_mm = float(camera.get("sensor_width_mm", 36.0))
+    cam_dist = float(camera.get("distance", 3.6))
+    yaw_deg = float(camera.get("yaw_deg", 24.0)) + float(camera.get("turntable_deg_per_s", 32.0)) * float(time)
+    pitch_deg = float(camera.get("pitch_deg", 14.0))
+    yaw, pitch = math.radians(yaw_deg), math.radians(pitch_deg)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+
+    def transform_v(v: tuple[float, float, float]) -> tuple[float, float, float]:
+        x, y, z = v
+        # Rotate around Y (turntable yaw), then around X (pitch)
+        x1, z1 = cy * x + sy * z, -sy * x + cy * z
+        y2, z2 = cp * y - sp * z1, sp * y + cp * z1
+        return (x1, y2, z2)
+
+    t_verts = [transform_v(v) for v in verts]
+    f_px = (focal_mm / max(1.0, sensor_mm)) * min(width, height)
+
+    def project(v: tuple[float, float, float]) -> tuple[float, float, float]:
+        x, y, z = v
+        z_cam = max(0.3, cam_dist - z)
+        u = width / 2.0 + (f_px * x) / z_cam
+        vp = height / 2.0 - (f_px * y) / z_cam
+        return (u, vp, z_cam)
+
+    lights_cfg = spec.get("lighting") or {}
+    default_dirs = {
+        "key_light": ((0.55, 0.65, 0.75), 0.90),
+        "fill_light": ((-0.65, 0.25, 0.55), 0.42),
+        "rim_light": ((0.0, 0.80, -0.75), 0.35),
+    }
+    lights = []
+    for lname, (ddir, dint) in default_dirs.items():
+        lcfg = lights_cfg.get(lname) or {}
+        raw_dir = lcfg.get("direction", ddir)
+        dx, dy, dz = (float(raw_dir[0]), float(raw_dir[1]), float(raw_dir[2]))
+        norm = math.sqrt(dx * dx + dy * dy + dz * dz) or 1.0
+        intensity = float(lcfg.get("intensity", dint))
+        lights.append(((dx / norm, dy / norm, dz / norm), intensity))
+
+    base_rgb = parse_hex(str(spec.get("albedo", "#2E7D32")))
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    # Sort faces back-to-front by camera-space Z (painter's algorithm)
+    face_records = []
+    for f_idx, face in enumerate(faces):
+        pts3 = [t_verts[i] for i in face]
+        # Compute outward normal (v1 - v0) x (v2 - v0)
+        ux, uy, uz = (pts3[1][j] - pts3[0][j] for j in range(3))
+        vx, vy, vz = (pts3[2][j] - pts3[0][j] for j in range(3))
+        nx = uy * vz - uz * vy
+        ny = uz * vx - ux * vz
+        nz = ux * vy - uy * vx
+        n_len = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+        nx, ny, nz = nx / n_len, ny / n_len, nz / n_len
+        proj = [project(p) for p in pts3]
+        mean_z = sum(p[2] for p in proj) / len(proj)
+        # Back-face culling in camera space (camera looks toward -Z in world, +Z toward camera)
+        if nz <= -0.15:
+            continue
+        shade = 0.18
+        for (lx, ly, lz), l_int in lights:
+            ndotl = max(0.0, nx * lx + ny * ly + nz * lz)
+            # Blinn-Phong half-vector with view = (0, 0, 1)
+            hx_v, hy_v, hz_v = lx, ly, lz + 1.0
+            h_len = math.sqrt(hx_v * hx_v + hy_v * hy_v + hz_v * hz_v) or 1.0
+            ndoth = max(0.0, (nx * hx_v + ny * hy_v + nz * hz_v) / h_len)
+            spec_term = (ndoth ** 20) * 0.28
+            shade += l_int * (0.78 * ndotl + spec_term)
+        rgb = tuple(max(0, min(255, round(c * min(1.35, shade)))) for c in base_rgb)
+        poly2d = [(p[0], p[1]) for p in proj]
+        face_records.append((mean_z, poly2d, rgb))
+
+    face_records.sort(key=lambda r: -r[0])
+    for _, poly2d, rgb in face_records:
+        draw.polygon(poly2d, fill=(*rgb, 255), outline=(20, 32, 24, 220))
+    return img
+
+
+def composite_depth_layers(
+    foreground: "Image.Image",
+    background: "Image.Image",
+    depth_map: "Image.Image",
+    *,
+    depth_model: str = "depth-anything-v2-Metric-Indoor",
+    focal_depth: float = 0.72,
+    blur_radius: float = 3.5,
+    parallax_dx: float = 14.0,
+    parallax_dy: float = -6.0,
+    tracked_badge: "Image.Image | None" = None,
+    track_anchor: tuple[int, int] = (60, 60),
+    badge_depth: float = 0.60,
+) -> "Image.Image":
+    """Composite foreground/background with per-pixel Z-depth DoF, parallax and occlusion (MD-602)."""
+    from PIL import Image, ImageChops, ImageFilter
+
+    if depth_model not in APPROVED_DEPTH_MODELS:
+        raise ValueError(f"Unapproved depth model {depth_model!r}")
+    w, h = background.size
+    fg = foreground.convert("RGBA").resize((w, h))
+    bg = background.convert("RGBA")
+    dmap = depth_map.convert("L").resize((w, h))
+
+    # Blur background for shallow depth of field
+    blurred_bg = bg.filter(ImageFilter.GaussianBlur(radius=max(0.5, float(blur_radius))))
+    # Displace foreground and background proportionally to depth
+    fg_shifted = ImageChops.offset(fg, int(round(parallax_dx)), int(round(parallax_dy)))
+    fg_shifted_dmap = ImageChops.offset(dmap, int(round(parallax_dx)), int(round(parallax_dy)))
+
+    composed = blurred_bg.copy()
+    if tracked_badge is not None:
+        bx = int(round(track_anchor[0] + parallax_dx * badge_depth))
+        by = int(round(track_anchor[1] + parallax_dy * badge_depth))
+        badge_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        badge_layer.alpha_composite(tracked_badge.convert("RGBA"), (bx, by))
+        # Occlude badge wherever foreground depth exceeds badge_depth
+        threshold = int(round(badge_depth * 255))
+        fg_occluder = fg_shifted_dmap.point(lambda v: 0 if v > threshold else 255)
+        badge_layer.putalpha(ImageChops.multiply(badge_layer.getchannel("A"), fg_occluder))
+        composed.alpha_composite(badge_layer)
+
+    near_mask = fg_shifted_dmap.point(lambda v: 255 if v >= int(focal_depth * 180) else int(v * 0.6))
+    fg_masked = fg_shifted.copy()
+    fg_masked.putalpha(ImageChops.multiply(fg_shifted.getchannel("A"), near_mask))
+    composed.alpha_composite(fg_masked)
+    return composed
+
+
+def write_scene_graph_inspector_html(
+    built_scenes: list,
+    output_html: str | Path,
+) -> dict:
+    """Write a self-contained interactive HTML5 + SVG motion-path editor and inspector (MD-603)."""
+    import html as html_mod
+
+    payload = export_scene_graph_inspector(built_scenes)
+    out_path = Path(output_html).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    svg_paths = []
+    rows_html = []
+    for sc in payload["scenes"]:
+        for node in sc["nodes"]:
+            role_esc = html_mod.escape(str(node["role"]))
+            kind_esc = html_mod.escape(str(node["kind"]))
+            track_names = ", ".join(sorted(node["tracks"])) or "static"
+            rows_html.append(
+                f"<tr data-scene='{sc['scene_index']}' data-role='{role_esc}'>"
+                f"<td>{sc['scene_index']}</td><td>{role_esc}</td><td>{kind_esc}</td>"
+                f"<td>{html_mod.escape(track_names)}</td></tr>"
+            )
+            if node["motion_path_svg"]:
+                svg_paths.append(
+                    f"<path d='{html_mod.escape(node['motion_path_svg'])}' "
+                    f"data-role='{role_esc}' fill='none' stroke='#47A013' stroke-width='2.5'/>"
+                )
+    doc = (
+        "<!DOCTYPE html><html lang='pl'><head><meta charset='utf-8'/>"
+        "<title>Reels Maker — Motion Path & Scene Graph Inspector</title>"
+        "<style>body{font-family:system-ui,sans-serif;margin:24px;background:#0E1A13;color:#F2F5F0}"
+        ".grid{display:grid;grid-template-columns:380px 1fr;gap:24px}"
+        "svg{background:#14241B;border:1px solid #2C4637;border-radius:12px;width:100%;height:420px}"
+        "table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #24382C;text-align:left}"
+        "</style></head><body>"
+        "<h1>Scene Graph &amp; Editable Motion Path Inspector</h1>"
+        "<label>Timeline scrubber: <input id='scrubber' type='range' min='0' max='100' value='50'/></label>"
+        "<div class='grid'>"
+        f"<svg id='motion-viewport' viewBox='-120 -120 360 360'>{''.join(svg_paths)}</svg>"
+        f"<div><table><thead><tr><th>Scena</th><th>Rola</th><th>Typ</th><th>Tory</th></tr></thead>"
+        f"<tbody>{''.join(rows_html)}</tbody></table></div></div>"
+        f"<script id='scene-graph-data' type='application/json'>{json.dumps(payload)}</script>"
+        "</body></html>"
+    )
+    out_path.write_text(doc, encoding="utf-8")
+    return {"output_html": str(out_path), "scene_count": len(payload["scenes"]), "payload": payload}
+
+
+def write_review_portal_html(
+    bundle: dict,
+    output_html: str | Path,
+) -> dict:
+    """Write an interactive HTML5 collaboration/approval portal with A/B comparison slider (MD-604)."""
+    import html as html_mod
+
+    out_path = Path(output_html).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    slider = bundle.get("comparison_slider") or {}
+    comments_rows = "".join(
+        f"<tr><td>#{int(c['shot'])}</td><td>{float(c['timecode_s']):.2f}s</td>"
+        f"<td>{html_mod.escape(str(c['author']))}</td>"
+        f"<td>{html_mod.escape(str(c['text']))}</td>"
+        f"<td>{'RESOLVED' if c.get('resolved') else 'OPEN'}</td></tr>"
+        for c in (bundle.get("shot_comments") or [])
+    )
+    doc = (
+        "<!DOCTYPE html><html lang='pl'><head><meta charset='utf-8'/>"
+        f"<title>Review Portal — {html_mod.escape(str(bundle.get('project', '')))}</title>"
+        "<style>body{font-family:system-ui,sans-serif;margin:24px;background:#101814;color:#F4F7F5}"
+        ".badge{padding:4px 10px;border-radius:6px;background:#47A013;display:inline-block}"
+        "table{width:100%;border-collapse:collapse;margin-top:16px}th,td{padding:8px;border-bottom:1px solid #26382E}"
+        "</style></head><body>"
+        f"<h1>Portal Akceptacji: {html_mod.escape(str(bundle.get('project', '')))} "
+        f"<span class='badge'>{html_mod.escape(str(bundle.get('approval_state', '')))}</span></h1>"
+        "<section id='ab-comparison'>"
+        f"<p>Porównanie A/B: <strong>{html_mod.escape(str(slider.get('left_variant', 'A')))}</strong> vs "
+        f"<strong>{html_mod.escape(str(slider.get('right_variant', 'B')))}</strong></p>"
+        "<input id='ab-slider' type='range' min='0' max='100' value='50'/>"
+        "</section>"
+        "<table><thead><tr><th>Ujęcie</th><th>Czas</th><th>Autor</th><th>Komentarz</th><th>Status</th></tr></thead>"
+        f"<tbody>{comments_rows}</tbody></table>"
+        f"<script id='review-bundle-data' type='application/json'>{json.dumps(bundle)}</script>"
+        "</body></html>"
+    )
+    out_path.write_text(doc, encoding="utf-8")
+    return {"output_html": str(out_path), "approval_state": bundle.get("approval_state")}
+
+
+def detect_hardware_h264_encoder() -> str:
+    """Probe FFmpeg for available GPU/hardware H.264 encoders, falling back to libx264 (MD-605)."""
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True, text=True, check=False, timeout=5,
+        )
+        out = proc.stdout or ""
+        for hw in ("h264_nvenc", "h264_videotoolbox", "h264_vaapi"):
+            if hw in out:
+                return hw
+    except Exception:
+        pass
+    return "libx264"
+
+
+def execute_render_farm_batch(
+    projects: list,
+    output_dir: str | Path,
+    *,
+    budget_usd: float = 5.0,
+) -> dict:
+    """Schedule and execute a batch of StudioProject renders with shared warm segment caching (MD-605)."""
+    from ..renderers.studio import probe_output, render_studio
+
+    if not projects:
+        raise ValueError("projects must not be empty")
+    out_root = Path(output_dir).resolve()
+    out_root.mkdir(parents=True, exist_ok=True)
+    cache_dir = out_root / ".segment-cache"
+    jobs_spec = [
+        {
+            "id": p.name,
+            "brand": p.brand or "default",
+            "style": p.style,
+            "duration_s": p.timeline().duration,
+        }
+        for p in projects
+    ]
+    plan = plan_render_farm_batch(jobs_spec, budget_usd=budget_usd)
+    hw_encoder = detect_hardware_h264_encoder()
+    by_id = {p.name: p for p in projects}
+    completed = []
+    for item in plan["schedule"]:
+        proj = by_id[item["job_id"]]
+        dest = out_root / f"{proj.name}.mp4"
+        # Share segment cache across jobs in the same (brand, style) group
+        from dataclasses import replace as _replace
+        shared_proj = _replace(proj, name=f"{proj.brand or 'default'}-{proj.style}")
+        rep = render_studio(shared_proj, output=dest, cache_dir=cache_dir, supersample=1)
+        probed = probe_output(dest)
+        completed.append({
+            **item,
+            "output_mp4": str(dest),
+            "cache_hits": rep["cache_hits"],
+            "cache_misses": rep["cache_misses"],
+            "render_seconds": rep["render_seconds"],
+            "frames": probed["frames"],
+            "export_status": rep["export_quality"]["status"],
+        })
+    return {
+        "ok": all(c["export_status"] == "pass" for c in completed),
+        "hardware_encoder_detected": hw_encoder,
+        "cache_dir": str(cache_dir),
+        "plan": plan,
+        "completed_jobs": completed,
+    }
+
+
 __all__ = ["CreativeIntent", "MotionDecision", "MotionPlan", "RenderScene",
            "RenderGraph", "creative_intent", "plan_motion", "render_graph",
-           "validate_3d_product_scene", "validate_depth_composite",
-           "export_scene_graph_inspector", "build_review_portal_bundle",
-           "plan_render_farm_batch"]
+           "validate_3d_product_scene", "render_3d_product_frame",
+           "validate_depth_composite", "composite_depth_layers",
+           "export_scene_graph_inspector", "write_scene_graph_inspector_html",
+           "build_review_portal_bundle", "write_review_portal_html",
+           "plan_render_farm_batch", "execute_render_farm_batch",
+           "detect_hardware_h264_encoder"]

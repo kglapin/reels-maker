@@ -875,9 +875,10 @@ def morph_chart_scenes(
     source_scene: dict,
     target_scene: dict,
     *,
-    transition_duration: float = 0.65,
+    duration: float = 3.0,
+    transition_duration: float = 0.85,
 ) -> dict:
-    """Build a mark-preserving staged chart morph descriptor between two data scenes (DM-104)."""
+    """Build a renderable Studio ``chart_morph`` scene preserving mark IDs and scales (DM-104)."""
     if not isinstance(source_scene, dict) or not isinstance(target_scene, dict):
         raise DataRenderError("source_scene and target_scene must be scene dicts")
     if transition_duration <= 0 or transition_duration > 3.0:
@@ -890,18 +891,75 @@ def morph_chart_scenes(
     dst_ids = list(dst_prov.get("shared_object_ids") or dst_prov.get("row_ids") or [])
     if not src_ids or set(src_ids) != set(dst_ids):
         raise DataRenderError("Chart morph requires shared mark/row IDs across both scenes")
+
+    def _extract_items(sc: dict) -> dict[str, dict]:
+        if sc.get("type") == "bars":
+            out = {}
+            for idx, b in enumerate(sc.get("bars") or []):
+                rid = str(b.get("id") or b.get("label"))
+                out[rid] = {
+                    "index": idx,
+                    "label": str(b.get("label", rid)),
+                    "value": float(b.get("value", 0.0)),
+                    "suffix": str(b.get("suffix", "")),
+                }
+            return out
+        if sc.get("type") == "table":
+            out = {}
+            cols = [c["id"] for c in (sc.get("columns") or [])]
+            label_col = cols[0] if cols else ""
+            val_col = cols[-1] if cols else ""
+            for idx, r in enumerate(sc.get("rows") or []):
+                rid = str(r["id"])
+                vals = r.get("values") or {}
+                raw_num = str(vals.get(val_col, "0")).split()[0].replace(",", ".")
+                try:
+                    num = float(raw_num)
+                except ValueError:
+                    num = 0.0
+                out[rid] = {
+                    "index": idx,
+                    "label": str(vals.get(label_col, rid)),
+                    "value": num,
+                    "suffix": "",
+                }
+            return out
+        return {rid: {"index": i, "label": rid, "value": 1.0, "suffix": ""} for i, rid in enumerate(src_ids)}
+
+    src_map = _extract_items(source_scene)
+    dst_map = _extract_items(target_scene)
+    ordered_dst = sorted(dst_map.items(), key=lambda kv: kv[1]["index"])
+    morph_items = []
+    for rid, dst_info in ordered_dst:
+        src_info = src_map.get(rid, dst_info)
+        morph_items.append({
+            "id": rid,
+            "label": dst_info["label"],
+            "from_index": src_info["index"],
+            "to_index": dst_info["index"],
+            "from_value": src_info["value"],
+            "to_value": dst_info["value"],
+            "suffix": dst_info["suffix"] or src_info["suffix"],
+        })
+
     return {
+        "type": "chart_morph",
+        "duration": float(duration),
+        "headline": str(target_scene.get("headline") or source_scene.get("headline") or "TRANSFORMACJA DANYCH"),
+        "subtitle": str(target_scene.get("subtitle") or source_scene.get("subtitle") or ""),
         "schema_version": 1,
         "from_type": source_scene.get("type"),
         "to_type": target_scene.get("type"),
         "source_sha256": src_prov.get("source_sha256"),
         "shared_mark_ids": src_ids,
         "transition_duration": round(float(transition_duration), 4),
+        "items": morph_items,
         "stages": [
             {"stage": "axis_rescale", "progress_range": [0.0, 0.45]},
             {"stage": "mark_interpolation", "progress_range": [0.25, 1.0]},
         ],
         "conservation_verified": True,
+        "data_provenance": dst_prov,
     }
 
 

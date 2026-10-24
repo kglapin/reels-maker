@@ -316,34 +316,33 @@ def _spec(role: str, weight: float, kind: str = "support",
 
 def _external_icon(scene: dict, key: str, cx: float, cy: float,
                    size: float, color, *, role: str | None = None) -> Node | None:
-    """Resolve scene-selected Lucide/Heroicons without drawing custom paths.
+    """Resolve scene-selected licensed packs without drawing custom paths.
 
     Explicit icon_library activates the provider. icon_names overrides the
-    default semantic mapping and icon_style picks outline/solid.
+    finite semantic mapping; pack-specific icon_style selects a pinned variant.
     """
     library = scene.get("icon_library")
     if not library:
         return None
-    defaults = {"battery": "battery-charging", "sun": "sun",
-                "house": "house", "arrow": "arrow-right",
-                "check": "check", "calendar": "calendar-days",
-                "clock": "clock", "phone": "smartphone",
-                "shield": "shield-check", "heat": "waves"}
-    hero = {"battery": "battery-100", "sun": "sun",
-            "house": "home", "arrow": "arrow-right",
-            "check": "check", "calendar": "calendar-days",
-            "clock": "clock", "phone": "device-phone-mobile",
-            "shield": "shield-check", "heat": "fire"}
+    from ..icon_library import DEFAULT_STYLES, SEMANTIC_ICONS
+
     overrides = scene.get("icon_names") or {}
     if not isinstance(overrides, dict):
         raise ValueError("icon_names must be a dictionary")
-    name = str(overrides.get(key) or (hero if library == "heroicons" else defaults)[key])
+    name = str(overrides.get(key) or SEMANTIC_ICONS.get(library, SEMANTIC_ICONS["lucide"])[key])
+    if library == "material_symbols" and not name.startswith("web/"):
+        name = "web/" + name.replace("-", "_")
+    style = scene.get("icon_style", DEFAULT_STYLES.get(library, "outline"))
     rgb = tuple(color)
     return Node(kind="icon", role=role or key, qa_class="decor",
                 props={"x": cx - size / 2, "y": cy - size / 2,
                        "w": size, "h": size, "size": size,
                        "library": library, "name": name,
-                       "style": scene.get("icon_style", "outline"),
+                       "style": style,
+                       "weight": scene.get("icon_weight", 400),
+                       "fill": scene.get("icon_fill", False),
+                       "grade": scene.get("icon_grade", 0),
+                       "optical_size": scene.get("icon_optical_size", 24),
                        "color": "#{:02X}{:02X}{:02X}".format(*rgb),
                        "stroke_width": scene.get("icon_stroke_width", 0)},
                 meta={"icon_library": library, "icon_name": name})
@@ -360,6 +359,9 @@ def _extra_icons(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
             raise ValueError("Every icon_assets entry must be an object")
         library = str(item.get("library", scene.get("icon_library", "lucide")))
         name = str(item.get("name", ""))
+        if library == "material_symbols" and not name.startswith("web/"):
+            name = "web/" + name.replace("-", "_")
+        from ..icon_library import DEFAULT_STYLES
         size = float(item.get("size", .10))
         x = float(item.get("x", .5))
         y = float(item.get("y", .5))
@@ -371,16 +373,35 @@ def _extra_icons(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
         if color is None:
             from ..design.color import parse_hex
             color = parse_hex(str(colour_name))
-        nodes.append(Node(kind="icon", role=f"asset-icon-{index}",
-                          props={"library": library, "name": name,
-                                 "style": item.get("style", "outline"),
-                                 "x": x * ctx.width - px / 2,
-                                 "y": y * ctx.height - px / 2,
-                                 "w": px, "h": px, "size": px,
-                                 "color": "#{:02X}{:02X}{:02X}".format(*color),
-                                 "stroke_width": item.get("stroke_width", 0)},
-                          qa_class="decor",
-                          meta={"icon_library": library, "icon_name": name}))
+        rotation = item.get("rotation", 0)
+        if isinstance(rotation, bool) or not isinstance(rotation, (int, float)) \
+                or not math.isfinite(rotation) or not -35 <= rotation <= 35:
+            raise ValueError("icon_assets rotation must be finite and between -35 and 35 degrees")
+        rotation_motion = item.get("rotation_motion")
+        if rotation_motion is not None and rotation != 0:
+            raise ValueError("icon_assets cannot combine static rotation and rotation_motion")
+        node = Node(kind="icon", role=f"asset-icon-{index}",
+                    props={"library": library, "name": name,
+                           "style": item.get("style", DEFAULT_STYLES.get(library, "outline")),
+                           "weight": item.get("weight", scene.get("icon_weight", 400)),
+                           "fill": item.get("fill", scene.get("icon_fill", False)),
+                           "grade": item.get("grade", scene.get("icon_grade", 0)),
+                           "optical_size": item.get("optical_size", scene.get("icon_optical_size", 24)),
+                           "x": x * ctx.width - px / 2,
+                           "y": y * ctx.height - px / 2,
+                           "w": px, "h": px, "size": px,
+                           "color": "#{:02X}{:02X}{:02X}".format(*color),
+                           "stroke_width": item.get("stroke_width", 0)},
+                    rotation=float(rotation), qa_class="decor",
+                    meta={"icon_library": library, "icon_name": name})
+        if rotation_motion is not None:
+            from ..motionkit.editorial_rotation import rotation_track
+            node.track("rotation", rotation_track(rotation_motion, ctx.duration, role="icon"))
+            node.meta["editorial_rotation"] = {
+                "family": rotation_motion.get("family", "tilt-settle"),
+                "reason": rotation_motion.get("reason", "explicit art direction"),
+            }
+        nodes.append(node)
     return nodes
 
 

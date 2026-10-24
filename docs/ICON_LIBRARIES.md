@@ -1,8 +1,8 @@
-# Icon libraries — Lucide / Heroicons
+# Icon libraries — pinned SVG packs
 
-Native studio scenes can use real, upstream SVG icon assets instead of
-custom-drawn primitive icons. Both packs are version-pinned; source files are
-cached persistently and rasterizations are memoized during export.
+Native studio scenes can use real, upstream SVG assets instead of custom-drawn
+primitive icons. Source packs are version-pinned; validated SVG files are cached
+outside the repository and rasterizations are memoized during export.
 
 ## Installation
 
@@ -33,8 +33,31 @@ Without cairo available, the studio engine renders unchanged (icons are
 opt-in), and the icon regression test skips itself.
 
 No JavaScript runtime is needed. Python downloads original icons from their
-upstream GitHub release only when absent in the local cache
+pinned upstream tag/revision only when absent in the local cache
 (`~/.cache/reels-maker/icon-libraries/`). Cached SVGs render offline.
+
+## Supported packs and license records
+
+| Pack | Pinned source | License | Styles |
+|---|---|---|---|
+| Lucide | `0.468.0` | ISC | `outline` |
+| Heroicons | `v2.2.0` | MIT | `outline`, `solid` |
+| Tabler | `v3.49.0` | MIT | `outline`, `filled` |
+| Phosphor | `v2.0.8` | MIT | `thin`, `light`, `regular`, `bold`, `fill`, `duotone` |
+| Material Symbols | Google repo commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` | Apache-2.0 | `outlined`, `rounded`, `sharp` |
+
+`icon_library.LICENSES` exposes each pack's license URL and notice requirement
+for provenance/export tooling. A pack license does not grant trademark, brand,
+or model/property rights to an individual icon use. When redistributing cached
+SVGs, retain the upstream license notice. Tabler `brand-*` and Phosphor/Material
+`*-logo*` glyphs are refused by default because the packs' general license does
+not settle individual trademark rights. Lucide's notice records the potential
+Feather-derived MIT notices as well as the pack-level ISC license.
+
+`studio-render --json` includes a deduplicated `icon_provenance` array with the
+pack/version/style, upstream file URL, license URL and cached SVG SHA-256.
+`rights_status` remains `unknown` and the report records that item-level
+trademark/brand review may still be required; this metadata is not an approval.
 
 ## Replace hand-drawn icons in built-in scene compositions
 
@@ -65,6 +88,12 @@ The `amount` / `hero-number` component uses `battery`. The
 
 Without `icon_library`, legacy primitive icons remain unchanged.
 
+Material Symbols names use the upstream namespace, e.g. `web/home`. Variant
+fields are `icon_weight` (100, 200, 300, 400, 500, 600, 700), `icon_fill`
+(boolean), `icon_grade` (-25, 0, 200) and `icon_optical_size` (20, 24, 40,
+48). Defaults are weight 400, fill false, grade 0 and optical size 24;
+unsupported combinations fail instead of choosing a nearby asset.
+
 ## Add arbitrary positioned icons
 
 Any scene may include an `icon_assets` array. Positions are relative to
@@ -84,17 +113,32 @@ video dimensions (x and y in 0–1), and size is a fraction of video width:
 }
 ```
 
+Icon nodes accept a restrained static `rotation` (±35°) or the existing
+authored editorial `rotation_motion` choreography (not both). For Material
+Symbols, individual `icon_assets` may override `weight`, `fill`, `grade` and
+`optical_size`; these options are ignored by no pack silently—unsupported
+pack/variant combinations fail with an error.
+
 Each node participates in the same scene graph and render path as other
 elements. The icon cache does not need an internet connection after its first
 download. To pre-provision a closed build, run a scene inspection or test render
 once on a networked machine and preserve the icon cache in the build image.
 
+`icon_library.suggest_icons(query, libraries=..., limit=...)` returns at most
+three deterministic candidates for a finite, reviewed semantic vocabulary. An
+unknown concept returns an empty list; it does not generate an icon name or
+download anything.
+
 ## Safety and reproducibility
 
 - Fixed Lucide release: `0.468.0` (ISC).
 - Fixed Heroicons release: `v2.2.0` (MIT).
+- Fixed Tabler release: `v3.49.0` (MIT).
+- Fixed Phosphor release: `v2.0.8` (MIT).
+- Fixed Material Symbols source commit: `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` (Apache-2.0).
 - Lowercase icon slugs only; paths and arbitrary remote URLs are forbidden.
-- SVG parsing refuses scripts, styles, external references and XML entities.
+- SVG parsing refuses scripts, styles, external references and XML entities;
+  files are capped at 100 KB, 512 elements and 256 paths.
 - Only approved geometric SVG elements are passed to CairoSVG.
 - Unknown names and unavailable icon downloads fail visibly (no silent fake icon).
 - Icons do not change the former built-in visual presets unless opted in.

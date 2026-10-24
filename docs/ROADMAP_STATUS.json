@@ -1,17 +1,17 @@
 {
-  "current_milestone": "F0 — Zintegrowany plan MD + DM: audyt kodu, katalogu funkcji i referencji jakości",
-  "status": "Plan 2.0 scalony w jednym źródle prawdy; wdrożenie 64 pakietów MD/DM NIE jest zakończone. Historyczne wyniki wydania v1 poniżej nie stanowią zatwierdzenia nowego zakresu.",
-  "next_action": "Wykonać MD-001–005; zinwentaryzować kod i stan licencji/mediów, zweryfikować referencje, przejść do F1 MD-101–106 i DM-001–003. Sprawdzić prywatność repozytorium przed importem materiałów klientów.",
-  "current_branch": "main",
-  "latest_commit": "integration: upstream creative commits verified end-to-end, goldens recaptured, cairo regression test skip-guarded",
+  "current_milestone": "Public media search/acquisition CLI wired; live media use remains rights/privacy blocked",
+  "status": "Public stock photo/video search and review-gated quarantine download are now exposed as noninteractive JSON CLI commands on local branch master-plan-2. The 64-task Plan 2.0 is not complete; v1 gates below are historical. F0 evidence is in docs/F0_AUDIT.md and F2 audit in docs/F2_AUDIT.md. Repository is PUBLIC and owner/media/human-review gates remain open.",
+  "next_action": "Before any real media download, resolve the PUBLIC-repository privacy gate and obtain item-specific rights/platform approval; then test one explicitly reviewed public-domain/cleared candidate through `media-search` -> rights decision -> `media-download`. Until then, validate the flow with mock responses/synthetic bytes only.",
+  "current_branch": "master-plan-2 (local branch based on origin/main eb44810)",
+  "latest_commit": "eb44810 docs: ensure reference data-motion acceptance precedes final P0 end-to-end gate (base; local changes uncommitted)",
   "branch_up_to_date": true,
-  "worktree_clean": true,
-  "draft_pr_state": "MERGED - PR #1 merged 2026-10-23; local prototype is not in that PR",
-  "ci_status": "Latest observed workflows on main succeeded; integration verified locally (2026-10-23)",
-  "local_tests": "269 passed in 55.04s with system cairo available / 268 passed + 1 skipped without it (icon regression test skip-guards itself; 2026-10-23)",
+  "worktree_clean": false,
+  "draft_pr_state": "PR #1 is MERGED; Plan 2.0 work is local on master-plan-2 and has not been pushed or opened as a PR",
+  "ci_status": "Latest listed GitHub run is Advanced transitions demo on main eb44810, success; no run found for reels-maker Python tests on main. No CI run for local branch master-plan-2.",
+  "local_tests": "362 tests run in 57.838s: 361 passed, 1 skipped (Cairo unavailable on loader path). Existing golden-frame ResourceWarnings are non-fatal.",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
-    "G1": "MED-01/02/03/04/05/07/08/10 - All 15 clips classified, 12 clean_source, 3 finished_promo, LFS detection, strict mode blocks prebranded footage",
+    "G1": "Historical v1 record is superseded: current catalog has 15 finished_promo ASTA footage, 11 unreviewed, 2 unknown and 2 separate clean_source stock items. No ASTA footage is established as clean overlay source.",
     "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests, caching, atomic publish, path safety, Unicode NFC normalization",
     "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar, reference annotations, rejection examples, minimum read times",
     "G4": "EDIT-01/02/03/04/05/06/08/09 - Hard cut default, dissolve/dip-to-black/motion_wipe, transition presets, shot boundary metadata",
@@ -30,9 +30,30 @@
     "REL-15: Tag version 1.0 after merge authorization"
   ],
   "blockers": [
-    "SEC-06: Repository currently PUBLIC; owner must restore/confirm private visibility",
+    "SEC-06: Repository currently PUBLIC; owner must restore/confirm private visibility before confidential/client material or new licensed media is imported",
+    "F0/MD-002: 24-shot reference golden suite requires actually viewed, human-annotated clips; existing 18-entry board has blank timecodes",
+    "Rights: owner sign-off remains pending for stock/logo/audio/FX publication; ASTA footage is finished_promo, not clean-source",
     "REL-09: Human creative review and approval"
   ],
+  "plan2_progress": {
+    "MD-001": "Audited module paths, legacy/default and opt-in render paths, dependencies and current media catalog; see docs/F0_AUDIT.md",
+    "MD-002": "Partial/blocking: existing 18-reference board lacks human-viewed timestamps; 24-shot human-annotated suite not accepted",
+    "MD-003": "Registry v2 implemented locally; focused tests pass",
+    "MD-004": "Asset rights/provenance schema and fail-closed delivery_ready implemented locally; current two CC0 records remain unknown and not delivery-ready",
+    "MD-005": "Plan/status/source reconciled locally; repository confirmed PUBLIC, owner privacy and media-signoff gates remain",
+    "MD-101": "Official Pexels/Pixabay image+video, Unsplash image, Wikimedia Commons and OAuth Openverse image adapters plus ranked JSON-first `media-search` CLI. One live Wikimedia metadata search returned 2 candidates; no media bytes downloaded and rights remain unknown. Other APIs not called live.",
+    "MD-102": "Per-provider credentials, local quotas, bounded retries, private persistent metadata cache and exact-item rights decision hooks implemented; Openverse OAuth lifecycle is external. One Wikimedia public metadata query succeeded; other providers not called live.",
+    "MD-103": "JSON-first `media-download` wired to exact-item and URL-bound human rights decisions; target platform, provider host/IP/redirect limits, streamed size/time-bounded quarantine, checksum/FFprobe, optional H.264/AAC transcode limited to 120s/1920px/one thread. Mock CLI + synthetic tests only; no provider assets downloaded. Unsplash is hotlink-only and deliberately rejected by the local downloader.",
+    "DM-001": "Typed CSV/JSON/XLSX loader implemented with explicit locale/units/rights provenance and synthetic tests; no client data imported",
+    "DM-002": "Deterministic Decimal aggregates/division, explicit units/currency/period/rounding and calculation ledger; unauthorized, null and invalid typed data fails closed. Synthetic tests only.",
+    "DM-003": "Planning-only chart family recommendations with rationale, rejected alternatives and missing-field reporting. Renderer support remains not_assessed.",
+    "MD-104": "Lucide/Heroicons/Tabler/Phosphor/Material Symbols support, safe SVG validation, pinning, finite semantic suggestions, logo guards, authored rotation and Studio source/license/hash provenance; 30 live source icons in a synthetic 1080x1920 MP4 plus entry/settle/exit rotation probe. Evidence: docs/evidence/md104-icon-pack-smoke.json. No phone/brand approval implied.",
+    "MD-105": "Openverse metadata-only audio search uses OAuth and keeps rights unknown; deterministic procedural WAV SFX generates only in imports/audio quarantine. No cleared audio library/download/mix exists.",
+    "MD-106": "Mock/offline provider and acquisition tests pass; limited-live checks intentionally not run without owner-approved rights/credentials and resolved privacy gate.",
+    "MD-201": "Additive typed CreativeIntent -> MotionPlan -> RenderGraph boundary implemented; snapshots validated, deterministic and parity-tested against existing v1 renderer manifests; renderer paths remain separate.",
+    "MD-202": "Partial: typed 2D affine spaces/hierarchy/camera-to-viewport mapping tested; Studio Node bounds/QA and Camera Canvas viewport sampling use the shared affine contract; shared parent/child graph across renderers and remaining object kinds remain outstanding.",
+    "MD-203": "Partial: FreeType per-word ink bounding boxes are checked by Studio QA at existing sample frames against its layout safe rectangle; standalone safe polygons/masks/affine checker has six tests. This is not glyph-outline or Camera Canvas coverage."
+  },
   "flagship_deliveries": [
     {
       "name": "asta-flagship-editorial-benefit",
@@ -41,7 +62,7 @@
       "duration_s": 17.68,
       "quality": "pass",
       "warnings": 0,
-      "all_clean_source": true
+      "all_clean_source": false
     },
     {
       "name": "asta-flagship-fast-montage",
@@ -50,7 +71,7 @@
       "duration_s": 27.72,
       "quality": "pass",
       "warnings": 0,
-      "all_clean_source": true
+      "all_clean_source": false
     }
   ],
   "experimental_motion_system": {
@@ -150,7 +171,7 @@
       "task": "Owner authorized code push to GitHub main on 2026-10-23; per-delivery media rights, claims and phone/rubric review remain owner gates"
     }
   ],
-  "test_count": 269,
+  "test_count": 326,
   "files_added": 12,
   "current_date": "2026-10-23",
   "version": "1.0",

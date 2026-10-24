@@ -85,6 +85,36 @@ class Node:
         return node
 
     # ------------------------------------------------------------------ bounds
+    def local_to_parent_transform(self):
+        """Return the shared affine form of this node's existing 2D transform.
+
+        Coordinates retain the current renderer contract: geometry is authored
+        in scene pixels; scale and rotation occur around ``anchor`` (or the
+        geometry center), then ``dx/dy`` translate the result. This adapter does
+        not change node parenting or Camera Canvas behavior.
+        """
+        from .transforms import Affine2D, Space
+
+        box = self.base_bounds()
+        if box is None:
+            anchor = self.anchor or (0.0, 0.0)
+        else:
+            anchor = self.anchor or ((box[0] + box[2]) / 2,
+                                     (box[1] + box[3]) / 2)
+        if not all(math.isfinite(value) for value in
+                   (self.scale, self.rotation, self.dx, self.dy, *anchor)):
+            raise ValueError("Node transform values must be finite")
+        angle = math.radians(self.rotation)
+        cosine, sine = math.cos(angle), math.sin(angle)
+        a, b = self.scale * cosine, self.scale * sine
+        c, d = -self.scale * sine, self.scale * cosine
+        ax, ay = anchor
+        return Affine2D(
+            a, b, c, d,
+            ax - a * ax - c * ay + self.dx,
+            ay - b * ax - d * ay + self.dy,
+            Space.LOCAL, Space.PARENT)
+
     def base_bounds(self) -> BBox | None:
         props = self.props
         kind = self.kind
@@ -131,29 +161,11 @@ class Node:
         box = self.base_bounds()
         if box is None:
             return None
-        x0, y0, x1, y1 = box
-        anchor = self.anchor or ((x0 + x1) / 2, (y0 + y1) / 2)
-        ax, ay = anchor
-        if self.scale != 1:
-            x0, x1 = ax + (x0 - ax) * self.scale, ax + (x1 - ax) * self.scale
-            y0, y1 = ay + (y0 - ay) * self.scale, ay + (y1 - ay) * self.scale
-        if self.rotation:
-            angle = math.radians(self.rotation)
-            cosine, sine = math.cos(angle), math.sin(angle)
-            corners = []
-            for px, py in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
-                rx = ax + (px - ax) * cosine - (py - ay) * sine
-                ry = ay + (px - ax) * sine + (py - ay) * cosine
-                corners.append((rx, ry))
-            x0 = min(point[0] for point in corners)
-            x1 = max(point[0] for point in corners)
-            y0 = min(point[1] for point in corners)
-            y1 = max(point[1] for point in corners)
-        x0 += self.dx
-        x1 += self.dx
-        y0 += self.dy
-        y1 += self.dy
-        box = (x0, y0, x1, y1)
+        from .transforms import Bounds, LocalSpace
+        transformed = self.local_to_parent_transform().map_bounds(
+            Bounds[LocalSpace](*box))
+        box = (transformed.left, transformed.top,
+               transformed.right, transformed.bottom)
         if self.clip is not None:
             clipped = intersect_boxes(box, self.clip)
             box = clipped
@@ -222,26 +234,9 @@ def collect_qa_elements(root: Node) -> list[dict[str, Any]]:
     result = []
 
     def transform(box: BBox, node: Node) -> BBox:
-        x0, y0, x1, y1 = box
-        base = node.base_bounds()
-        anchor = node.anchor or (
-            ((base[0] + base[2]) / 2, (base[1] + base[3]) / 2)
-            if base is not None else ((x0 + x1) / 2, (y0 + y1) / 2))
-        ax, ay = anchor
-        if node.scale != 1:
-            x0, x1 = ax + (x0 - ax) * node.scale, ax + (x1 - ax) * node.scale
-            y0, y1 = ay + (y0 - ay) * node.scale, ay + (y1 - ay) * node.scale
-        if node.rotation:
-            angle = math.radians(node.rotation)
-            cosine, sine = math.cos(angle), math.sin(angle)
-            corners = []
-            for px, py in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
-                corners.append((ax + (px - ax) * cosine - (py - ay) * sine,
-                                ay + (px - ax) * sine + (py - ay) * cosine))
-            x0, x1 = min(p[0] for p in corners), max(p[0] for p in corners)
-            y0, y1 = min(p[1] for p in corners), max(p[1] for p in corners)
-        return (x0 + node.dx, y0 + node.dy,
-                x1 + node.dx, y1 + node.dy)
+        from .transforms import Bounds, LocalSpace
+        mapped = node.local_to_parent_transform().map_bounds(Bounds[LocalSpace](*box))
+        return (mapped.left, mapped.top, mapped.right, mapped.bottom)
 
     def walk(node: Node, ancestors: tuple[Node, ...],
              parent_opacity: float) -> None:

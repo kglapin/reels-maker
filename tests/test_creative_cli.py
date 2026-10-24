@@ -34,6 +34,9 @@ class CreativeCLITests(unittest.TestCase):
         self.assertEqual(code,0)
         self.assertTrue(report["ok"])
         self.assertIn("camera_canvas",report["modes"])
+        self.assertEqual(report["schema_version"],2)
+        self.assertIn("providers",report)
+        self.assertIn("icon_packs",report)
     def test_json_schema_cli(self):
         code,report=self.invoke("creative-schema","--json")
         self.assertEqual(code,0)

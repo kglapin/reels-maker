@@ -7,6 +7,7 @@ import math
 import unittest
 
 from reels_maker.core.scene_graph import Node
+from reels_maker.core.transforms import Bounds, Point, Space
 from reels_maker.motionkit.keyframes import Track
 
 
@@ -41,6 +42,20 @@ class RotationalTypographyTests(unittest.TestCase):
         self.assertIsNotNone(original)
         self.assertIsNotNone(rotated)
         self.assertGreater(rotated[3] - rotated[1], original[3] - original[1])
+
+    def test_node_bounds_use_shared_affine_transform_contract(self):
+        node = Node(kind="panel", props={"x": 10, "y": 20, "w": 80, "h": 40},
+                    dx=7, dy=-3, scale=1.5, rotation=30, anchor=(10, 20))
+        expected = node.local_to_parent_transform().map_bounds(
+            Bounds(10, 20, 90, 60))
+        self.assertEqual(node.world_bounds(),
+                         (expected.left, expected.top, expected.right, expected.bottom))
+        transform = node.local_to_parent_transform()
+        self.assertEqual((transform.source, transform.target),
+                         (Space.LOCAL, Space.PARENT))
+        restored = transform.inverse().apply(transform.apply(Point(13, 29)))
+        self.assertAlmostEqual(restored.x, 13)
+        self.assertAlmostEqual(restored.y, 29)
 
 
 if __name__ == "__main__":

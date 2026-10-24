@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -203,6 +204,52 @@ def main(argv: list[str] | None = None) -> int:
     pixabay.add_argument("--all", action="store_true",
                          help="Download every listed candidate")
     pixabay.add_argument("--json", action="store_true")
+    media_search = commands.add_parser(
+        "media-search",
+        help="Search public stock-media APIs and save ranked, unapproved candidates")
+    media_search.add_argument("query", help="Search terms")
+    media_search.add_argument("--provider", choices=("all", "pexels", "pixabay",
+        "unsplash", "wikimedia_commons", "openverse"), default="all")
+    media_search.add_argument("--kind", choices=("image", "video"), default="image")
+    media_search.add_argument("--limit", type=int, default=12,
+                              help="Candidates requested from each provider (1..50)")
+    media_search.add_argument("--aspect", type=float, default=9/16,
+                              help="Target width/height used for ranking")
+    media_search.add_argument("--output", type=Path,
+                              help="Optional candidate report JSON path")
+    media_search.add_argument("--json", action="store_true")
+    media_download = commands.add_parser(
+        "media-download",
+        help="Download one exact-item reviewed candidate into brand imports quarantine")
+    media_download.add_argument("candidate_file", type=Path,
+                                help="Candidate record or media-search report JSON")
+    media_download.add_argument("--provider", required=True,
+        choices=("pexels", "pixabay", "unsplash", "wikimedia_commons", "openverse"))
+    media_download.add_argument("--asset-id", required=True,
+                                help="Exact provider asset ID from search result")
+    media_download.add_argument("--rights-decision", type=Path, required=True,
+                                help="Human-reviewed exact-item rights decision JSON")
+    media_download.add_argument("--brand", required=True)
+    media_download.add_argument("--root", type=Path, default=ROOT)
+    media_download.add_argument("--target-platform", required=True)
+    media_download.add_argument("--transcode", choices=("h264_mp4",))
+    media_download.add_argument("--json", action="store_true")
+    sfx = commands.add_parser(
+        "sfx-generate",
+        help="Generate deterministic procedural SFX into imports/audio quarantine")
+    sfx.add_argument("--brand", required=True, help="Existing brand slug")
+    sfx.add_argument("--root", type=Path, default=ROOT,
+                     help="Repository root containing brands/")
+    sfx.add_argument("--kind", choices=("click", "whoosh", "riser", "hit"),
+                     required=True)
+    sfx.add_argument("--duration", type=float, default=0.45,
+                     help="Duration in seconds (0.03..3.0)")
+    sfx.add_argument("--sample-rate", type=int, choices=(22050, 44100, 48000),
+                     default=48000)
+    sfx.add_argument("--seed", type=int, default=0)
+    sfx.add_argument("--peak", type=float, default=0.20,
+                     help="Linear peak amplitude (0.01..0.50)")
+    sfx.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     creative_caps = commands.add_parser(
@@ -583,6 +630,101 @@ def main(argv: list[str] | None = None) -> int:
                                              kind=args.kind,
                                              cookies=args.cookies)
                 result["download"] = report
+        elif args.command == "media-search":
+            from .assets.stock_acquisition import candidate_record, search_with_fallback
+            from .assets.stock_media import (
+                search_openverse, search_pexels, search_pexels_videos,
+                search_pixabay, search_pixabay_videos, search_unsplash,
+                search_wikimedia_commons,
+            )
+            if not 1 <= args.limit <= 50:
+                raise ValueError("--limit must be between 1 and 50")
+            if not isinstance(args.query, str) or not args.query.strip():
+                raise ValueError("Search query must contain non-whitespace text")
+            if not math.isfinite(args.aspect) or args.aspect <= 0:
+                raise ValueError("--aspect must be a finite positive number")
+            if args.provider == "all":
+                providers = (("pexels", "pixabay") if args.kind == "video" else
+                             ("pexels", "pixabay", "unsplash",
+                              "wikimedia_commons", "openverse"))
+            else:
+                providers = (args.provider,)
+                if args.kind == "video" and args.provider not in ("pexels", "pixabay"):
+                    raise ValueError(
+                        "Video search is currently supported only by Pexels/Pixabay")
+            orientation = ("landscape" if args.aspect > 1.2 else
+                           "portrait" if args.aspect < 0.85 else "square")
+            provider_limits = {"unsplash": 30, "openverse": 20}
+            searches = []
+            for provider in providers:
+                per_page = min(args.limit, provider_limits.get(provider, 50))
+                if provider == "pexels":
+                    fn = (lambda query, limit=per_page, orientation=orientation:
+                          search_pexels_videos(query, per_page=limit,
+                                               orientation=orientation)
+                          if args.kind == "video" else
+                          search_pexels(query, per_page=limit))
+                elif provider == "pixabay":
+                    fn = (lambda query, limit=per_page:
+                          search_pixabay_videos(query, per_page=limit)
+                          if args.kind == "video" else
+                          search_pixabay(query, per_page=limit))
+                elif provider == "unsplash":
+                    fn = lambda query, limit=per_page: search_unsplash(query, per_page=limit)
+                elif provider == "wikimedia_commons":
+                    fn = lambda query, limit=per_page: search_wikimedia_commons(query, per_page=limit)
+                else:
+                    fn = lambda query, limit=per_page: search_openverse(query, per_page=limit)
+                fn.__name__ = provider
+                searches.append(fn)
+            candidates, outcomes = search_with_fallback(
+                args.query, searches, aspect=args.aspect)
+            records = [candidate_record(asset) for asset in candidates]
+            successes = sum(item["status"] == "ok" for item in outcomes)
+            search_status = ("unavailable" if successes == 0 else
+                             "partial" if successes < len(outcomes) else "ok")
+            result = {"query": args.query, "kind": args.kind,
+                      "target_aspect": args.aspect, "providers": outcomes,
+                      "candidate_count": len(records), "candidates": records,
+                      "search_status": search_status,
+                      "rights_status": "unknown",
+                      "note": "Search results are candidates, not licensed or approved assets."}
+            if args.output is not None:
+                location = args.output.expanduser().resolve()
+                location.parent.mkdir(parents=True, exist_ok=True)
+                location.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                                    encoding="utf-8")
+                result["report"] = str(location)
+        elif args.command == "media-download":
+            from .assets.stock_acquisition import candidate_asset, download_cleared_asset
+            from .assets.stock_media import apply_reviewed_rights_decision
+            try:
+                candidate_doc = json.loads(args.candidate_file.read_text(encoding="utf-8"))
+                decision = json.loads(args.rights_decision.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ProjectError(f"Cannot read candidate or rights decision JSON: {exc}") from exc
+            records = (candidate_doc.get("candidates") if isinstance(candidate_doc, dict)
+                       and isinstance(candidate_doc.get("candidates"), list)
+                       else [candidate_doc])
+            matches = [record for record in records
+                       if isinstance(record, dict)
+                       and record.get("provider") == args.provider
+                       and str(record.get("asset_id")) == args.asset_id]
+            if len(matches) != 1:
+                raise ProjectError("Candidate file must contain exactly one matching provider/asset ID")
+            asset = candidate_asset(matches[0])
+            asset = apply_reviewed_rights_decision(asset, decision)
+            report = download_cleared_asset(
+                asset, brand=args.brand, root=args.root,
+                target_platform=args.target_platform,
+                transcode_format=args.transcode)
+            result = {"download": report,
+                      "note": "Downloaded files remain unapproved in brands/<slug>/imports/."}
+        elif args.command == "sfx-generate":
+            from .audio_synthesis import SFXSpec, write_procedural_sfx
+            result = {"audio": write_procedural_sfx(
+                SFXSpec(args.kind, args.duration, args.sample_rate, args.seed, args.peak),
+                brand=args.brand, root=args.root)}
         else:
             project = load_project(args.project)
             if args.command == "validate":

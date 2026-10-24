@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from ..core.transforms import Affine2D, Space
 
 def ease(v):
     t=min(1,max(0,float(v)))
@@ -112,10 +113,14 @@ class CameraCanvasRenderer:
 
     def _frame(self,world,stop):
         cx,cy,angle,zoom=stop
-        c,s=math.cos(math.radians(angle)),math.sin(math.radians(angle))
         w,h=self.w,self.h
-        mat=(zoom*c,-zoom*s,cx-zoom*c*w/2+zoom*s*h/2,
-             zoom*s,zoom*c,cy-zoom*s*w/2-zoom*c*h/2)
+        # Pillow's affine API maps output viewport pixels back to world pixels.
+        # Keep that established sampling direction, but express the matrix in
+        # the shared coordinate-space contract used by Studio Node bounds.
+        camera_to_world = camera_viewport_to_world(
+            cx, cy, angle, zoom, w, h)
+        mat=(camera_to_world.a, camera_to_world.c, camera_to_world.e,
+             camera_to_world.b, camera_to_world.d, camera_to_world.f)
         return world.transform((w,h),Image.Transform.AFFINE,mat,
                                resample=Image.Resampling.BILINEAR).convert("RGBA")
 
@@ -166,3 +171,21 @@ class CameraCanvasRenderer:
             y+=round((1-p)*min(self.h*.085,62))
         base.alpha_composite(overlay,(x,y))
         return base.convert("RGB")
+
+
+def camera_viewport_to_world(cx: float, cy: float, angle: float, zoom: float,
+                             width: int, height: int) -> Affine2D:
+    """Return Pillow's output-viewport-to-world sampling transform."""
+    values = (cx, cy, angle, zoom)
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("Camera values must be finite")
+    if zoom <= 0 or type(width) is not int or type(height) is not int \
+            or width <= 0 or height <= 0:
+        raise ValueError("Camera zoom and viewport dimensions must be positive")
+    cosine, sine = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    return Affine2D(
+        a=zoom * cosine, b=zoom * sine,
+        c=-zoom * sine, d=zoom * cosine,
+        e=cx - zoom * cosine * width / 2 + zoom * sine * height / 2,
+        f=cy - zoom * sine * width / 2 - zoom * cosine * height / 2,
+        source=Space.VIEWPORT, target=Space.WORLD)

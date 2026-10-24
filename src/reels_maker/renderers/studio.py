@@ -64,6 +64,42 @@ def _audio_config(project: StudioProject):
     return voice, music, voice_path, music_path, sfx_tracks
 
 
+def _icon_provenance(scenes) -> list[dict]:
+    from ..icon_library import provenance
+    records: dict[tuple, dict] = {}
+    seen: set[tuple] = set()
+    for scene in scenes:
+        pending = list(scene.nodes)
+        while pending:
+            node = pending.pop()
+            pending.extend(node.children or [])
+            if node.kind != "icon":
+                continue
+            props = node.props
+            signature = tuple(repr(value) for value in (
+                props["library"], props["name"], props.get("style", "outline"),
+                props.get("weight", 400), props.get("fill", False),
+                props.get("grade", 0), props.get("optical_size", 24),
+            ))
+            if signature in seen:
+                continue
+            seen.add(signature)
+            record = provenance(
+                str(props["library"]), str(props["name"]),
+                style=str(props.get("style", "outline")),
+                cache_dir=props.get("cache_dir"),
+                offline=bool(props.get("offline", False)),
+                weight=props.get("weight", 400),
+                fill=props.get("fill", False),
+                grade=props.get("grade", 0),
+                optical_size=props.get("optical_size", 24),
+            )
+            key = (record["provider"], record["asset_id"], record["style"],
+                   record["source_url"])
+            records[key] = record
+    return [records[key] for key in sorted(records)]
+
+
 def _mux(project: StudioProject, silent: Path, destination: Path,
          duration: float) -> dict:
     voice, music, voice_path, music_path, sfx_tracks = _audio_config(project)
@@ -311,6 +347,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         "cache_hits": cache_hits,
         "cache_misses": encodes,
         "cache_signature": (cache_signature[:12] if cache_root else None),
+        "icon_provenance": _icon_provenance(built),
         "scenes": [scene.to_dict() for scene in built],
         "warnings": [issue for scene in built
                      for issue in scene.choreography.warnings],

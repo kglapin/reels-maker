@@ -17,14 +17,28 @@ def _brand(base: Path) -> dict:
     assets.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (1640, 1640), (20, 40, 20)).save(assets / "panel.png")
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "entries": [{
             "id": "panel-hero",
             "kind": "product",
             "file": "media/assets/panel.png",
             "source": "https://example.org/source",
+            "provider": "Example source",
             "license": "CC0 1.0",
             "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "rights_status": "cleared",
+            "usage_context": "commercial social video",
+            "allowed_platforms": ["instagram_reels"],
+            "attribution": "not required",
+            "creator": "owner",
+            "license_version": "1.0",
+            "downloaded_at": "2026-10-23",
+            "expiry": "none",
+            "release_status": "not_applicable",
+            "content_id_status": "not_applicable",
+            "checksum": "sha256:example",
+            "derivative_paths": ["media/assets/panel.png"],
+            "transform_recipe": "original file",
             "resolution": [1640, 1640],
             "topics": ["pv", "installation"],
             "editorial_state": "reviewed",
@@ -56,6 +70,34 @@ class AssetLibraryTests(unittest.TestCase):
         self.assertEqual(report["entries"], 1)
         self.assertEqual(report["reviewed"], 1)
         self.assertEqual(report["quarantine"], 0)
+        self.assertTrue(report["delivery_ready"])
+
+    def test_previous_library_schema_requires_explicit_migration(self):
+        manifest = _brand(self.base)
+        manifest["schema_version"] = 1
+        with self.assertRaisesRegex(LibraryError, "schema_version must be 2"):
+            check_library(self._write(manifest["entries"], schema_version=1))
+
+    def test_unknown_rights_are_valid_but_fail_delivery_gate(self):
+        manifest = _brand(self.base)
+        manifest["entries"][0]["rights_status"] = "unknown"
+        report = check_library(self._write(manifest["entries"]))
+        self.assertTrue(report["ok"])
+        self.assertFalse(report["delivery_ready"])
+        self.assertTrue(any("blocked from delivery" in w
+                            for w in report["warnings"]))
+
+    def test_unreviewed_asset_cannot_pass_delivery_gate(self):
+        manifest = _brand(self.base)
+        manifest["entries"][0]["editorial_state"] = "quarantine"
+        report = check_library(self._write(manifest["entries"]))
+        self.assertFalse(report["delivery_ready"])
+
+    def test_derivative_path_cannot_escape_brand_root(self):
+        manifest = _brand(self.base)
+        manifest["entries"][0]["derivative_paths"] = ["../../outside.png"]
+        with self.assertRaisesRegex(LibraryError, "derivative.*brand directory"):
+            check_library(self._write(manifest["entries"]))
 
     def test_missing_field_is_a_named_error(self):
         path = self._write()

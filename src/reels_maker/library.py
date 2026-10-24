@@ -15,7 +15,8 @@ from .spec import ProjectError
 
 ALLOWED_KINDS = {"product", "icon", "graphic", "footage", "audio"}
 ALLOWED_STATES = {"reviewed", "quarantine"}
-SCHEMA_VERSION = 1
+RIGHTS_STATES = {"cleared", "blocked", "unknown"}
+SCHEMA_VERSION = 2
 _MIN_LONG_EDGE = 720
 
 
@@ -57,13 +58,18 @@ def check_library(path: str | Path) -> dict:
     warnings: list[str] = []
     reviewed = 0
     quarantine = 0
+    blocked = 0
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise LibraryError(
                 f"Library entry #{index + 1} must be a JSON object")
-        for field in ("id", "kind", "file", "source", "license",
+        for field in ("id", "kind", "file", "source", "provider", "license",
                       "license_url", "resolution", "topics",
-                      "editorial_state", "review"):
+                      "editorial_state", "review", "rights_status",
+                      "usage_context", "allowed_platforms", "attribution",
+                      "creator", "license_version", "downloaded_at",
+                      "expiry", "release_status", "content_id_status",
+                      "checksum", "derivative_paths", "transform_recipe"):
             if field not in entry or entry[field] in (None, ""):
                 raise _entry_error(entry, index, field,
                                    "is required — the engine does not invent "
@@ -88,6 +94,35 @@ def check_library(path: str | Path) -> dict:
                 entry, index, "editorial_state",
                 f"must be {sorted(ALLOWED_STATES)} (an unreviewed file is "
                 f"'quarantine', never silently usable), got {state!r}")
+        rights_status = str(entry["rights_status"])
+        if rights_status not in RIGHTS_STATES:
+            raise _entry_error(
+                entry, index, "rights_status",
+                f"must be one of {sorted(RIGHTS_STATES)}")
+        if rights_status != "cleared" or state != "reviewed":
+            blocked += 1
+            warnings.append(
+                f"{entry_id!r} is blocked from delivery: rights_status="
+                f"{rights_status!r}, editorial_state={state!r}")
+        platforms = entry["allowed_platforms"]
+        if not isinstance(platforms, list) or not all(
+                isinstance(value, str) and value for value in platforms):
+            raise _entry_error(
+                entry, index, "allowed_platforms",
+                "must be a list of explicitly permitted platform names")
+        derivatives = entry["derivative_paths"]
+        if not isinstance(derivatives, list) or not all(
+                isinstance(value, str) and value for value in derivatives):
+            raise _entry_error(entry, index, "derivative_paths",
+                               "must be a list of exact local derivative paths")
+        for derivative in derivatives:
+            derivative_path = (base / derivative).resolve()
+            if not derivative_path.is_relative_to(base.resolve()):
+                raise _entry_error(entry, index, "derivative_paths",
+                                   "every derivative must resolve inside the brand directory")
+            if not derivative_path.is_file():
+                raise _entry_error(entry, index, "derivative_paths",
+                                   f"derivative does not exist on disk: {derivative_path}")
         review = entry["review"]
         if not isinstance(review, dict) or not review.get("by") \
                 or not review.get("date"):
@@ -107,7 +142,10 @@ def check_library(path: str | Path) -> dict:
             raise _entry_error(
                 entry, index, "topics",
                 "must be a non-empty list of strings")
-        file_path = base / str(entry["file"])
+        file_path = (base / str(entry["file"])).resolve()
+        if not file_path.is_relative_to(base.resolve()):
+            raise _entry_error(entry, index, "file",
+                               "must resolve inside the brand directory")
         if not file_path.is_file():
             raise _entry_error(
                 entry, index, "file", f"does not exist on disk: {file_path}")
@@ -135,5 +173,6 @@ def check_library(path: str | Path) -> dict:
         "reviewed": reviewed,
         "quarantine": quarantine,
         "warnings": warnings,
+        "delivery_ready": blocked == 0,
         "ok": True,
     }

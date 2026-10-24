@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from PIL import Image
 
-from reels_maker.creative import capabilities, compile_creative_spec
+from reels_maker.creative import CapabilityRegistry, capabilities, compile_creative_spec
 from reels_maker.creative.spec import CreativeSpecError, validate_creative_spec
 from reels_maker.creative.edit import CreativeEditError, edit_creative_spec
 from reels_maker.creative.quality import audit_creative_spec
@@ -38,9 +38,48 @@ class CreativeEngineTests(unittest.TestCase):
         self.folder.cleanup()
     def test_registry_never_advertises_unimplemented_motion(self):
         cap=capabilities()
+        self.assertEqual(cap["schema_version"],2)
         self.assertEqual(cap["creative_spec_version"],1)
         self.assertEqual(cap["modes"]["camera_canvas"]["status"],"implemented")
         self.assertIn("mask-rise",cap["modes"]["camera_canvas"]["typography_motions"])
+
+    def test_registry_reports_provider_icon_and_feature_status_truthfully(self):
+        cap=CapabilityRegistry().describe()
+        stock={p["name"]:p for p in cap["providers"]["stock_media"]}
+        self.assertEqual(set(stock),{"pexels","unsplash","pixabay",
+                                     "wikimedia_commons","openverse"})
+        self.assertTrue(all(p["status"] in ("implemented", "partial") for p in stock.values()))
+        self.assertEqual(stock["openverse"]["status"], "partial")
+        self.assertIn("OPENVERSE_ACCESS_TOKEN", stock["openverse"]["authentication"])
+        self.assertEqual(stock["pexels"]["media"],["image","video"])
+        self.assertEqual(stock["pixabay"]["media"],["image","video"])
+        self.assertEqual(stock["pixabay"]["local_rate_limit"],
+                         {"requests":100,"window_seconds":60,"scope":"process"})
+        self.assertEqual(stock["pixabay"]["search_cache_ttl_seconds"],86400)
+        self.assertEqual(stock["openverse"]["status"],"partial")
+        self.assertIn("OPENVERSE_ACCESS_TOKEN",stock["openverse"]["authentication"])
+        audio=cap["providers"]["audio"]
+        self.assertEqual(audio[0]["status"],"partial")
+        self.assertIn("quarantine",audio[0]["workflow"])
+        self.assertEqual({p["name"] for p in cap["icon_packs"]},
+                         {"lucide","heroicons","tabler","phosphor","material_symbols"})
+        self.assertTrue(all(p["license"]["url"] for p in cap["icon_packs"]))
+        self.assertTrue(all(p["item_level_rights_review_required"] for p in cap["icon_packs"]))
+        self.assertTrue(next(p for p in cap["icon_packs"]
+                             if p["name"] == "material_symbols")["material_symbol_variants"])
+        flags=cap["feature_flags"]
+        self.assertEqual(flags["typed_creative_pipeline_v1"]["status"], "implemented")
+        self.assertEqual(flags["stock_video_search"]["status"],"implemented")
+        self.assertEqual(flags["licensed_asset_download"]["status"],"partial")
+        self.assertTrue(any("media-search and media-download" in item
+                            for item in flags["licensed_asset_download"]["limitations"]))
+        self.assertEqual(flags["semantic_icon_suggestions"]["status"],"implemented")
+        self.assertEqual(flags["procedural_sfx_generation"]["status"],"partial")
+        procedural = next(item for item in cap["providers"]["audio"]
+                          if item["name"] == "reels-maker-procedural")
+        self.assertEqual(procedural["status"], "partial")
+        self.assertEqual(flags["audio_beat_sync"]["status"],"unsupported")
+        self.assertEqual(flags["semantic_photo_sourcing"]["status"],"unsupported")
     def test_validate_creative_spec(self):
         report=validate_creative_spec(self.spec)
         self.assertEqual(report["shot_count"],2)

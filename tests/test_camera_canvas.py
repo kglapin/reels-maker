@@ -1,10 +1,14 @@
 """Regression checks for optional shared-canvas camera mode."""
 import tempfile
 import unittest
+import math
 from pathlib import Path
 from types import SimpleNamespace
 from PIL import Image
-from reels_maker.renderers.camera_canvas import CameraCanvasRenderer, validate_camera_canvas
+from reels_maker.renderers.camera_canvas import (
+    CameraCanvasRenderer, camera_viewport_to_world, validate_camera_canvas,
+)
+from reels_maker.core.transforms import Point, Space
 
 class CameraCanvasTests(unittest.TestCase):
     def setUp(self):
@@ -47,6 +51,21 @@ class CameraCanvasTests(unittest.TestCase):
         renderer=CameraCanvasRenderer(self.project())
         self.assertEqual(len(renderer.stages),3)
         self.assertEqual(renderer.stages[0].size,renderer.stages[1].size)
+
+    def test_camera_sampling_uses_shared_viewport_to_world_affine(self):
+        transform = camera_viewport_to_world(550, 590, -13, 1.2, 360, 640)
+        self.assertEqual((transform.source, transform.target),
+                         (Space.VIEWPORT, Space.WORLD))
+        center = transform.apply(Point(180, 320))
+        self.assertAlmostEqual(center.x, 550)
+        self.assertAlmostEqual(center.y, 590)
+        cosine, sine = math.cos(math.radians(-13)), math.sin(math.radians(-13))
+        self.assertAlmostEqual(transform.a, 1.2 * cosine)
+        self.assertAlmostEqual(transform.b, 1.2 * sine)
+        self.assertAlmostEqual(transform.c, -1.2 * sine)
+        self.assertAlmostEqual(transform.d, 1.2 * cosine)
+        self.assertAlmostEqual(transform.e, 550 - 1.2*cosine*180 + 1.2*sine*320)
+        self.assertAlmostEqual(transform.f, 590 - 1.2*sine*180 - 1.2*cosine*320)
 
 if __name__=="__main__":
     unittest.main()

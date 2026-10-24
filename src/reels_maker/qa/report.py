@@ -21,12 +21,15 @@ from ..core.timeline import Timeline
 from ..design.color import contrast_ratio, relative_luminance
 from ..design.tokens import DesignTokens
 from ..motionkit.choreography import variety_report
-from ..textkit.typesetter import TextBlock
+from ..core.transforms import Affine2D, Space
+from ..textkit.safe_geometry import SafePolygon, check_text_block
+from ..textkit.typesetter import FontBook, TextBlock
 
 MIN_HOLD = .42
 MAX_READING_CPS = 22.0
 CONTRAST_LARGE = 3.0
 CONTRAST_SMALL = 4.5
+SAFE_AREA_TOLERANCE = 1.5
 
 
 @dataclass
@@ -132,6 +135,8 @@ def audit(project, built_scenes, timeline: Timeline, *,
             scene_issues.extend(_collisions(elements, allowed, built, time,
                                             local_frame))
             scene_issues.extend(_safe_area(elements, built, time, local_frame))
+            scene_issues.extend(_text_ink_safe_area(
+                nodes, built, time, local_frame))
             for element in elements:
                 elements_seen.setdefault(element["role"], element)
         for element in elements_seen.values():
@@ -342,7 +347,7 @@ def _safe_area(elements: list[dict], built, time: float,
                local_frame: int) -> list[Issue]:
     safe = _safe_box(built.layout.safe)
     issues = []
-    tolerance = 1.5
+    tolerance = SAFE_AREA_TOLERANCE
     for element in elements:
         box = element["bounds"]
         if (box[0] < safe[0] - tolerance or box[1] < safe[1] - tolerance
@@ -354,6 +359,89 @@ def _safe_area(elements: list[dict], built, time: float,
                 [element.get("path", element["role"])],
                 "Keep text and controls inside the platform-safe margins.",
                 local_frame))
+    return issues
+
+
+def _text_ink_safe_area(roots: list[Node], built, time: float,
+                        local_frame: int) -> list[Issue]:
+    """Check placed FreeType word ink after the sampled scene-tree transforms."""
+    safe_rect = built.layout.safe
+    # Match the existing rectangular QA check's 1.5px raster-rounding tolerance.
+    # This does not enlarge the authored safe area by a visual amount, but keeps
+    # antialias/subpixel metrics consistent between the two geometry checks.
+    tolerance = SAFE_AREA_TOLERANCE
+    safe_polygon = SafePolygon(((safe_rect.x - tolerance, safe_rect.y - tolerance),
+                                (safe_rect.right + tolerance, safe_rect.y - tolerance),
+                                (safe_rect.right + tolerance, safe_rect.bottom + tolerance),
+                                (safe_rect.x - tolerance, safe_rect.bottom + tolerance)),
+                               "layout-safe")
+    issues = []
+    seen = set()
+
+    def visit(node: Node, ancestors: tuple[Node, ...], parent_path: tuple[str, ...],
+              parent_opacity: float):
+        effective_opacity = parent_opacity * node.opacity
+        if effective_opacity <= .015:
+            return
+        path_parts = parent_path + ((node.role,) if node.role != "decor" else ())
+        block = node.props.get("block")
+        if isinstance(block, TextBlock) and not block.truncated:
+            path = "/".join(path_parts) or node.role
+            try:
+                # Word.x already includes alignment within the full text column.
+                # Translate from the renderer's block origin (props x/y), not
+                # the narrower painted-bounds metadata, or centered copy is
+                # centered twice in the measured ink geometry.
+                if "x" in node.props and "y" in node.props:
+                    origin_x = float(node.props["x"])
+                    origin_y = float(node.props["y"])
+                else:
+                    origin = node.meta.get("bounds")
+                    if origin and len(origin) == 4:
+                        origin_x, origin_y = float(origin[0]), float(origin[1])
+                    else:
+                        raise ValueError("missing text block scene origin")
+                transform = Affine2D(e=origin_x, f=origin_y,
+                                     source=Space.LOCAL, target=Space.LOCAL)
+                for current in (node,) + tuple(reversed(ancestors)):
+                    edge = current.local_to_parent_transform()
+                    edge_local = Affine2D(edge.a, edge.b, edge.c, edge.d,
+                                          edge.e, edge.f,
+                                          Space.LOCAL, Space.LOCAL)
+                    transform = transform.then(edge_local)
+                report = check_text_block(block, FontBook(), (safe_polygon,),
+                                           transform=transform)
+                failures = tuple((failure.line_index, failure.word_index,
+                                  failure.text, failure.reason)
+                                 for failure in report.failures)
+                if failures:
+                    words = ", ".join(repr(item[2]) for item in failures)
+                    key = (local_frame, path, failures)
+                    if key not in seen:
+                        seen.add(key)
+                        issues.append(Issue(
+                            "text_ink_safe_area", "error",
+                            f"Text {path!r} has word ink outside the layout safe rectangle: {words}.",
+                            built.index + 1, round(time, 3), [path],
+                            "Move or reflow the text so every word's ink fits inside the safe rectangle.",
+                            local_frame))
+            except Exception as exc:
+                # Missing metrics and invalid transforms are actionable QA failures,
+                # not grounds for silently omitting this text block.
+                key = (local_frame, path, str(exc))
+                if key not in seen:
+                    seen.add(key)
+                    issues.append(Issue(
+                        "text_ink_safe_area", "error",
+                        f"Text {path!r} ink geometry could not be checked: {exc}.",
+                        built.index + 1, round(time, 3), [path],
+                        "Restore valid font metrics, text placement and transforms.",
+                        local_frame))
+        for child in node.children:
+            visit(child, ancestors + (node,), path_parts, effective_opacity)
+
+    for root in roots:
+        visit(root, (), (), 1.0)
     return issues
 
 

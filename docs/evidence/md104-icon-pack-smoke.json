@@ -1,0 +1,565 @@
+{
+  "date": "2026-10-23",
+  "scope": "synthetic icon pack integration smoke, not a campaign",
+  "render": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "frames": 60,
+    "duration": 2.0,
+    "profile": "final",
+    "codec": "libx264",
+    "crf": 17,
+    "bytes": 31954,
+    "export_quality": {
+      "status": "pass",
+      "width": 1080,
+      "height": 1920,
+      "fps": "30/1",
+      "frames": 60,
+      "codec": "h264",
+      "pix_fmt": "yuv420p",
+      "duration": 2.0,
+      "video_duration": 2.0,
+      "audio_streams": 0,
+      "audio_codec": null,
+      "sample_rate": null,
+      "expected_frames": 60,
+      "expected_duration": 2.0
+    }
+  },
+  "icon_provenance": [
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/arrow_right_alt",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/arrow_right_alt/materialsymbolsoutlined/arrow_right_alt_24px.svg",
+      "sha256": "2e975e29c640abfe0174ca03290d72bfa239060cb73534c7d878cc3a82780a5b",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/bar_chart",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/bar_chart/materialsymbolsoutlined/bar_chart_24px.svg",
+      "sha256": "20fe01f4d43fb4afb0b58461424e27dd4dcb712c1bb0233e2b0140b626d0412a",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/battery_charging_full",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/battery_charging_full/materialsymbolsoutlined/battery_charging_full_24px.svg",
+      "sha256": "492e73071a4ac2fa3541ac5c8f1e5606167a44d438014b1ef70fa61dcee5057a",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/bolt",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/bolt/materialsymbolsoutlined/bolt_24px.svg",
+      "sha256": "efc632df3302b78537d07d8fd674a66cb911b132515cd4f84c6a6a995ecff8e7",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/calendar_month",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/calendar_month/materialsymbolsoutlined/calendar_month_24px.svg",
+      "sha256": "bdc60a3e813b0db2928261ff7376870a7af445a0bd498bcb83f43a7e6ef26987",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/check",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/check/materialsymbolsoutlined/check_24px.svg",
+      "sha256": "01edd53418816632be08e9565b8ca40d9028c230a8a67baaf4b8a1de20db00e6",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/home",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/home/materialsymbolsoutlined/home_24px.svg",
+      "sha256": "41735f056fa43ed570585a294210f4c32dad1481bdf0a617b86b1007b2a8a913",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/schedule",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/schedule/materialsymbolsoutlined/schedule_24px.svg",
+      "sha256": "6b6606472e4d807e4b2afc8cd667a48fa634341d44487580a7b350f8dd790170",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/shield",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/shield/materialsymbolsoutlined/shield_24px.svg",
+      "sha256": "06e04825326fb2bfa5ca911f8d9379da8b09bc36b3f04b371ddaebee71bd3f8f",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "material_symbols",
+      "asset_id": "web/sunny",
+      "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+      "style": "outlined",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/sunny/materialsymbolsoutlined/sunny_24px.svg",
+      "sha256": "58faf3b66f61114c23bca0752f514ae5dc2669c4def0b5ae68ecaac8707e11c2",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "arrow-right",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/arrow-right.svg",
+      "sha256": "e45bc4a12592b8723110db42c6deffdf177e4fe7704cf50324963fa0a59b2d74",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "battery-charging",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/battery-charging.svg",
+      "sha256": "5e2b18c3c8d1012e9345fbf45271dc8e42056b09a68617d7f1d5c88fc917e3bf",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "calendar-blank",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/calendar-blank.svg",
+      "sha256": "6268583ae0ea04e93fd24f1e70d47a8e8d79c88fc304af397b95b318980215d6",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "chart-bar",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/chart-bar.svg",
+      "sha256": "d161e503af4f5386a370ffd742d19d85e98625fd6d6eadbabbdb36d58dcca22c",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "check",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/check.svg",
+      "sha256": "cbb89a8c42f283d4f846eb935e05d88c1be04462f16480e068c0f82b9ce40b12",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "clock",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/clock.svg",
+      "sha256": "b8c6c2899d2b9af48a55ba02ba6d7faf89b757915772dd24f5397f7b0d02aa5c",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "house",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/house.svg",
+      "sha256": "f674c1137ad26dafd368fec58ac981e304db6549a41c8cc689a0b550f15abdcc",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "lightning",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/lightning.svg",
+      "sha256": "3a50c776266b21812f8ec5b5a841a81f54aa942569a31eb03a36fb0a5bfbe66e",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "shield-check",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/shield-check.svg",
+      "sha256": "1031d675a6163ec5aa7be4e0912bebcf32ff8502fe27ac661581f5f5980c1441",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "phosphor",
+      "asset_id": "sun",
+      "version": "v2.0.8",
+      "style": "regular",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/sun.svg",
+      "sha256": "8df1c7b747774f8b2c1fe353b1b785c74aac35bfa50f2ed7d8d9a85a4191b2ac",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "arrow-right",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/arrow-right.svg",
+      "sha256": "7e602a26d53e78ceb788f38cb89ec1d1091130c56d7829ca294b7ed0642277c6",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "battery-charging",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/battery-charging.svg",
+      "sha256": "d8093f2c92ed48c85bc815011ab178e218c004e178f5f4287f9fc29eccf9aa58",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "bolt",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/bolt.svg",
+      "sha256": "5321162cf117d3a83aec6c8f67a3bb0398068edb487b524d280b8fb47d6b98ce",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "calendar",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/calendar.svg",
+      "sha256": "4861f170e9b1fa72eaa7cdefc3c7ca64ca6a10b9c2e3a13e1aceb4725f266d8d",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "chart-bar",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/chart-bar.svg",
+      "sha256": "ca1d3717da5007a46a2cf7521f9df558fd6e159874696dd400626809ead41162",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "check",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/check.svg",
+      "sha256": "e206067a7d570997b5b3a7d30ab287c0b15a492787649a8b96dff8fad2862fbe",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "clock",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/clock.svg",
+      "sha256": "971b0b2d3b5b17ae240cd3aac1a09710ab680d8c41900f1a37a0e430994d7fda",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "home",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/home.svg",
+      "sha256": "069600f461f3e967685765723a851af7b35f24b715e03d41a2928152cf75644c",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "shield-check",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/shield-check.svg",
+      "sha256": "7d12a28bb5b8ba69445a94118aa96b57a513f8d45e23974665f25c597eaccc30",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    },
+    {
+      "provider": "tabler",
+      "asset_id": "sun",
+      "version": "v3.49.0",
+      "style": "outline",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+        "notice_required": true
+      },
+      "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/sun.svg",
+      "sha256": "6677490605af8987d55d6e4185b1f6c241eced65b63ccfece68cadb7ce90fbb5",
+      "rights_status": "unknown",
+      "note": "Pack license recorded; trademark/brand and item-level use still require review."
+    }
+  ],
+  "qa_note": "studio-qa strict passed with only the expected icon_overload warning for the intentionally dense 30-icon grid; storyboard verified actual MP4 1080x1920/30fps/60 frames. Phone/brand and individual-logo clearance remain human gates.",
+  "rotation_probe": {
+    "scope": "three-icon synthetic entry/settle/exit motion probe",
+    "render": {
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 60,
+      "duration": 2.0,
+      "profile": "final",
+      "codec": "libx264",
+      "export_quality": {
+        "status": "pass",
+        "width": 1080,
+        "height": 1920,
+        "fps": "30/1",
+        "frames": 60,
+        "codec": "h264",
+        "pix_fmt": "yuv420p",
+        "duration": 2.0,
+        "video_duration": 2.0,
+        "audio_streams": 0,
+        "audio_codec": null,
+        "sample_rate": null,
+        "expected_frames": 60,
+        "expected_duration": 2.0
+      }
+    },
+    "icon_provenance": [
+      {
+        "provider": "material_symbols",
+        "asset_id": "web/home",
+        "version": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+        "style": "rounded",
+        "license": {
+          "id": "Apache-2.0",
+          "url": "https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE",
+          "notice_required": true
+        },
+        "source_url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/home/materialsymbolsrounded/home_wght500grad200fill1_24px.svg",
+        "sha256": "60f98f434ae0e239e036e709754497f3a58f3e13bc81064ca5e28e1cb3fe6f3f",
+        "rights_status": "unknown",
+        "note": "Pack license recorded; trademark/brand and item-level use still require review."
+      },
+      {
+        "provider": "phosphor",
+        "asset_id": "house",
+        "version": "v2.0.8",
+        "style": "regular",
+        "license": {
+          "id": "MIT",
+          "url": "https://github.com/phosphor-icons/core/blob/v2.0.8/LICENSE",
+          "notice_required": true
+        },
+        "source_url": "https://raw.githubusercontent.com/phosphor-icons/core/v2.0.8/assets/regular/house.svg",
+        "sha256": "f674c1137ad26dafd368fec58ac981e304db6549a41c8cc689a0b550f15abdcc",
+        "rights_status": "unknown",
+        "note": "Pack license recorded; trademark/brand and item-level use still require review."
+      },
+      {
+        "provider": "tabler",
+        "asset_id": "home",
+        "version": "v3.49.0",
+        "style": "outline",
+        "license": {
+          "id": "MIT",
+          "url": "https://github.com/tabler/tabler-icons/blob/v3.49.0/LICENSE",
+          "notice_required": true
+        },
+        "source_url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.49.0/icons/outline/home.svg",
+        "sha256": "069600f461f3e967685765723a851af7b35f24b715e03d41a2928152cf75644c",
+        "rights_status": "unknown",
+        "note": "Pack license recorded; trademark/brand and item-level use still require review."
+      }
+    ],
+    "storyboard_samples_seconds": [
+      0.35,
+      1.117,
+      1.95
+    ],
+    "qa_note": "studio-qa strict passed; actual final MP4 storyboard showed the authored Tabler tilt-settle and separate Phosphor/Material Symbols icons within the canvas. This synthetic inspection is not phone/brand approval."
+  }
+}

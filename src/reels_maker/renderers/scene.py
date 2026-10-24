@@ -343,7 +343,11 @@ class SceneRenderer:
                         str(colour), style=str(props.get("style", "outline")),
                         stroke_width=float(props.get("stroke_width", 0)),
                         cache_dir=props.get("cache_dir"),
-                        offline=bool(props.get("offline", False)))
+                        offline=bool(props.get("offline", False)),
+                        weight=props.get("weight", 400),
+                        fill=props.get("fill", False),
+                        grade=props.get("grade", 0),
+                        optical_size=props.get("optical_size", 24))
         x = int(round((float(props["x"]) + dx) * self.ss))
         y = int(round((float(props["y"]) + dy) * self.ss))
         target.alpha_composite(bitmap, (x, y))

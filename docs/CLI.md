@@ -46,6 +46,81 @@ pages and bootstrap JSON are challenged, and that is what the bridges cover:
   publishing a track still requires a human review record in
   `media/asset-library.json` (see the `library` command).
 
+## Public photo/video databases
+
+Search results are candidate records with `rights_status: "unknown"`; search
+does not grant reuse rights or download media. Search can combine providers and
+continue when one provider is missing credentials or unavailable:
+
+```sh
+reels-maker media-search "solar panels" --provider all --kind image \
+  --aspect 0.5625 --output candidates.json --json
+reels-maker media-search "solar farm" --provider pexels --kind video \
+  --limit 12 --output video-candidates.json --json
+```
+
+Image providers are Pexels, Pixabay, Unsplash, Wikimedia Commons and Openverse.
+Video search is currently Pexels/Pixabay only. Credentials are supplied through
+`PEXELS_API_KEY`, `PIXABAY_API_KEY`, `UNSPLASH_ACCESS_KEY`, and
+`OPENVERSE_ACCESS_TOKEN` (OAuth); Wikimedia image search needs no API key.
+Inspect the returned `providers` outcomes and each candidate's source, creator,
+license and exact `download_url`. The result has `search_status: "ok"`,
+`"partial"` or `"unavailable"`; provider errors are included in `providers`
+and are not silently treated as empty approved media.
+Each candidate also reports `local_download_supported`; an Unsplash URL can be
+used only through compliant API hotlinking and is intentionally rejected by
+`media-download`.
+
+Downloading requires a separate human-reviewed decision JSON bound to the exact
+provider, asset ID, source URL, download URL, reviewer, review date, evidence,
+attribution (or an explicit statement that none is required), license and
+permitted platforms. Example:
+
+```json
+{
+  "provider": "wikimedia_commons",
+  "asset_id": "123456",
+  "source_url": "https://commons.wikimedia.org/wiki/File:Example.jpg",
+  "download_url": "https://upload.wikimedia.org/wikipedia/commons/.../Example.jpg",
+  "decision": "cleared",
+  "reviewer": "Human reviewer",
+  "review_date": "2026-10-24",
+  "evidence": "rights ticket or review record",
+  "attribution": "Crisco 1492, CC BY-SA 4.0",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "allowed_platforms": ["instagram_reels"]
+}
+```
+
+```sh
+reels-maker media-download candidates.json --provider wikimedia_commons \
+  --asset-id 123456 --rights-decision rights-review.json \
+  --brand <slug> --target-platform instagram_reels --json
+```
+
+Downloads are host/IP, redirect, size and time checked; images/videos are
+verified, hashed and staged only in `brands/<slug>/imports/` quarantine. The
+result remains `approval: "not_approved"`; copy nothing into `media/` and do not
+publish until editorial and library review is complete. Unsplash is deliberately
+not locally downloaded by this command because its API workflow requires
+hotlinked image URLs; this checkout does not implement an approved hotlink-based
+render path. Openverse external hosts beyond the fixed provider allowlist are
+accepted only when the exact item URL is included in a human rights decision and
+the resolved host is public HTTPS.
+
+## Asset-library rights gate
+
+```sh
+reels-maker library brands/<slug>/media/asset-library.json --json
+```
+
+The command's top-level `status: "ok"` means the manifest was parsed and
+validated. Check `library.delivery_ready` separately: `false` means one or more
+assets still have unknown/blocked rights or are not editor-reviewed. Never
+publish merely because the JSON command succeeded; source/license metadata and
+human review remain required.
+
 For legacy kinetic manifests, `kinetic-render` keeps Cairo as its default; opt
 into the shared studio engine with `--engine studio` during migration:
 

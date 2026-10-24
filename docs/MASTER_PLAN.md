@@ -49,11 +49,11 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
-| **MD-001** | P0 | fragmenty istnieją — zweryfikować | Inventory existing modules, deprecated pipelines, media/license state and identify single runtime of record. | — |
-| **MD-002** | P0 | fragmenty istnieją — zweryfikować | Establish 24-shot golden reference suite with human annotations and failure examples; store in golden manifests. | MD-001 |
-| **MD-003** | P0 | fragmenty istnieją — zweryfikować | Build public CapabilityRegistry v2 incl icon packs, stock providers, audio, current feature flags and limitations. | MD-001 |
-| **MD-004** | P0 | do wdrożenia | Establish licensed asset ID/provenance schema and default rights policy; block unreviewed footage/music. | MD-001 |
-| **MD-005** | P0 | do wdrożenia | Reconcile docs/MASTER_PLAN.md, docs/ROADMAP_STATUS.json and source status, especially repository privacy and client licensing. | MD-001; MD-003 |
+| **MD-001** | P0 | verified audit recorded; runtime paths remain multiple | Inventory existing modules, deprecated pipelines, media/license state and identify single runtime of record. Evidence: `docs/F0_AUDIT.md`; repository catalog reproduced at 30 items. | — |
+| **MD-002** | P0 | partial; human-observation blocker | Establish 24-shot golden reference suite with human annotations and failure examples; store in golden manifests. Existing 18-item board has blank timecodes; do not invent annotations. | MD-001 |
+| **MD-003** | P0 | implemented locally; tests pass | Build public CapabilityRegistry v2 incl icon packs, stock providers, audio, current feature flags and limitations. Evidence: `CapabilityRegistry` and CLI tests; provider search is not rights clearance. | MD-001 |
+| **MD-004** | P0 | implemented locally; actual assets remain blocked | Establish licensed asset ID/provenance schema and default rights policy; block unreviewed footage/music. Unknown rights remain `delivery_ready: false`; do not infer clearance. | MD-001 |
+| **MD-005** | P0 | reconciled locally; owner gates remain open | Reconcile docs/MASTER_PLAN.md, docs/ROADMAP_STATUS.json and source status, especially repository privacy and client licensing. Evidence: `docs/F0_AUDIT.md`; GitHub visibility is PUBLIC. | MD-001; MD-003 |
 
 **Warunek odbioru F0:** Inwentaryzacja każdej rzeczywistej funkcji, zasady praw/licencji, zatwierdzony materiał referencyjny i brak sprzecznych statusów.
 
@@ -61,15 +61,15 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
-| **MD-101** | P0 | fragmenty istnieją — zweryfikować | Implement Pexels and Pixabay photos+videos API adapters, Unsplash compliant photo adapter, Wikimedia/Openverse adapters. | MD-004 |
-| **MD-102** | P0 | fragmenty istnieją — zweryfikować | Add per-provider credentials, quotas, backoff, retries, cache, provenance, rights decisions and authorization tests. | MD-101; MD-004 |
-| **MD-103** | P0 | fragmenty istnieją — zweryfikować | Implement image/video discovery ranking, alternate search fallback, download/verification/transcoding. | MD-102 |
-| **MD-104** | P0 | fragmenty istnieją — zweryfikować | Implement icon packs Lucide/Heroicons/Tabler/Phosphor/Material with pinning, safe SVG, semantic selection, cache and legal notices. | MD-003; MD-004 |
-| **MD-105** | P0 | fragmenty istnieją — zweryfikować | Implement curated cross-platform-safe music/SFX packs and licensed SFX/music source adapters. | MD-004; MD-102 |
+| **MD-101** | P0 | search adapters + JSON-first `media-search` CLI implemented; review/live policy gates pending | Implement Pexels and Pixabay photos+videos API adapters, Unsplash compliant photo adapter, Wikimedia/Openverse adapters. Mock CLI tests pass; providers were not called live and results remain candidates. | MD-004 |
+| **MD-102** | P0 | implemented locally; live credentials unavailable/not exercised | Provider-specific credentials/OAuth checks, local quotas, bounded retry/backoff, persistent private metadata cache (Pixabay TTL 24h), explicit Unsplash download tracking and exact-item review decision. Mock tests pass; provider/server quotas remain authoritative; no live API calls. | MD-101; MD-004 |
+| **MD-103** | P0 | JSON-first `media-download` wired; only synthetic download/transcode exercised | Deterministic provider ranking/fallback; exact candidate provider/ID/source/download URL and target platform require human-reviewed decision before networking; host/IP/redirect allowlist, size/time bounds, atomic quarantine, checksum/FFprobe, explicit H.264/AAC transcode. CLI and synthetic tests pass; no real provider assets downloaded. | MD-102 |
+| **MD-104** | P0 | implemented locally; source/license QA recorded, mobile review pending | Implement icon packs Lucide/Heroicons/Tabler/Phosphor/Material with pinning, safe SVG, semantic selection, cache and legal notices. 30 live upstream icons across Tabler/Phosphor/Material rendered in a synthetic 1080x1920 test MP4, plus entry/settle/exit rotation smoke; Studio export records source/version/license/hash in `docs/evidence/md104-icon-pack-smoke.json`. | MD-003; MD-004 |
+| **MD-105** | P0 | partial; Openverse metadata search + procedural SFX quarantine | Openverse audio candidate search uses OAuth and returns item-level license/source metadata with rights unknown. Deterministic procedural WAV SFX may be generated only in `imports/audio/`; curated cross-platform-safe packs, authorized downloads/mixes and human playback/licensing review remain incomplete. | MD-004; MD-102 |
 | **MD-106** | P0 | do wdrożenia | Produce provider mock and limited live end-to-end tests; stop if unavailable or no rights. | MD-103; MD-104; MD-105 |
-| **DM-001** | P0 | do wdrożenia | typed data source loader for CSV/JSON/XLSX and authorized connector exports; schema/number/locale/rights provenance. | MD-004 |
-| **DM-002** | P0 | do wdrożenia | Data Integrity Validator, calculation ledger, deterministic aggregation, safe rounding and explicit units. | DM-001 |
-| **DM-003** | P0 | do wdrożenia | Data Director chart-selection/variant planning based on FT Visual Vocabulary; explainable rationale. | DM-002; MD-003 |
+| **DM-001** | P0 | local file loader implemented; connector integration pending | Typed data source loader for CSV/JSON/XLSX and authorized connector exports; schema/number/locale/rights provenance. Synthetic CSV/JSON tests pass; XLSX requires optional extra; no client data imported. | MD-004 |
+| **DM-002** | P0 | implemented locally; synthetic tests pass | Data Integrity Validator, calculation ledger, deterministic Decimal aggregation, named rounding and explicit units/currency/period; nulls, unauthorized provenance and invalid denominators fail closed. No client data imported. | DM-001 |
+| **DM-003** | P0 | implemented locally; planning-only recommendations | Data Director chart-selection/variant planning based on FT Visual Vocabulary; explainable rationale, alternatives and required/missing fields. Families remain `renderer_status: not_assessed`; no unsupported renderer claim. | DM-002; MD-003 |
 
 **Warunek odbioru F1:** Legalne wyszukanie/pobranie zdjęcia, wideo, ikony i audio z pełną proweniencją; import i walidacja liczb oraz wybór rodzaju wizualizacji.
 
@@ -77,9 +77,9 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
-| **MD-201** | P0 | fragmenty istnieją — zweryfikować | Typed Creative Intent -> Motion Plan -> Render Graph. | MD-003; DM-002 |
-| **MD-202** | P0 | fragmenty istnieją — zweryfikować | Common hierarchy for 2D/video/vector/text/camera; reconcile Studio and Camera Canvas. | MD-201 |
-| **MD-203** | P0 | fragmenty istnieją — zweryfikować | Actual glyph shaping, text fit, multi-line wrap, mask bounds and platform safe polygons. | MD-202 |
+| **MD-201** | P0 | additive typed boundary implemented locally; legacy parity tests pass | Typed Creative Intent -> Motion Plan -> Render Graph. New stages snapshot/validate Creative Spec v1 and convert deterministically back to the existing Studio/Camera Canvas manifest contracts; no shared graph/migration claim. | MD-003; DM-002 |
+| **MD-202** | P0 | partial; shared affine core used by Studio Node bounds and Camera Canvas sampling | Common hierarchy for 2D/video/vector/text/camera; reconcile Studio and Camera Canvas. Typed affine 2D core backs Studio Node transforms/QA bounds and Camera Canvas viewport-to-world sampling; shared parent/child object graph across renderers remains incomplete. | MD-201 |
+| **MD-203** | P0 | partial; sampled Studio QA checks FreeType ink bboxes, full glyph-outline/platform-polygon QA pending | Actual glyph shaping, text fit, multi-line wrap, mask bounds and platform safe polygons. Studio checks transformed word ink bounds at existing sample frames against layout-safe rectangle; standalone polygon/mask checker exists. This is not vector glyph-outline coverage and Camera Canvas integration remains outstanding. | MD-202 |
 | **MD-204** | P0 | fragmenty istnieją — zweryfikować | Camera path planning, arbitrary positions, controlled rotation and subject retention. | MD-202; MD-203 |
 | **MD-205** | P0 | fragmenty istnieją — zweryfikować | Layout candidate generator, hard-reject invalid placements, soft artistic scoring and explainable choice. | MD-203; MD-204; DM-003 |
 | **MD-206** | P0 | fragmenty istnieją — zweryfikować | Transform- and timeline-sampled QA at every keyframe extremum and representative in-between frames. | MD-205 |

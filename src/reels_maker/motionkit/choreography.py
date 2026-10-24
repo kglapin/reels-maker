@@ -241,6 +241,67 @@ def plan_choreography(elements: Iterable[ElementSpec], *,
     return Choreography(entries, warnings, scene_index, exits)
 
 
+def verify_shared_element_continuity(
+    built_scenes: list,
+    *,
+    max_anchor_jump_px: float = 320.0,
+) -> dict:
+    """Verify object identity and spatial continuity across consecutive BuiltScenes (MD-305)."""
+    transitions = []
+    violations = []
+    for idx in range(len(built_scenes) - 1):
+        left, right = built_scenes[idx], built_scenes[idx + 1]
+        left_map: dict[str, tuple[float, float, float, float]] = {}
+        right_map: dict[str, tuple[float, float, float, float]] = {}
+        for root in left.at(max(0.0, left.duration - 1e-3)):
+            for node in root.flatten():
+                sid = node.meta.get("stable_row_id") or node.meta.get("shared_element_id")
+                if sid:
+                    wb = node.world_bounds()
+                    if wb is not None:
+                        left_map[str(sid)] = wb
+        for root in right.at(0.0):
+            for node in root.flatten():
+                sid = node.meta.get("stable_row_id") or node.meta.get("shared_element_id")
+                if sid:
+                    wb = node.world_bounds()
+                    if wb is not None:
+                        right_map[str(sid)] = wb
+        shared_ids = sorted(set(left_map) & set(right_map))
+        pairs = []
+        for sid in shared_ids:
+            lb, rb = left_map[sid], right_map[sid]
+            lcx, lcy = (lb[0] + lb[2]) / 2.0, (lb[1] + lb[3]) / 2.0
+            rcx, rcy = (rb[0] + rb[2]) / 2.0, (rb[1] + rb[3]) / 2.0
+            jump = ((rcx - lcx) ** 2 + (rcy - lcy) ** 2) ** 0.5
+            pairs.append({
+                "id": sid,
+                "from_center": [round(lcx, 2), round(lcy, 2)],
+                "to_center": [round(rcx, 2), round(rcy, 2)],
+                "jump_px": round(jump, 2),
+            })
+            if jump > max_anchor_jump_px:
+                violations.append({
+                    "from_scene": idx + 1,
+                    "to_scene": idx + 2,
+                    "id": sid,
+                    "jump_px": round(jump, 2),
+                    "max_anchor_jump_px": max_anchor_jump_px,
+                })
+        transitions.append({
+            "from_scene": idx + 1,
+            "to_scene": idx + 2,
+            "shared_count": len(shared_ids),
+            "shared_ids": shared_ids,
+            "pairs": pairs,
+        })
+    return {
+        "ok": not violations,
+        "transitions": transitions,
+        "violations": violations,
+    }
+
+
 def variety_report(plans: Iterable[Choreography]) -> dict:
     """Detect monotonous rhythm without pretending to judge aesthetics."""
     plans = list(plans)

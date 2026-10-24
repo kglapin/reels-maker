@@ -209,3 +209,107 @@ def resolve_tokens(style: str, brand: Mapping | None = None,
         number_feature=system.number_feature,
         corner_style=system.corner_style,
     ).with_canvas(width, height)
+
+
+PLATFORM_PROFILES: dict[str, dict[str, object]] = {
+    "instagram_reels": {
+        "width": 1080,
+        "height": 1920,
+        "aspect": "9:16",
+        "safe": {"left": .075, "right": .075, "top": .08, "bottom": .14},
+        "action_rail": {"x_from": .84, "y_from": .48},
+    },
+    "tiktok": {
+        "width": 1080,
+        "height": 1920,
+        "aspect": "9:16",
+        "safe": {"left": .075, "right": .075, "top": .09, "bottom": .16},
+        "action_rail": {"x_from": .83, "y_from": .45},
+    },
+    "youtube_shorts": {
+        "width": 1080,
+        "height": 1920,
+        "aspect": "9:16",
+        "safe": {"left": .075, "right": .075, "top": .08, "bottom": .15},
+        "action_rail": {"x_from": .84, "y_from": .50},
+    },
+    "linkedin_portrait": {
+        "width": 1080,
+        "height": 1350,
+        "aspect": "4:5",
+        "safe": {"left": .07, "right": .07, "top": .07, "bottom": .10},
+        "action_rail": None,
+    },
+    "square_feed": {
+        "width": 1080,
+        "height": 1080,
+        "aspect": "1:1",
+        "safe": {"left": .075, "right": .075, "top": .075, "bottom": .09},
+        "action_rail": None,
+    },
+    "landscape_hd": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9",
+        "safe": {"left": .075, "right": .075, "top": .08, "bottom": .10},
+        "action_rail": None,
+    },
+}
+
+
+def resolve_platform_profile(name: str) -> dict[str, object]:
+    """Return a validated copy of a social-platform profile (MD-403)."""
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("Platform profile name must be a non-empty string")
+    key = name.strip().lower().replace("-", "_")
+    if key not in PLATFORM_PROFILES:
+        raise ValueError(
+            f"Unknown platform profile {name!r}; choose one of "
+            + ", ".join(sorted(PLATFORM_PROFILES))
+        )
+    spec = PLATFORM_PROFILES[key]
+    return {
+        "id": key,
+        "width": spec["width"],
+        "height": spec["height"],
+        "aspect": spec["aspect"],
+        "safe": dict(spec["safe"]),
+        "action_rail": dict(spec["action_rail"]) if spec["action_rail"] else None,
+    }
+
+
+def platform_safe_polygon(profile_name: str, width: int | None = None,
+                          height: int | None = None):
+    """Build a platform-specific SafePolygon accounting for UI rails (MD-203/403)."""
+    from ..textkit.safe_geometry import SafePolygon
+
+    spec = resolve_platform_profile(profile_name)
+    w = int(width if width is not None else spec["width"])
+    h = int(height if height is not None else spec["height"])
+    if w <= 0 or h <= 0:
+        raise ValueError("Canvas dimensions must be positive")
+    safe = spec["safe"]
+    left = w * float(safe["left"])
+    right = w * (1.0 - float(safe["right"]))
+    top = h * float(safe["top"])
+    bottom = h * (1.0 - float(safe["bottom"]))
+    rail = spec["action_rail"]
+    if rail:
+        rail_x = min(right, w * float(rail["x_from"]))
+        rail_y = max(top, min(bottom, h * float(rail["y_from"])))
+        if rail_x < right and top < rail_y < bottom:
+            # 6-vertex L-polygon excluding the lower-right social UI action rail
+            return SafePolygon((
+                (left, top),
+                (right, top),
+                (right, rail_y),
+                (rail_x, rail_y),
+                (rail_x, bottom),
+                (left, bottom),
+            ), f"platform:{spec['id']}")
+    return SafePolygon((
+        (left, top),
+        (right, top),
+        (right, bottom),
+        (left, bottom),
+    ), f"platform:{spec['id']}")

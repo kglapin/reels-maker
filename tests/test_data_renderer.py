@@ -8,7 +8,12 @@ import unittest
 from reels_maker.components.base import SceneContext
 from reels_maker.components.scenes import build_scene
 from reels_maker.data_director import recommend_visualizations
-from reels_maker.data_renderer import DataRenderError, line_chart_scene, table_scene
+from reels_maker.data_renderer import (
+    DataRenderError, bar_chart_scene, compile_visualization_scene,
+    line_chart_scene, paginate_table_scenes, sorted_table_scene,
+    stacked_bars_100_scene, table_scene, table_to_bars_scenes,
+)
+from reels_maker.qa.report import audit_data_scene
 from reels_maker.data_sources import (
     ColumnSpec, DataSchema, LoadedData, RightsProvenance,
 )
@@ -173,6 +178,143 @@ class DataRendererTests(unittest.TestCase):
             table_scene(data, row_id_column="id", column_widths={"region": .5, "count": .5},
                         alignments={"region": "left", "count": "right"},
                         duration=2, headline="Table", max_rows=1)
+
+    def test_bar_and_stacked_bar_compilers_and_unified_dispatcher(self):
+        bar_data = LoadedData((
+            {"region": "Północ", "output": Decimal("45.0")},
+            {"region": "Południe", "output": Decimal("80.5")},
+            {"region": "Zachód", "output": Decimal("62.0")},
+        ), DataSchema((
+            ColumnSpec("region", "string", "none", "reject"),
+            ColumnSpec("output", "decimal", "MWh", "reject", currency="none"),
+        ), "pl_PL", "none"), "bars.csv", "d" * 64, RIGHTS)
+        plan = recommend_visualizations(
+            bar_data, question="Który region produkuje najwięcej?",
+            intent="magnitude_ranking",
+        )
+        scene = compile_visualization_scene(
+            bar_data, plan, duration=3.0, data_order="descending"
+        )
+        self.assertEqual(scene["type"], "bars")
+        self.assertEqual(scene["bars"][0]["suffix"], " MWh")
+        built = build_scene(self.context(), scene)
+        self.assertEqual(built.meta["row_ids"], ["Południe", "Zachód", "Północ"])
+        self.assertEqual(audit_data_scene(built), [])
+
+        stack_data = LoadedData((
+            {"sector": "Dom", "source": "PV", "share_mwh": Decimal("60")},
+            {"sector": "Dom", "source": "Sieć", "share_mwh": Decimal("40")},
+            {"sector": "Firma", "source": "PV", "share_mwh": Decimal("75")},
+            {"sector": "Firma", "source": "Sieć", "share_mwh": Decimal("25")},
+        ), DataSchema((
+            ColumnSpec("sector", "string", "none", "reject"),
+            ColumnSpec("source", "string", "none", "reject"),
+            ColumnSpec("share_mwh", "decimal", "MWh", "reject", currency="none"),
+        ), "pl_PL", "none"), "stack.csv", "e" * 64, RIGHTS)
+        stack_plan = recommend_visualizations(
+            stack_data, question="Udział źródeł energii", intent="part_to_whole"
+        )
+        stack_scene = stacked_bars_100_scene(
+            stack_data, stack_plan,
+            category_column="sector", segment_column="source",
+            value_column="share_mwh", duration=3.0,
+        )
+        self.assertEqual(stack_scene["type"], "stacked_bars_100")
+        built_stack = build_scene(self.context(), stack_scene)
+        self.assertEqual(audit_data_scene(built_stack), [])
+
+    def test_sorted_table_animates_row_reorder_highlights_and_cell_counters(self):
+        data = LoadedData((
+            {"id": "r-1", "region": "Północ", "energy": Decimal("12.0")},
+            {"id": "r-2", "region": "Południe", "energy": Decimal("38.0")},
+            {"id": "r-3", "region": "Centrum", "energy": Decimal("24.0")},
+        ), DataSchema((
+            ColumnSpec("id", "string", "none", "reject"),
+            ColumnSpec("region", "string", "none", "reject"),
+            ColumnSpec("energy", "decimal", "kWh", "reject", currency="none"),
+        ), "pl_PL", "none"), "sort.csv", "f" * 64, RIGHTS)
+        scene = sorted_table_scene(
+            data,
+            row_id_column="id",
+            visible_columns=["region", "energy"],
+            column_widths={"region": .6, "energy": .4},
+            alignments={"region": "left", "energy": "right"},
+            duration=3.0,
+            headline="Ranking mocy",
+            sort_by="energy",
+            sort_order="descending",
+            highlight_rows=["r-2"],
+            highlight_cells=[("r-3", "energy")],
+            cell_transitions={"r-2": {"energy": {"from": 20.0, "to": 38.0, "suffix": " kWh"}}},
+        )
+        self.assertEqual([r["id"] for r in scene["rows"]], ["r-2", "r-3", "r-1"])
+        self.assertEqual(scene["animate_from_row_ids"], ["r-1", "r-2", "r-3"])
+        built = build_scene(self.context(), scene)
+        table_children = [
+            n for n in built.elements["table"].children if n.kind == "group"
+        ]
+        # r-2 moved from index 1 -> 0, so dy at t=0 is positive (starts lower)
+        r2_node = table_children[0]
+        self.assertEqual(r2_node.meta["stable_row_id"], "r-2")
+        self.assertTrue(r2_node.meta["highlighted"])
+        self.assertIn("dy", r2_node.tracks)
+        self.assertGreater(r2_node.tracks["dy"].value(0.0), 0.0)
+        self.assertAlmostEqual(r2_node.tracks["dy"].value(2.5), 0.0, places=3)
+        # r-2 energy cell has an animated counter track
+        num_cells = [c for c in r2_node.children if c.kind == "number"]
+        self.assertEqual(len(num_cells), 1)
+        self.assertIn("prop.value", num_cells[0].tracks)
+        self.assertAlmostEqual(num_cells[0].tracks["prop.value"].value(0.0), 20.0, places=3)
+        self.assertAlmostEqual(num_cells[0].tracks["prop.value"].value(2.5), 38.0, places=3)
+
+    def test_table_pagination_and_table_to_bars_conservation(self):
+        rows = tuple(
+            {"id": f"id-{i:02d}", "name": f"Instalacja {i}", "kwh": Decimal(str(10 * i))}
+            for i in range(1, 11)
+        )
+        schema = DataSchema((
+            ColumnSpec("id", "string", "none", "reject"),
+            ColumnSpec("name", "string", "none", "reject"),
+            ColumnSpec("kwh", "decimal", "kWh", "reject", currency="none"),
+        ), "pl_PL", "none")
+        ten_rows = LoadedData(rows, schema, "ten.csv", "1" * 64, RIGHTS)
+        pages = paginate_table_scenes(
+            ten_rows,
+            row_id_column="id",
+            visible_columns=["name", "kwh"],
+            column_widths={"name": .65, "kwh": .35},
+            alignments={"name": "left", "kwh": "right"},
+            duration_per_page=2.5,
+            headline="Instalacje",
+            page_size=6,
+        )
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(len(pages[0]["rows"]), 6)
+        self.assertEqual(len(pages[1]["rows"]), 4)
+        self.assertEqual(
+            [r["id"] for p in pages for r in p["rows"]],
+            [f"id-{i:02d}" for i in range(1, 11)],
+        )
+
+        four_rows = LoadedData(rows[:4], schema, "four.csv", "2" * 64, RIGHTS)
+        tbl_scene, bar_scene = table_to_bars_scenes(
+            four_rows,
+            row_id_column="id",
+            label_column="name",
+            value_column="kwh",
+            visible_columns=["name", "kwh"],
+            column_widths={"name": .65, "kwh": .35},
+            alignments={"name": "left", "kwh": "right"},
+            headline="Transformacja tabela -> wykres",
+        )
+        self.assertTrue(tbl_scene["data_provenance"]["conservation_verified"])
+        self.assertEqual(
+            tbl_scene["data_provenance"]["shared_object_ids"],
+            bar_scene["data_provenance"]["shared_object_ids"],
+        )
+        built_tbl = build_scene(self.context(), tbl_scene)
+        built_bar = build_scene(self.context(), bar_scene)
+        self.assertEqual(set(built_tbl.meta["row_ids"]), set(built_bar.meta["row_ids"]))
 
 
 if __name__ == "__main__":

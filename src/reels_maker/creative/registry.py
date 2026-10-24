@@ -152,7 +152,25 @@ class CapabilityRegistry:
                                         "providers": ["pexels", "pixabay"]},
                 "data_visualization": {
                     "status": "partial",
-                    "limitations": ["Studio has bars/donut/stat-grid, ordered bars, explicit vector line_chart, 100%-stacked bars and a basic stable-row-ID table. Typed LoadedData bridges support a line series and table only; no general DataSpec compiler, row pagination or animated cell transitions."],
+                    "limitations": [
+                        "Studio has bars/donut/stat-grid, ordered bars, explicit vector line_chart, 100%-stacked bars and a stable-row-ID table with sort, row/cell highlights, cell counter transitions, pagination and table->bars shared-ID compilation.",
+                        "Typed LoadedData bridges support line, bar, stacked_bar and table via compile_visualization_scene; full waterfall/Sankey/heatmap families and human mobile review remain.",
+                    ],
+                },
+                "layout_solver_qa": {
+                    "status": "implemented",
+                    "limitations": ["solve_scene_layout and repair_scene_layout evaluate candidate compositions against timeline-sampled geometry/ink QA; aesthetic approval remains human-gated."],
+                },
+                "platform_safe_polygons": {
+                    "status": "implemented",
+                    "profiles": [
+                        "instagram_reels", "tiktok", "youtube_shorts",
+                        "linkedin_portrait", "square_feed", "landscape_hd",
+                    ],
+                },
+                "vector_path_trim": {
+                    "status": "implemented",
+                    "limitations": ["Arc-length polyline/line trim (progress/trim_start) and icon state transitions are supported; arbitrary cubic-Bezier SVG morphs remain unsupported."],
                 },
                 "vector_line_chart": {
                     "status": "partial",

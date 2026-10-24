@@ -207,3 +207,62 @@ def sfx_plan(scene_lengths: list[float], cues: Mapping[int, Mapping[str, float]]
                                "asset": "tick-soft", "gain_db": -24})
         cursor += length
     return events
+
+
+def select_compatible_audio(
+    candidates: Iterable[Mapping[str, object]],
+    *,
+    platform: str,
+    required_duration: float,
+    kind: str = "music",
+    require_reviewed_rights: bool = True,
+) -> dict:
+    """Filter and rank legal cross-platform audio candidates fail-closed (MD-401)."""
+    if not isinstance(platform, str) or not platform.strip():
+        raise ValueError("platform must be a non-empty string")
+    if required_duration <= 0:
+        raise ValueError("required_duration must be positive")
+    if kind not in ("music", "sfx"):
+        raise ValueError("kind must be music or sfx")
+    target_platform = platform.strip().lower()
+    eligible = []
+    rejected = []
+    for idx, item in enumerate(candidates):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"audio candidate {idx} must be a mapping")
+        cid = str(item.get("id") or item.get("file") or f"audio-{idx}")
+        item_kind = str(item.get("kind", "music")).lower()
+        if item_kind != kind:
+            rejected.append({"id": cid, "reason": f"kind_mismatch:{item_kind}"})
+            continue
+        rights = str(item.get("rights_status", "unknown")).lower()
+        delivery_ready = bool(item.get("delivery_ready", False))
+        if require_reviewed_rights and (rights != "approved" or not delivery_ready):
+            rejected.append({"id": cid, "reason": "unreviewed_or_unapproved_rights"})
+            continue
+        platforms = [str(p).lower() for p in (item.get("platforms_allowed") or [])]
+        if target_platform not in platforms and "all" not in platforms:
+            rejected.append({"id": cid, "reason": f"platform_not_allowed:{target_platform}"})
+            continue
+        duration = float(item.get("duration") or 0.0)
+        loopable = bool(item.get("loopable", False))
+        if kind == "music" and duration < required_duration and not loopable:
+            rejected.append({"id": cid, "reason": "duration_too_short"})
+            continue
+        duration_delta = abs(duration - required_duration)
+        score = round(1.0 / (1.0 + duration_delta / max(1.0, required_duration)), 6)
+        eligible.append({
+            "id": cid,
+            "file": item.get("file"),
+            "duration": duration,
+            "license": item.get("license"),
+            "score": score,
+        })
+    eligible.sort(key=lambda r: (-r["score"], r["id"]))
+    selected = eligible[0] if eligible else None
+    return {
+        "ok": selected is not None,
+        "selected": selected,
+        "eligible": eligible,
+        "rejected": rejected,
+    }

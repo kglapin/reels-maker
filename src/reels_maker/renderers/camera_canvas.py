@@ -3,7 +3,9 @@ from __future__ import annotations
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from ..core.transforms import Affine2D, Space
+from ..core.transforms import (
+    Affine2D, Bounds, Point, Space, TransformHierarchy, TransformNode,
+)
 
 def ease(v):
     t=min(1,max(0,float(v)))
@@ -189,3 +191,172 @@ def camera_viewport_to_world(cx: float, cy: float, angle: float, zoom: float,
         e=cx - zoom * cosine * width / 2 + zoom * sine * height / 2,
         f=cy - zoom * sine * width / 2 - zoom * cosine * height / 2,
         source=Space.VIEWPORT, target=Space.WORLD)
+
+
+def camera_world_to_viewport(cx: float, cy: float, angle: float, zoom: float,
+                             width: int, height: int) -> Affine2D:
+    """Return the exact forward transform mapping world coordinates to viewport."""
+    return camera_viewport_to_world(cx, cy, angle, zoom, width, height).inverse()
+
+
+_LAYOUT_PHOTO_BOXES = {
+    "photo-above": (.10, .10, .80, .45),
+    "photo-left": (.08, .17, .59, .52),
+    "offset": (.22, .09, .68, .43),
+    "diagonal": (.09, .18, .77, .43),
+}
+
+_LAYOUT_TEXT_ORIGINS = {
+    "photo-above": (.09, .65),
+    "photo-left": (.09, .76),
+    "offset": (.10, .61),
+    "diagonal": (.10, .67),
+}
+
+
+def build_camera_canvas_hierarchy(
+    scenes: list[dict], width: int, height: int
+) -> tuple[TransformHierarchy, dict[str, Bounds]]:
+    """Build a shared TransformHierarchy and local bounds for Camera Canvas shots.
+
+    Each shot tile has its own root node in world space (centered at stop x, y
+    and rotated by stop angle) plus child nodes for its photo subject and
+    typography block in tile-local coordinates.
+    """
+    validate_camera_canvas(scenes)
+    if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
+        raise ValueError("Viewport dimensions must be positive integers")
+    hierarchy = TransformHierarchy()
+    local_bounds: dict[str, Bounds] = {}
+    for index, scene in enumerate(scenes):
+        cfg = scene["camera_canvas"]
+        sx = float(cfg["x"])
+        sy = float(cfg["y"])
+        angle = float(cfg.get("angle", 0.0))
+        layout = cfg.get("layout", "photo-above")
+        rad = math.radians(angle)
+        cos_a, sin_a = math.cos(rad), math.sin(rad)
+        # Tile-local (0..width, 0..height) centered around (width/2, height/2)
+        # mapped into world coordinates at (sx, sy) with rotation `angle`.
+        cx_local, cy_local = width / 2.0, height / 2.0
+        tx = sx - (cos_a * cx_local - sin_a * cy_local)
+        ty = sy - (sin_a * cx_local + cos_a * cy_local)
+        shot_id = f"shot-{index}"
+        hierarchy.add(TransformNode(
+            shot_id,
+            Affine2D(a=cos_a, b=sin_a, c=-sin_a, d=cos_a, e=tx, f=ty,
+                     source=Space.LOCAL, target=Space.WORLD),
+            parent_id=None,
+        ))
+        local_bounds[shot_id] = Bounds(0.0, 0.0, float(width), float(height))
+
+        px, py, pw, ph = _LAYOUT_PHOTO_BOXES[layout]
+        photo_id = f"{shot_id}/photo"
+        hierarchy.add(TransformNode(
+            photo_id,
+            Affine2D(e=px * width, f=py * height,
+                     source=Space.LOCAL, target=Space.PARENT),
+            parent_id=shot_id,
+        ))
+        local_bounds[photo_id] = Bounds(0.0, 0.0, pw * width, ph * height)
+
+        tx_rel, ty_rel = _LAYOUT_TEXT_ORIGINS[layout]
+        text_id = f"{shot_id}/typography"
+        hierarchy.add(TransformNode(
+            text_id,
+            Affine2D(e=tx_rel * width, f=ty_rel * height,
+                     source=Space.LOCAL, target=Space.PARENT),
+            parent_id=shot_id,
+        ))
+        local_bounds[text_id] = Bounds(
+            0.0, 0.0, width * .83, min(height * .22, height * (1.0 - ty_rel - .04))
+        )
+    return hierarchy, local_bounds
+
+
+def _rect_intersection_area(a: Bounds, b: Bounds) -> float:
+    ix = max(0.0, min(a.right, b.right) - max(a.left, b.left))
+    iy = max(0.0, min(a.bottom, b.bottom) - max(a.top, b.top))
+    return ix * iy
+
+
+def plan_camera_path(
+    scenes: list[dict],
+    width: int,
+    height: int,
+    *,
+    max_angle_delta: float = 45.0,
+    min_subject_retention: float = 0.55,
+) -> dict:
+    """Validate camera path travel, rotation deltas and subject retention (MD-204).
+
+    Measures how much of each shot's photo subject remains inside the output
+    viewport when settled and across intermediate travel probes.
+    """
+    hierarchy, local_bounds = build_camera_canvas_hierarchy(scenes, width, height)
+    viewport_bounds = Bounds(0.0, 0.0, float(width), float(height))
+    stops = [
+        (float(s["camera_canvas"]["x"]), float(s["camera_canvas"]["y"]),
+         float(s["camera_canvas"].get("angle", 0.0)),
+         float(s["camera_canvas"].get("zoom", 1.0)))
+        for s in scenes
+    ]
+    transitions = []
+    violations = []
+    for index, stop in enumerate(stops):
+        photo_id = f"shot-{index}/photo"
+        photo_to_world = hierarchy.world_transform(photo_id)
+        vp_map = camera_world_to_viewport(*stop, width, height)
+        photo_vp = photo_to_world.then(vp_map).map_bounds(local_bounds[photo_id])
+        subject_area = max(1.0, (photo_vp.right - photo_vp.left) * (photo_vp.bottom - photo_vp.top))
+        settled_retention = _rect_intersection_area(photo_vp, viewport_bounds) / subject_area
+        if settled_retention < min_subject_retention:
+            violations.append({
+                "scene": index + 1,
+                "code": "subject_retention_low",
+                "retention": round(settled_retention, 4),
+                "minimum": min_subject_retention,
+            })
+        if index == 0:
+            transitions.append({
+                "scene": 1,
+                "distance_px": 0.0,
+                "angle_delta_deg": 0.0,
+                "settled_subject_retention": round(settled_retention, 4),
+                "arrival_probe_retentions": [round(settled_retention, 4)],
+            })
+            continue
+        prev = stops[index - 1]
+        distance = math.hypot(stop[0] - prev[0], stop[1] - prev[1])
+        angle_delta = abs(stop[2] - prev[2])
+        if angle_delta > max_angle_delta:
+            violations.append({
+                "scene": index + 1,
+                "code": "excessive_camera_rotation",
+                "angle_delta_deg": round(angle_delta, 3),
+                "maximum": max_angle_delta,
+            })
+        probe_retentions = []
+        for fraction in (.5, .75, 1.0):
+            p = ease(fraction)
+            interp = tuple(a + (b - a) * p for a, b in zip(prev, stop))
+            vp_box = photo_to_world.then(
+                camera_world_to_viewport(*interp, width, height)
+            ).map_bounds(local_bounds[photo_id])
+            vp_area = max(1.0, (vp_box.right - vp_box.left) * (vp_box.bottom - vp_box.top))
+            probe_retentions.append(
+                round(_rect_intersection_area(vp_box, viewport_bounds) / vp_area, 4)
+            )
+        transitions.append({
+            "scene": index + 1,
+            "distance_px": round(distance, 2),
+            "angle_delta_deg": round(angle_delta, 3),
+            "settled_subject_retention": round(settled_retention, 4),
+            "arrival_probe_retentions": probe_retentions,
+        })
+    return {
+        "ok": not violations,
+        "scene_count": len(scenes),
+        "transitions": transitions,
+        "violations": violations,
+    }

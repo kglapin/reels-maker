@@ -1625,31 +1625,95 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
             table_children.append(header)
         x += cell_width
 
+    highlight_rows = {str(r) for r in (scene.get("highlight_rows") or [])}
+    highlight_cells = {
+        (str(pair[0]), str(pair[1]))
+        for pair in (scene.get("highlight_cells") or [])
+        if isinstance(pair, (list, tuple)) and len(pair) == 2
+    }
+    animate_from = [str(r) for r in (scene.get("animate_from_row_ids") or [])]
+    prev_slot_by_id = {rid: idx for idx, rid in enumerate(animate_from)}
+    cell_transitions = scene.get("cell_transitions") or {}
+    cell_highlight_style = TextStyle(
+        max(12, min(ctx.tokens.px(20), row_height * .52)),
+        theme["accent"], "bold", line_height=1.0,
+    )
+
     for row_index, row in enumerate(parsed_rows):
         y = header_y + header_height + ctx.tokens.px(8) + row_index * row_height
+        is_row_hi = row["id"] in highlight_rows
+        row_fill = (
+            mix(theme["surface"], theme["accent"], .22)
+            if is_row_hi else (
+                theme["surface"] if row_index % 2 == 0
+                else mix(theme["surface"], theme["base"], .06)
+            )
+        )
         row_nodes = [panel_node(
             f"table-row-bg-{row_index}", Rect(outer_x, y, table_width, row_height),
-            ctx.tokens,
-            fill=(theme["surface"] if row_index % 2 == 0
-                  else mix(theme["surface"], theme["base"], .06)),
-            radius="sm", shadow=False)]
+            ctx.tokens, fill=row_fill, radius="sm", shadow=False)]
         x = outer_x
+        row_trans = cell_transitions.get(row["id"]) if isinstance(cell_transitions, dict) else None
         for column in parsed_columns:
             cell_width = table_width * column["width"]
-            cell = text_node(
-                f"table-cell-{row_index}-{column['id']}",
-                row["values"][column["id"]], cell_style,
-                Rect(x + cell_width * .04, y, cell_width * .92, row_height),
-                ctx.fonts, align=column["align"], valign="center", fit=True)
+            col_id = column["id"]
+            is_cell_hi = is_row_hi or ((row["id"], col_id) in highlight_cells)
+            style_use = cell_highlight_style if is_cell_hi else cell_style
+            cell_rect = Rect(x + cell_width * .04, y, cell_width * .92, row_height)
+            spec_tr = row_trans.get(col_id) if isinstance(row_trans, dict) else None
+            if isinstance(spec_tr, dict) and "from" in spec_tr and "to" in spec_tr:
+                fmt = {
+                    "prefix": str(spec_tr.get("prefix", "")),
+                    "suffix": str(spec_tr.get("suffix", "")),
+                    "decimals": int(spec_tr.get("decimals", 0)),
+                    "thousands": " ",
+                }
+                cell = number_node(
+                    f"table-cell-{row_index}-{col_id}",
+                    safe_number(spec_tr["to"]),
+                    cell_rect,
+                    ctx.tokens,
+                    fmt=fmt,
+                    size_role="body",
+                    color=style_use.color,
+                    align=column["align"],
+                )
+                from_val = safe_number(spec_tr["from"])
+                to_val = safe_number(spec_tr["to"])
+                dur = max(.4, min(1.2, ctx.duration * .45))
+                cell.track("prop.value", Track([
+                    Keyframe(0.0, from_val, "out-cubic"),
+                    Keyframe(0.25, from_val, "out-cubic"),
+                    Keyframe(0.25 + dur, to_val, "out-cubic"),
+                ]))
+            else:
+                cell = text_node(
+                    f"table-cell-{row_index}-{col_id}",
+                    row["values"][col_id], style_use,
+                    cell_rect,
+                    ctx.fonts, align=column["align"], valign="center", fit=True)
             if cell:
                 row_nodes.append(cell)
             x += cell_width
-        table_children.append(Node(
+        row_group = Node(
             kind="group", role=f"table-row-{row_index}", children=row_nodes,
-            qa_class="control", meta={"stable_row_id": row["id"]}))
+            qa_class="control",
+            meta={"stable_row_id": row["id"], "highlighted": is_row_hi},
+        )
+        prev_idx = prev_slot_by_id.get(row["id"])
+        if prev_idx is not None and prev_idx != row_index and 0 <= prev_idx < len(parsed_rows):
+            delta_y = (prev_idx - row_index) * row_height
+            settle_t = max(.35, min(1.1, ctx.duration * .45))
+            row_group.track("dy", Track([
+                Keyframe(0.0, delta_y, "in-out-cubic"),
+                Keyframe(settle_t, 0.0, "in-out-cubic"),
+                Keyframe(ctx.duration, 0.0, "linear"),
+            ]))
+        table_children.append(row_group)
     elements["table"] = Node(kind="group", role="table", children=table_children,
                               qa_class="control",
-                              meta={"row_ids": [row["id"] for row in parsed_rows]})
+                              meta={"row_ids": [row["id"] for row in parsed_rows],
+                                    "highlight_rows": sorted(highlight_rows)})
     if body and layout.optional("body"):
         elements["body"] = text_node("body", body, body_style,
                                       layout.region("body"), ctx.fonts,
@@ -1659,8 +1723,10 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "table",
-                         "columns": parsed_columns, "row_ids": [row["id"]
-                                                                   for row in parsed_rows]})
+                         "columns": parsed_columns,
+                         "row_ids": [row["id"] for row in parsed_rows],
+                         "highlight_rows": sorted(highlight_rows),
+                         "data_provenance": scene.get("data_provenance")})
 
 
 # ----------------------------------------------------------------------- bars
@@ -1672,10 +1738,12 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
         {"label": "DZIŚ", "value": 32}, {"label": "Z MAGAZYNEM", "value": 78}]
     if not isinstance(data, list) or not data:
         raise ValueError("bars requires a nonempty data list")
-    parsed = [{"label": str(item.get("label", "")),
+    parsed = [{"id": str(item.get("id") or item.get("label") or f"bar-{idx}"),
+               "label": str(item.get("label", "")),
                "value": safe_number(item.get("value", 0)),
                "suffix": str(item.get("suffix", "")),
-               "prefix": str(item.get("prefix", ""))} for item in data]
+               "prefix": str(item.get("prefix", ""))}
+              for idx, item in enumerate(data)]
     data_order = scene.get("data_order", "source")
     if data_order not in ("source", "ascending", "descending"):
         raise ValueError("bars data_order must be source, ascending or descending")
@@ -1737,7 +1805,8 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                           ctx.fonts, align="right", valign="top")
         group = Node(kind="group", role=f"bar-row-{index}",
                      children=[child for child in (label, base, bar, value)
-                               if child], qa_class="control")
+                               if child], qa_class="control",
+                     meta={"stable_row_id": item["id"]})
         elements[f"bar-row-{index}"] = group
     if subtitle and layout.optional("body"):
         elements["body"] = text_node(
@@ -1752,7 +1821,9 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
     plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "bars", "data": parsed,
-                         "data_order": data_order})
+                         "data_order": data_order,
+                         "row_ids": [item["id"] for item in parsed],
+                         "data_provenance": scene.get("data_provenance")})
     for index, item in enumerate(parsed):
         entry = plan.choreography.entries.get(f"bar-row-{index}")
         if entry:

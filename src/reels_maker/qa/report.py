@@ -104,13 +104,16 @@ def _text_blocks(root: Node) -> list[tuple[str, TextBlock]]:
 
 def sample_geometry_frames(built, timing, fps: int,
                            samples_per_scene: int = 6) -> list[int]:
-    """Combine evenly-spaced QA frames with track keys and in-between probes.
+    """Combine evenly-spaced QA frames with track keys, easing extrema and probes.
 
     Every authored keyframe is mapped onto an output frame. Each interval
     between unique transform/property key times also gets quarter/mid/three-
-    quarter probes so easing overshoots cannot hide between the old six samples.
-    Sampling remains frame-quantized to inspect exactly renderable output times.
+    quarter probes plus exact analytical easing-extremum times (for overshoot
+    curves such as ``back`` and ``spring``) so overshoots cannot hide between
+    sparse samples. Sampling remains frame-quantized to inspect renderable times.
     """
+    from ..motionkit.easing import easing_extrema_progress
+
     if type(samples_per_scene) is not int or samples_per_scene < 2:
         raise ValueError("samples_per_scene must be an integer >= 2")
     frames = timing.frames
@@ -119,13 +122,26 @@ def sample_geometry_frames(built, timing, fps: int,
     indices = {round((frames - 1) * step / (samples_per_scene - 1))
                for step in range(samples_per_scene)}
     key_times = {0.0, max(0.0, (frames - 1) / fps)}
+    extremum_times: set[float] = set()
     for root in built.nodes:
         for node in root.flatten():
             for track in node.tracks.values():
                 key_times.update(float(key.time) for key in track.keys
                                  if 0 <= key.time <= built.duration)
+                for left, right in zip(track.keys, track.keys[1:]):
+                    span = float(right.time) - float(left.time)
+                    if span <= 0:
+                        continue
+                    try:
+                        extrema = easing_extrema_progress(right.easing)
+                    except ValueError:
+                        extrema = ()
+                    for fraction in extrema:
+                        t_ext = float(left.time) + span * fraction
+                        if 0 <= t_ext <= built.duration:
+                            extremum_times.add(t_ext)
     ordered = sorted(key_times)
-    probes = set(ordered)
+    probes = set(ordered) | extremum_times
     for start, end in zip(ordered, ordered[1:]):
         span = end - start
         if span <= 0:
@@ -542,6 +558,57 @@ def _data_checks(built) -> list[Issue]:
                 issues.append(Issue(
                     "invalid_number", "error", f"{key} is not a finite number.",
                     built.index + 1, None, [], "Fix the manifest value."))
+    if meta.get("component") in ("table", "line_chart", "bars", "stacked_bars_100"):
+        issues.extend(audit_data_scene(built))
+    return issues
+
+
+def audit_data_scene(built, *, min_mobile_px: int = 11) -> list[Issue]:
+    """Mobile legibility, non-truncation and reading-hold QA for charts and tables (DM-007)."""
+    issues: list[Issue] = []
+    scale = min(built.context.width, built.context.height) / 1080.0
+    min_px = max(9.0, min_mobile_px * scale)
+    for root in built.nodes:
+        for node in root.flatten():
+            block = node.props.get("block")
+            if isinstance(block, TextBlock):
+                if block.truncated:
+                    issues.append(Issue(
+                        "data_label_truncated",
+                        "error",
+                        f"Data scene element {node.role!r} truncated its text.",
+                        built.index + 1,
+                        None,
+                        [node.role],
+                        "Widen column, paginate rows or shorten label copy.",
+                    ))
+                if block.style.size < min_px - 1e-6:
+                    issues.append(Issue(
+                        "mobile_text_too_small",
+                        "error",
+                        f"Data scene text {node.role!r} is {block.style.size:.1f}px (< {min_px:.1f}px mobile floor).",
+                        built.index + 1,
+                        None,
+                        [node.role],
+                        "Reduce row/column count or increase text size for mobile legibility.",
+                    ))
+    # Verify minimum reading hold for data visualizations
+    entries = getattr(built.choreography, "entries", {}) or {}
+    latest_settle = max(
+        (float(e.onset) + float(e.duration) for e in entries.values()),
+        default=0.0,
+    )
+    hold_window = float(built.duration) - latest_settle
+    if hold_window < 0.55:
+        issues.append(Issue(
+            "data_reading_hold_short",
+            "warning",
+            f"Data visualization hold window is {hold_window:.2f}s (< 0.55s).",
+            built.index + 1,
+            None,
+            [],
+            "Extend scene duration or shorten entrance stagger so viewers can read the data.",
+        ))
     return issues
 
 
@@ -656,6 +723,223 @@ def _measure_audio(path: Path, video_duration: float) -> dict:
         return result
     except OSError as exc:
         return {"path": str(path), "status": "error", "message": str(exc)}
+
+
+def audit_camera_canvas(
+    scenes: list[dict],
+    width: int,
+    height: int,
+    *,
+    fps: int = 30,
+    max_angle_delta: float = 45.0,
+    min_subject_retention: float = 0.55,
+) -> dict:
+    """Timeline-sampled QA for Camera Canvas path, hierarchy and subject retention (MD-204/206)."""
+    from ..renderers.camera_canvas import (
+        build_camera_canvas_hierarchy, camera_world_to_viewport, plan_camera_path,
+    )
+
+    path_report = plan_camera_path(
+        scenes, width, height,
+        max_angle_delta=max_angle_delta,
+        min_subject_retention=min_subject_retention,
+    )
+    hierarchy, local_bounds = build_camera_canvas_hierarchy(scenes, width, height)
+    issues: list[Issue] = []
+    for item in path_report["violations"]:
+        issues.append(Issue(
+            item["code"],
+            "error",
+            f"Camera Canvas scene {item['scene']} failed {item['code']}.",
+            item["scene"],
+            None,
+            [f"shot-{item['scene'] - 1}"],
+            "Reduce camera step/rotation or adjust zoom so the subject stays in frame.",
+        ))
+    sampled_frames = 0
+    for idx, scene in enumerate(scenes):
+        cfg = scene["camera_canvas"]
+        duration = float(scene.get("duration", 3.0))
+        move = 0.0 if idx == 0 else float(cfg.get("move_duration", .8))
+        delay = float(cfg.get("reveal_delay", .18))
+        reveal = float(cfg.get("reveal_duration", .55))
+        key_times = sorted({
+            0.0,
+            min(duration, move * .5),
+            min(duration, move),
+            min(duration, move + delay),
+            min(duration, move + delay + reveal * .5),
+            min(duration, move + delay + reveal),
+            duration,
+        })
+        sampled_frames += len(key_times)
+        # Verify hierarchy transforms invert cleanly at every key time
+        stop = (float(cfg["x"]), float(cfg["y"]),
+                float(cfg.get("angle", 0.0)), float(cfg.get("zoom", 1.0)))
+        vp_map = camera_world_to_viewport(*stop, width, height)
+        text_id = f"shot-{idx}/typography"
+        text_vp = hierarchy.world_transform(text_id).then(vp_map).map_bounds(local_bounds[text_id])
+        if (text_vp.left < -SAFE_AREA_TOLERANCE or text_vp.top < -SAFE_AREA_TOLERANCE
+                or text_vp.right > width + SAFE_AREA_TOLERANCE
+                or text_vp.bottom > height + SAFE_AREA_TOLERANCE):
+            issues.append(Issue(
+                "camera_typography_clipped",
+                "error",
+                f"Camera Canvas typography {text_id!r} leaves viewport when settled.",
+                idx + 1,
+                round(move + delay + reveal, 3),
+                [text_id],
+                "Reduce camera zoom/rotation or shorten headline copy.",
+                round((move + delay + reveal) * fps),
+            ))
+    return {
+        "schema_version": 1,
+        "ok": not issues,
+        "scenes": len(scenes),
+        "frames_sampled": sampled_frames,
+        "path": path_report,
+        "issues": [issue.to_dict() for issue in issues],
+    }
+
+
+def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6) -> list[Issue]:
+    from types import SimpleNamespace
+    frames = max(2, round(float(built.duration) * fps))
+    timing = SimpleNamespace(frames=frames)
+    samples = sample_geometry_frames(built, timing, fps, samples_per_scene=samples_per_scene)
+    issues: list[Issue] = []
+    seen: set[tuple] = set()
+    for local_frame in samples:
+        t = local_frame / fps
+        nodes = built.at(t)
+        elems: list[dict] = []
+        for node in nodes:
+            elems.extend(collect_qa_elements(node))
+        for issue in (
+            _safe_area(elems, built, t, local_frame)
+            + _collisions(elems, set(), built, t, local_frame)
+            + _text_ink_safe_area(nodes, built, t, local_frame)
+        ):
+            sig = (issue.code, tuple(issue.elements))
+            if sig not in seen:
+                seen.add(sig)
+                issues.append(issue)
+    issues.extend(_data_checks(built))
+    return issues
+
+
+def repair_scene_layout(
+    ctx,
+    scene: Mapping[str, object],
+    *,
+    max_retries: int = 3,
+    fps: int = 30,
+    samples_per_scene: int = 6,
+) -> dict:
+    """Deterministic frame-based QA repair loop with bounded retries and audit report (MD-404)."""
+    from dataclasses import replace
+    from ..components.scenes import build_scene
+    from ..layout.composition_optimizer import solve_scene_layout
+
+    if type(max_retries) is not int or not 1 <= max_retries <= 5:
+        raise ValueError("max_retries must be an integer between 1 and 5")
+
+    attempts: list[dict] = []
+    current_scene = dict(scene)
+    current_ctx = ctx
+
+    def try_build_and_check(attempt_no: int, action: str, candidate_ctx, candidate_scene: dict):
+        built = build_scene(candidate_ctx, candidate_scene)
+        found = _evaluate_built_scene_qa(
+            built, fps=fps, samples_per_scene=samples_per_scene
+        )
+        errors = [i for i in found if i.severity == "error"]
+        warnings = [i for i in found if i.severity == "warning"]
+        attempts.append({
+            "attempt": attempt_no,
+            "action": action,
+            "composition": candidate_scene.get("composition"),
+            "errors": len(errors),
+            "warnings": len(warnings),
+            "issues": [i.to_dict() for i in found],
+        })
+        return built, errors, warnings
+
+    built0, errors0, warnings0 = try_build_and_check(0, "initial", current_ctx, current_scene)
+    if not errors0 and not warnings0:
+        return {
+            "ok": True,
+            "repaired": False,
+            "attempts": attempts,
+            "scene": current_scene,
+            "built": built0,
+        }
+
+    best_built = built0
+    best_scene = current_scene
+    best_score = (len(errors0), len(warnings0))
+
+    repair_plan = [
+        ("layout_solver", None),
+        ("compact_typography_90_and_quiet_motion", 0.90),
+        ("compact_typography_80_and_extend_hold", 0.80),
+    ][:max_retries]
+
+    for retry_idx, (action, scale_factor) in enumerate(repair_plan, 1):
+        trial_scene = dict(current_scene)
+        trial_ctx = current_ctx
+        if action == "layout_solver" and not trial_scene.get("type"):
+            solved = solve_scene_layout(
+                trial_ctx, trial_scene, fps=fps, samples_per_scene=samples_per_scene
+            )
+            if solved["selected_built"] is not None:
+                selected_comp = next(
+                    c["layout"] for c in solved["candidates"]
+                    if c["candidate_id"] == solved["selected_id"]
+                )
+                trial_scene["composition"] = selected_comp
+        elif scale_factor is not None:
+            t_type = trial_ctx.tokens.typography
+            scaled_type = replace(
+                t_type,
+                display=max(48, round(t_type.display * scale_factor)),
+                hero=max(40, round(t_type.hero * scale_factor)),
+                title=max(28, round(t_type.title * scale_factor)),
+                subtitle=max(20, round(t_type.subtitle * scale_factor)),
+                body=max(16, round(t_type.body * scale_factor)),
+            )
+            scaled_tokens = replace(trial_ctx.tokens, typography=scaled_type)
+            new_duration = float(trial_scene.get("duration", trial_ctx.duration))
+            if action.endswith("extend_hold"):
+                new_duration = min(15.0, new_duration + 0.8)
+                trial_scene["duration"] = new_duration
+            trial_scene["typography_motion"] = "fade-up"
+            trial_ctx = replace(trial_ctx, tokens=scaled_tokens, duration=new_duration)
+
+        built_i, errors_i, warnings_i = try_build_and_check(
+            retry_idx, action, trial_ctx, trial_scene
+        )
+        score_i = (len(errors_i), len(warnings_i))
+        if score_i < best_score:
+            best_built = built_i
+            best_scene = trial_scene
+            best_score = score_i
+        if not errors_i and not warnings_i:
+            return {
+                "ok": True,
+                "repaired": True,
+                "attempts": attempts,
+                "scene": trial_scene,
+                "built": built_i,
+            }
+
+    return {
+        "ok": best_score[0] == 0,
+        "repaired": best_score < (len(errors0), len(warnings0)),
+        "attempts": attempts,
+        "scene": best_scene,
+        "built": best_built,
+    }
 
 
 def contact_sheet(report: dict, built_scenes, renderer, timeline: Timeline,

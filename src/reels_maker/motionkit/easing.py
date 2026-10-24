@@ -163,3 +163,40 @@ def progress(t: float, onset: float, duration: float) -> float:
     if not math.isfinite(t) or not math.isfinite(onset) or duration <= 0:
         raise ValueError("Invalid animation timing")
     return clamp01((t - onset) / duration)
+
+
+def easing_extrema_progress(name: str, *, overshoot: float = 1.04,
+                            damping: float = 7.0) -> tuple[float, ...]:
+    """Return exact interior progress values p in (0, 1) where d(ease)/dp == 0.
+
+    Monotonic easings return ``()``; ``back`` and ``spring`` return their
+    closed-form overshoot/oscillation extrema so timeline QA samples the exact
+    peak displacement frame rather than relying only on fixed quarter probes.
+    """
+    if not isinstance(name, str):
+        raise ValueError("Easing name must be a string")
+    key = name.strip().lower().replace("_", "-")
+    if key not in EASINGS:
+        raise ValueError(f"Unknown easing {name!r}; choose one of "
+                         + ", ".join(EASINGS))
+    if key == "back":
+        if not 1 <= overshoot <= 1.12:
+            raise ValueError("overshoot must be between 1 and 1.12")
+        c = 1.70158 * (1 + (overshoot - 1) * 3)
+        peak = 1.0 - (2.0 * c) / (3.0 * (c + 1.0))
+        return (peak,) if 0.0 < peak < 1.0 else ()
+    if key == "spring":
+        if damping <= 0:
+            raise ValueError("damping must be positive")
+        base = math.atan(-damping / 10.0)
+        extrema: list[float] = []
+        k = 1
+        while True:
+            p = (base + k * math.pi) / 10.0
+            if p >= 1.0:
+                break
+            if p > 0.0:
+                extrema.append(p)
+            k += 1
+        return tuple(extrema)
+    return ()

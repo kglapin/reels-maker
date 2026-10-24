@@ -155,6 +155,42 @@ def ring(image: Image.Image, cx: float, cy: float, radius: float,
                      fill=_rgba(color, opacity))
 
 
+def trim_polyline(points: list[tuple[float, float]], progress: float,
+                  *, start: float = 0.0) -> list[tuple[float, float]]:
+    """Return the arc-length trimmed sub-polyline for ``start..progress`` in 0..1 (MD-303)."""
+    if len(points) < 2:
+        return list(points)
+    t0 = max(0.0, min(1.0, float(start)))
+    t1 = max(0.0, min(1.0, float(progress)))
+    if t1 <= t0 + 1e-6:
+        return []
+    if t0 <= 1e-6 and t1 >= .9999:
+        return list(points)
+    seg_lengths = [
+        math.hypot(b[0] - a[0], b[1] - a[1])
+        for a, b in zip(points, points[1:])
+    ]
+    total = sum(seg_lengths)
+    if total <= 1e-6:
+        return []
+    d_start, d_end = t0 * total, t1 * total
+    out: list[tuple[float, float]] = []
+    acc = 0.0
+    for (ax, ay), (bx, by), length in zip(points, points[1:], seg_lengths):
+        next_acc = acc + length
+        if next_acc > d_start + 1e-9 and acc < d_end - 1e-9 and length > 1e-9:
+            u0 = max(0.0, min(1.0, (d_start - acc) / length))
+            u1 = max(0.0, min(1.0, (d_end - acc) / length))
+            p0 = (ax + (bx - ax) * u0, ay + (by - ay) * u0)
+            p1 = (ax + (bx - ax) * u1, ay + (by - ay) * u1)
+            if not out or math.hypot(out[-1][0] - p0[0], out[-1][1] - p0[1]) > 1e-6:
+                out.append(p0)
+            if math.hypot(out[-1][0] - p1[0], out[-1][1] - p1[1]) > 1e-6:
+                out.append(p1)
+        acc = next_acc
+    return out if len(out) >= 2 else []
+
+
 def line(image: Image.Image, points, color, width: float = 2,
          opacity: float = 1.0, closed: bool = False, fill: bool = False) -> None:
     if not points:

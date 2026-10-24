@@ -86,6 +86,69 @@ class RotationalTypographyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "depth limit"):
             build_transform_hierarchy(root, max_depth=2)
 
+    def test_eight_distinct_text_mechanism_families_and_selection(self):
+        from reels_maker.design.tokens import resolve_tokens
+        from reels_maker.motionkit.presets import (
+            apply_entrance, select_text_mechanism, text_mechanism_families,
+        )
+
+        families = text_mechanism_families()
+        self.assertEqual(len(families), 8)
+        presets_seen = set()
+        for name, spec in families.items():
+            preset = select_text_mechanism(name)
+            self.assertEqual(preset, spec["preset"])
+            self.assertEqual(select_text_mechanism(str(spec["purpose"])), preset)
+            presets_seen.add(preset)
+            tokens = resolve_tokens("editorial-premium", width=1080, height=1920)
+            node = Node(kind="rect", props={"x": 100, "y": 100, "w": 200, "h": 60})
+            apply_entrance(node, preset, 0.0, 0.5, tokens,
+                           safe_bounds=(0, 0, 1080, 1920))
+            self.assertTrue(node.tracks or node.reveal)
+        self.assertEqual(len(presets_seen), 8)
+
+    def test_vector_polyline_trim_and_icon_state_transition(self):
+        from reels_maker.components.base import animate_icon_state, animate_progress
+        from reels_maker.renderers.canvas import trim_polyline
+
+        pts = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0)]
+        self.assertEqual(trim_polyline(pts, 0.0), [])
+        half = trim_polyline(pts, 0.5)
+        self.assertEqual(half, [(0.0, 0.0), (100.0, 0.0)])
+        quarter_to_three = trim_polyline(pts, 0.75, start=0.25)
+        self.assertEqual(quarter_to_three[0], (50.0, 0.0))
+        self.assertEqual(quarter_to_three[-1], (100.0, 50.0))
+
+        path_node = Node(kind="path", role="trace",
+                         props={"points": pts, "progress": 0.0})
+        animate_progress(path_node, 0.0, 1.0)
+        self.assertAlmostEqual(path_node.sample(0.5).props["progress"], 0.875, places=2)
+
+        icon_a = Node(kind="circle", role="state-a", props={"cx": 50, "cy": 50, "r": 20})
+        icon_b = Node(kind="circle", role="state-b", props={"cx": 50, "cy": 50, "r": 20})
+        state_group = animate_icon_state(icon_a, icon_b, switch_time=1.0, duration=0.4)
+        self.assertAlmostEqual(state_group.sample(0.5).children[0].opacity, 1.0)
+        self.assertAlmostEqual(state_group.sample(0.5).children[1].opacity, 0.0)
+        self.assertAlmostEqual(state_group.sample(1.5).children[0].opacity, 0.0)
+        self.assertAlmostEqual(state_group.sample(1.5).children[1].opacity, 1.0)
+
+    def test_shared_element_continuity_across_scenes(self):
+        from types import SimpleNamespace
+        from reels_maker.motionkit.choreography import verify_shared_element_continuity
+
+        n1 = Node(kind="rect", props={"x": 100, "y": 200, "w": 80, "h": 40},
+                  meta={"stable_row_id": "item-1"})
+        n2 = Node(kind="rect", props={"x": 120, "y": 210, "w": 80, "h": 40},
+                  meta={"stable_row_id": "item-1"})
+        s1 = SimpleNamespace(duration=2.0, at=lambda t: [n1.sample(t)])
+        s2 = SimpleNamespace(duration=2.0, at=lambda t: [n2.sample(t)])
+        report = verify_shared_element_continuity([s1, s2], max_anchor_jump_px=50.0)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["transitions"][0]["shared_ids"], ["item-1"])
+
+        bad = verify_shared_element_continuity([s1, s2], max_anchor_jump_px=5.0)
+        self.assertFalse(bad["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()

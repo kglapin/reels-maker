@@ -46,6 +46,75 @@ PRESET_ALIASES = {
     "kinetic-rise": "pop-settle", "scale": "scale-focus",
 }
 
+TEXT_MECHANISM_FAMILIES: dict[str, dict[str, object]] = {
+    "vertical-drift": {
+        "preset": "fade-up",
+        "purpose": "support-copy-arrival",
+        "axes": ("opacity", "dy"),
+        "easing": "out-cubic",
+    },
+    "curtain-mask": {
+        "preset": "mask-rise",
+        "purpose": "editorial-headline-reveal",
+        "axes": ("reveal", "dy"),
+        "easing": "out-quart",
+    },
+    "horizontal-wipe": {
+        "preset": "reveal-right",
+        "purpose": "label-or-rule-wipe",
+        "axes": ("reveal",),
+        "easing": "in-out-quart",
+    },
+    "lateral-slide": {
+        "preset": "slide-left",
+        "purpose": "directional-callout",
+        "axes": ("opacity", "dx"),
+        "easing": "out-quart",
+    },
+    "elastic-scale": {
+        "preset": "pop-settle",
+        "purpose": "metric-or-badge-accent",
+        "axes": ("opacity", "scale", "dy"),
+        "easing": "back",
+    },
+    "optical-tracking": {
+        "preset": "tracking-in",
+        "purpose": "kicker-or-display-condense",
+        "axes": ("opacity", "prop.tracking_offset"),
+        "easing": "out-expo",
+    },
+    "stagger-cascade": {
+        "preset": "word-cascade",
+        "purpose": "multi-line-headline-stagger",
+        "axes": ("opacity", "dy", "scale"),
+        "easing": "out-cubic",
+    },
+    "depth-focus": {
+        "preset": "scale-focus",
+        "purpose": "hero-statement-focus",
+        "axes": ("opacity", "scale"),
+        "easing": "out-expo",
+    },
+}
+
+
+def text_mechanism_families() -> dict[str, dict[str, object]]:
+    """Return the 8 distinct renderer-backed text mechanism families (MD-301)."""
+    return {k: dict(v) for k, v in TEXT_MECHANISM_FAMILIES.items()}
+
+
+def select_text_mechanism(family_or_purpose: str) -> str:
+    """Resolve a semantic mechanism family or purpose to its canonical preset."""
+    if not isinstance(family_or_purpose, str) or not family_or_purpose.strip():
+        raise ValueError("family_or_purpose must be a non-empty string")
+    key = family_or_purpose.strip().lower().replace("_", "-")
+    if key in TEXT_MECHANISM_FAMILIES:
+        return str(TEXT_MECHANISM_FAMILIES[key]["preset"])
+    for spec in TEXT_MECHANISM_FAMILIES.values():
+        if spec["purpose"] == key:
+            return str(spec["preset"])
+    return canonical_preset(key)
+
 
 def _safe_translation(node: Node, distance: float, axis: str,
                       safe_bounds: tuple[float, float, float, float] | None) -> float:

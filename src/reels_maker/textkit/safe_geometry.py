@@ -73,6 +73,10 @@ class SafePolygon:
         if abs(area2) <= _EPSILON:
             raise ValueError("Polygon must have non-zero area")
 
+    def contains_point(self, x: float, y: float) -> bool:
+        """Return True when ``(x, y)`` lies inside or on the boundary of this polygon."""
+        return _inside((float(x), float(y)), self)
+
 
 @dataclass(frozen=True)
 class WordInk:

@@ -10,6 +10,7 @@ from ..design.format import format_value
 from ..design.tokens import DesignTokens
 from ..layout.engine import LayoutEngine, LayoutPlan, Rect
 from ..motionkit.choreography import Choreography, ElementSpec, plan_choreography
+from ..motionkit.keyframes import Keyframe, Track
 from ..motionkit.presets import number_track, progress_track
 from ..textkit.typesetter import (
     FontBook, Run, TextBlock, TextStyle, fit_text, typeset, typeset_runs,
@@ -281,6 +282,42 @@ def animate_progress(node: Node, onset: float, duration: float,
                      *, easing: str = "out-cubic") -> Node:
     node.track("prop.progress", progress_track(onset, duration, easing=easing))
     return node
+
+
+def animate_icon_state(primary: Node, secondary: Node, *,
+                       switch_time: float, duration: float = 0.32,
+                       role: str = "icon-state") -> Node:
+    """Cross-fade and scale-settle between two icon states at ``switch_time`` (MD-303)."""
+    if switch_time < 0 or duration <= 0:
+        raise ValueError("switch_time must be >= 0 and duration > 0")
+    end = switch_time + duration
+    primary.track("opacity", Track([
+        Keyframe(0.0, 1.0, "out-cubic"),
+        Keyframe(switch_time, 1.0, "out-cubic"),
+        Keyframe(end, 0.0, "out-cubic"),
+    ]))
+    primary.track("scale", Track([
+        Keyframe(0.0, 1.0, "out-cubic"),
+        Keyframe(switch_time, 1.0, "out-cubic"),
+        Keyframe(end, 0.86, "out-cubic"),
+    ]))
+    secondary.track("opacity", Track([
+        Keyframe(0.0, 0.0, "out-cubic"),
+        Keyframe(switch_time, 0.0, "out-cubic"),
+        Keyframe(end, 1.0, "out-cubic"),
+    ]))
+    secondary.track("scale", Track([
+        Keyframe(0.0, 0.86, "out-cubic"),
+        Keyframe(switch_time, 0.86, "out-cubic"),
+        Keyframe(end, 1.0, "back"),
+    ]))
+    return Node(
+        kind="group",
+        role=role,
+        children=[primary, secondary],
+        qa_class="control",
+        meta={"switch_time": round(switch_time, 4), "duration": round(duration, 4)},
+    )
 
 
 def apply_choreography(ctx: SceneContext, elements: dict[str, Node],

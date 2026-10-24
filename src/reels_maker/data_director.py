@@ -183,8 +183,10 @@ def recommend_visualizations(
         )
         if missing:
             rationale += " Required but absent or untyped fields: " + ", ".join(missing) + "."
-        renderer_status = "partial" if family in ("bar", "line", "donut", "kpi_cards") \
+        renderer_status = (
+            "partial" if family in ("bar", "line", "stacked_bar", "table", "donut", "kpi_cards")
             else "not_assessed"
+        )
         variants.append(VisualizationVariant(
             family, rank, rationale, rejected, axes, labels, tuple(missing),
             renderer_status=renderer_status))

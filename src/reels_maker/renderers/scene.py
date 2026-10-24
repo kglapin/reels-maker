@@ -290,18 +290,30 @@ class SceneRenderer:
                     opacity=opacity)
             return
         if kind == "line":
-            cv.line(target,
-                    [((props["x1"] + dx) * s, (props["y1"] + dy) * s),
-                     ((props["x2"] + dx) * s, (props["y2"] + dy) * s)],
-                    props.get("color", (255, 255, 255)),
-                    props.get("width", 1) * s, opacity)
+            pts = [((props["x1"] + dx) * s, (props["y1"] + dy) * s),
+                   ((props["x2"] + dx) * s, (props["y2"] + dy) * s)]
+            if "progress" in props or "trim_start" in props:
+                pts = cv.trim_polyline(
+                    pts, float(props.get("progress", 1.0)),
+                    start=float(props.get("trim_start", 0.0)),
+                )
+            if pts:
+                cv.line(target, pts,
+                        props.get("color", (255, 255, 255)),
+                        props.get("width", 1) * s, opacity)
             return
         if kind == "path":
             points = [((x + dx) * s, (y + dy) * s) for x, y in props["points"]]
-            cv.line(target, points, props.get("color", (255, 255, 255)),
-                    props.get("width", 1) * s, opacity,
-                    closed=bool(props.get("closed")),
-                    fill=bool(props.get("fill")))
+            if "progress" in props or "trim_start" in props:
+                points = cv.trim_polyline(
+                    points, float(props.get("progress", 1.0)),
+                    start=float(props.get("trim_start", 0.0)),
+                )
+            if points:
+                cv.line(target, points, props.get("color", (255, 255, 255)),
+                        props.get("width", 1) * s, opacity,
+                        closed=bool(props.get("closed")) and float(props.get("progress", 1.0)) >= .999,
+                        fill=bool(props.get("fill")) and float(props.get("progress", 1.0)) >= .999)
             return
         if kind == "icon":
             self._icon(target, node, dx, dy)

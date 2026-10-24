@@ -19,6 +19,27 @@ to this policy. An owner must restore/confirm privacy; do not push the local
 prototype or media while this blocker is open. PR #1 is already merged; that
 does not approve the prototype or release.
 
+
+## Curated motion reference and anti-slop preflight
+
+Professional craft references and production recipes are documented in
+[docs/REFERENCE_LIBRARY.md](docs/REFERENCE_LIBRARY.md) and stored as
+[reference_data/library.json](src/reels_maker/creative/reference_data/library.json).
+They provide curated creative direction, negative examples, links to original
+studios and data-visualization patterns; no third-party video bytes are stored.
+
+```sh
+python -m reels_maker.creative.reference_library
+python -m reels_maker.creative.reference_library --spec examples/creative-engine-editorial-demo.json
+python -m reels_maker.creative.reference_library --spec examples/creative-engine-editorial-demo.json --audit
+```
+
+`creative-qa` integrates the deterministic preflight issues with existing
+technical quality checks. Only unfinished placeholder copy is a new hard
+failure; compositional slop risks are warnings. Manual review of video,
+sound, rights and factual claims is still required. Reference-board footage
+and ideas must not be copied or imported as media assets.
+
 ## Architecture
 
 - `src/reels_maker/` — shared Python/FFmpeg engine; no per-brand copies.

@@ -12,6 +12,13 @@ from .canvas_layout import design_scale, resolve_safe_areas
 def _font(size: int, bold: bool, custom: str | None = None,
           family: str | None = None):
     choices = [custom]
+    if family:
+        # Installed "<Family>-<Weight>.ttf" files (e.g. Google Fonts in
+        # ~/Library/Fonts) resolve by family name alone.
+        stem = (f'{family.replace(" ", "")}-'
+                f'{"Bold" if bold else "Regular"}.ttf')
+        choices.extend([stem, f"/Library/Fonts/{stem}",
+                        str(Path.home() / "Library/Fonts" / stem)])
     if family and family.lower().replace(" ", "") == "opensans":
         choices.extend([
             "OpenSans-Bold.ttf" if bold else "OpenSans-Regular.ttf",

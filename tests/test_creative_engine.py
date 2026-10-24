@@ -61,6 +61,8 @@ class CreativeEngineTests(unittest.TestCase):
         audio=cap["providers"]["audio"]
         self.assertEqual(audio[0]["status"],"partial")
         self.assertIn("quarantine",audio[0]["workflow"])
+        commons_audio = next(item for item in audio if item["name"] == "wikimedia_commons")
+        self.assertEqual(commons_audio["status"], "implemented")
         self.assertEqual({p["name"] for p in cap["icon_packs"]},
                          {"lucide","heroicons","tabler","phosphor","material_symbols"})
         self.assertTrue(all(p["license"]["url"] for p in cap["icon_packs"]))
@@ -70,6 +72,10 @@ class CreativeEngineTests(unittest.TestCase):
         flags=cap["feature_flags"]
         self.assertEqual(flags["typed_creative_pipeline_v1"]["status"], "implemented")
         self.assertEqual(flags["stock_video_search"]["status"],"implemented")
+        self.assertEqual(flags["vector_line_chart"]["status"], "partial")
+        self.assertEqual(flags["data_visualization"]["status"], "partial")
+        self.assertTrue(any("Typed LoadedData bridges" in item
+                            for item in flags["data_visualization"]["limitations"]))
         self.assertEqual(flags["licensed_asset_download"]["status"],"partial")
         self.assertTrue(any("media-search and media-download" in item
                             for item in flags["licensed_asset_download"]["limitations"]))

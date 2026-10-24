@@ -9,14 +9,18 @@ from unittest.mock import patch
 
 from PIL import Image
 
+from reels_maker import icon_library
+
 try:  # pragma: no cover - environment probe (system cairo needed by cairosvg)
+    icon_library._homebrew_cairo_fallback()
     import cairocffi  # noqa: F401
     _CAIRO = True
 except (ImportError, OSError):
     _CAIRO = False
 
 from reels_maker.icon_library import (
-    IconLibraryError, _validated, asset, provenance, raster, suggest_icons,
+    IconLibraryError, VERSIONS, _validated, asset, provenance, raster,
+    suggest_icons,
 )
 from reels_maker.components.scenes import _external_icon, _extra_icons
 from reels_maker.core.scene_graph import Node
@@ -173,6 +177,27 @@ class IconLibraryTests(unittest.TestCase):
             self.assertIsNotNone(icon.getbbox())
             self.assertGreater(sum(1 for pixel in icon.getdata()
                                    if pixel[0] > pixel[2] and pixel[3]), 0)
+
+    @unittest.skipUnless(_CAIRO, "system cairo is not available (cairosvg)")
+    def test_fillless_material_svg_inherits_requested_colour(self):
+        # Material Symbols paths carry no fill attribute; the inherited colour
+        # must not fall back to the default black fill.
+        filled = (b'<svg xmlns="http://www.w3.org/2000/svg" height="24" '
+                  b'viewBox="0 -960 960 960" width="24"><path d="M480-320'
+                  b'q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 '
+                  b'113q0 66-47 113t-113 47Z"/></svg>')
+        with tempfile.TemporaryDirectory() as root:
+            path = (Path(root) / "material_symbols"
+                    / VERSIONS["material_symbols"] / "outlined"
+                    / "web--sunny-f0-g0-o24.svg")
+            path.parent.mkdir(parents=True)
+            path.write_bytes(filled)
+            icon = raster("material_symbols", "web/sunny", 72, "#123456",
+                          cache_dir=root, offline=True)
+            coloured = [pixel for pixel in icon.getdata() if pixel[3] > 0]
+            self.assertTrue(coloured)
+            strongest = max(coloured, key=lambda pixel: pixel[3])
+            self.assertEqual(strongest[:3], (0x12, 0x34, 0x56))
 
     def test_graph_bounds_and_sample(self):
         node = Node(kind="icon", role="graphic",

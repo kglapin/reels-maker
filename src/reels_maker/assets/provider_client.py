@@ -23,6 +23,7 @@ class ProviderPolicy:
     limit: int
     window_seconds: int
     cache_ttl: int = 900
+    credential_required: bool = True
 
 
 POLICIES = {
@@ -30,11 +31,16 @@ POLICIES = {
     "pixabay": ProviderPolicy("PIXABAY_API_KEY", 100, 60, 86400),
     "unsplash": ProviderPolicy("UNSPLASH_ACCESS_KEY", 50, 3600),
     "wikimedia_commons": ProviderPolicy(None, 60, 60),
-    # Requires a registered Openverse OAuth client and an operator-provided
-    # bearer access token; token acquisition/refresh is intentionally external.
-    "openverse": ProviderPolicy("OPENVERSE_ACCESS_TOKEN", 60, 60),
+    # Openverse serves an anonymous tier (server-advertised 20/min burst,
+    # 200/day). An operator-provisioned OAuth bearer raises those limits
+    # upstream, but is not required; local quotas stay at the anonymous level.
+    "openverse": ProviderPolicy("OPENVERSE_ACCESS_TOKEN", 20, 60,
+                                credential_required=False),
 }
-MONTHLY_LIMITS = {"pexels": (20000, 30 * 24 * 3600)}
+# Long-window request ceilings on top of the per-minute policy above.
+LONG_WINDOW_LIMITS = {"pexels": (20000, 30 * 24 * 3600),
+                      "openverse": (200, 86400)}
+MONTHLY_LIMITS = LONG_WINDOW_LIMITS  # backwards-compatible alias
 
 
 class ProviderError(RuntimeError):
@@ -79,8 +85,9 @@ class ProviderClient:
         if policy.credential:
             key = os.environ.get(policy.credential, "").strip()
             if not key:
-                raise ProviderError(f"{policy.credential} is required for {provider}")
-            if provider == "openverse":
+                if policy.credential_required:
+                    raise ProviderError(f"{policy.credential} is required for {provider}")
+            elif provider == "openverse":
                 result.setdefault("Authorization", "Bearer " + key)
             # Credentials embedded in URL query strings (Pixabay's API contract) are
             # supplied by the adapter, not copied into logs or cache keys.
@@ -99,15 +106,15 @@ class ProviderClient:
             if len(calls) >= policy.limit:
                 wait = max(0.0, calls[0] + policy.window_seconds - now)
                 raise RateLimitError(f"{provider} local request quota exhausted; retry in {wait:.1f}s")
-            if provider in MONTHLY_LIMITS:
-                limit, window = MONTHLY_LIMITS[provider]
+            if provider in LONG_WINDOW_LIMITS:
+                limit, window = LONG_WINDOW_LIMITS[provider]
                 monthly = self._monthly_calls[provider]
                 while monthly and monthly[0] <= now - window:
                     monthly.popleft()
                 if len(monthly) >= limit:
-                    raise RateLimitError(f"{provider} local monthly request quota exhausted")
+                    raise RateLimitError(f"{provider} local long-window request quota exhausted")
             calls.append(now)
-            if provider in MONTHLY_LIMITS:
+            if provider in LONG_WINDOW_LIMITS:
                 self._monthly_calls[provider].append(now)
 
     def get_json(self, provider: str, url: str, headers: dict[str, str] | None = None,
@@ -115,6 +122,9 @@ class ProviderClient:
         if provider not in POLICIES:
             raise ValueError(f"Unknown stock provider: {provider}")
         headers = self._authorize(provider, headers or {})
+        # urllib's default "Python-urllib/x.y" signature is bot-banned by the
+        # CDN layer of several providers (HTTP 403, Cloudflare code 1010).
+        headers.setdefault("User-Agent", "reels-maker/1.0")
         cache_key = hashlib.sha256((provider + "\0" + url).encode()).hexdigest()
         if cache_response:
             cached = self.cache.get(cache_key)

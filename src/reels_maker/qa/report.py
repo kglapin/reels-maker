@@ -102,6 +102,40 @@ def _text_blocks(root: Node) -> list[tuple[str, TextBlock]]:
     return result
 
 
+def sample_geometry_frames(built, timing, fps: int,
+                           samples_per_scene: int = 6) -> list[int]:
+    """Combine evenly-spaced QA frames with track keys and in-between probes.
+
+    Every authored keyframe is mapped onto an output frame. Each interval
+    between unique transform/property key times also gets quarter/mid/three-
+    quarter probes so easing overshoots cannot hide between the old six samples.
+    Sampling remains frame-quantized to inspect exactly renderable output times.
+    """
+    if type(samples_per_scene) is not int or samples_per_scene < 2:
+        raise ValueError("samples_per_scene must be an integer >= 2")
+    frames = timing.frames
+    if type(frames) is not int or frames < 1 or type(fps) is not int or fps < 1:
+        raise ValueError("QA frame count and FPS must be positive integers")
+    indices = {round((frames - 1) * step / (samples_per_scene - 1))
+               for step in range(samples_per_scene)}
+    key_times = {0.0, max(0.0, (frames - 1) / fps)}
+    for root in built.nodes:
+        for node in root.flatten():
+            for track in node.tracks.values():
+                key_times.update(float(key.time) for key in track.keys
+                                 if 0 <= key.time <= built.duration)
+    ordered = sorted(key_times)
+    probes = set(ordered)
+    for start, end in zip(ordered, ordered[1:]):
+        span = end - start
+        if span <= 0:
+            continue
+        probes.update(start + span * fraction for fraction in (.25, .5, .75))
+    for time in probes:
+        indices.add(max(0, min(frames - 1, round(time * fps))))
+    return sorted(indices)
+
+
 def audit(project, built_scenes, timeline: Timeline, *,
           renderer=None, samples_per_scene: int = 6,
           strict: bool = False) -> dict:
@@ -110,6 +144,8 @@ def audit(project, built_scenes, timeline: Timeline, *,
         raise ValueError("QA requires at least one built scene")
     if len(built_scenes) != len(timeline.scenes):
         raise ValueError("Built scenes and timeline length differ")
+    if type(samples_per_scene) is not int or samples_per_scene < 2:
+        raise ValueError("samples_per_scene must be an integer >= 2")
     issues: list[Issue] = []
     scenes_report = []
     compositions = []
@@ -122,9 +158,8 @@ def audit(project, built_scenes, timeline: Timeline, *,
         elements_seen: dict[str, dict] = {}
         compositions.append(built.layout.recipe)
         # ---------------------------------------------------------- geometry
-        samples = sorted({round((timing.frames - 1) * step /
-                                max(1, samples_per_scene - 1))
-                          for step in range(samples_per_scene)})
+        samples = sample_geometry_frames(built, timing, timeline.fps,
+                                         samples_per_scene)
         for local_frame in samples:
             time = local_frame / timeline.fps
             nodes = built.at(time)

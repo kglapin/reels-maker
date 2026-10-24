@@ -7,6 +7,7 @@ based on narrative role, style and scene position.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import math
 
 from ..core.scene_graph import Node
 from ..design.tokens import DesignTokens
@@ -46,6 +47,54 @@ PRESET_ALIASES = {
 }
 
 
+def _safe_translation(node: Node, distance: float, axis: str,
+                      safe_bounds: tuple[float, float, float, float] | None) -> float:
+    """Clamp an entrance offset so every translated node AABB stays safe."""
+    if safe_bounds is None or distance == 0:
+        return distance
+    if len(safe_bounds) != 4:
+        raise ValueError("safe_bounds must be left, top, right, bottom")
+    if not all(math.isfinite(value) for value in safe_bounds):
+        raise ValueError("safe_bounds values must be finite")
+    box = node.world_bounds()
+    if box is None:
+        return distance
+    if axis == "x":
+        low, high = safe_bounds[0] - box[0], safe_bounds[2] - box[2]
+    elif axis == "y":
+        low, high = safe_bounds[1] - box[1], safe_bounds[3] - box[3]
+    else:
+        raise ValueError("safe translation axis must be x or y")
+    if distance > 0:
+        return min(distance, max(0.0, high))
+    return max(distance, min(0.0, low))
+
+
+def _safe_scale(node: Node, requested: float,
+                safe_bounds: tuple[float, float, float, float] | None) -> float:
+    """Limit scale-up to the largest factor that fits the safe rectangle."""
+    if safe_bounds is None or requested <= 1:
+        return requested
+    box = node.world_bounds()
+    if box is None:
+        return requested
+    anchor = node.anchor or ((box[0] + box[2]) / 2,
+                             (box[1] + box[3]) / 2)
+    ax, ay = anchor
+    limits = [requested]
+    for extent, pivot, safe_min, safe_max in (
+        (box[0], ax, safe_bounds[0], safe_bounds[2]),
+        (box[2], ax, safe_bounds[0], safe_bounds[2]),
+        (box[1], ay, safe_bounds[1], safe_bounds[3]),
+        (box[3], ay, safe_bounds[1], safe_bounds[3]),
+    ):
+        distance = extent - pivot
+        boundary = safe_min if distance < 0 else safe_max
+        if distance:
+            limits.append((boundary - pivot) / distance)
+    return max(.01, min(limits))
+
+
 def canonical_preset(name: str | None) -> str:
     if not name:
         return "fade-up"
@@ -59,7 +108,8 @@ def canonical_preset(name: str | None) -> str:
 
 def apply_entrance(node: Node, preset: str, onset: float, duration: float,
                    tokens: DesignTokens, *, seed: int = 0,
-                   distance: float | None = None) -> Node:
+                   distance: float | None = None,
+                   safe_bounds: tuple[float, float, float, float] | None = None) -> Node:
     """Attach entrance tracks to a node; leave static nodes untouched."""
     key = canonical_preset(preset)
     spec = PRESETS[key]
@@ -76,25 +126,30 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
             Keyframe(onset, 0.0, "out-cubic"),
             Keyframe(onset + fade_in, 1.0, "out-cubic")]))
         node.track("dy", Track([
-            Keyframe(onset, travel, spec.easing),
+            Keyframe(onset, _safe_translation(node, travel, "y", safe_bounds), spec.easing),
             Keyframe(end, 0.0, spec.easing)]))
     elif key in ("slide-left", "slide-right"):
         node.track("opacity", Track([
             Keyframe(onset, 0.0, "out-cubic"),
             Keyframe(onset + fade_in, 1.0, "out-cubic")]))
-        start = travel if key == "slide-left" else -travel
+        requested = travel if key == "slide-left" else -travel
+        start = _safe_translation(node, requested, "x", safe_bounds)
         node.track("dx", Track([
             Keyframe(onset, start, spec.easing),
             Keyframe(end, 0.0, spec.easing)]))
     elif key == "pop-settle":
+        start_scale = _safe_scale(node, spec.scale_from, safe_bounds)
+        scale_easing = ("back" if safe_bounds is None or
+                        _safe_scale(node, tokens.motion.overshoot, safe_bounds)
+                        >= tokens.motion.overshoot else "out-cubic")
         node.track("opacity", Track([
             Keyframe(onset, 0.0, "out-cubic"),
             Keyframe(onset + min(duration * .55, .2), 1.0, "out-cubic")]))
         node.track("scale", Track([
-            Keyframe(onset, spec.scale_from, "back"),
-            Keyframe(end, 1.0, "back")]))
+            Keyframe(onset, start_scale, scale_easing),
+            Keyframe(end, 1.0, scale_easing)]))
         node.track("dy", Track([
-            Keyframe(onset, travel * .5, "out-quart"),
+            Keyframe(onset, _safe_translation(node, travel * .5, "y", safe_bounds), "out-quart"),
             Keyframe(end, 0.0, "out-quart")]))
     elif key == "mask-rise":
         node.reveal = {**(node.reveal or {}), "direction": "up", "progress": 0.0}
@@ -102,7 +157,7 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
             Keyframe(onset, 0.0, spec.easing),
             Keyframe(end, 1.0, spec.easing)]))
         node.track("dy", Track([
-            Keyframe(onset, travel * .35, "out-quart"),
+            Keyframe(onset, _safe_translation(node, travel * .35, "y", safe_bounds), "out-quart"),
             Keyframe(end, 0.0, "out-quart")]))
     elif key == "reveal-right":
         node.reveal = {**(node.reveal or {}), "direction": "right", "progress": 0.0}
@@ -114,10 +169,10 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
             Keyframe(onset, 0.0, "out-cubic"),
             Keyframe(onset + min(.22, duration), 1.0, "out-cubic")]))
         node.track("dy", Track([
-            Keyframe(onset, travel, spec.easing),
+            Keyframe(onset, _safe_translation(node, travel, "y", safe_bounds), spec.easing),
             Keyframe(end, 0.0, spec.easing)]))
         node.track("scale", Track([
-            Keyframe(onset, spec.scale_from, "out-cubic"),
+            Keyframe(onset, _safe_scale(node, spec.scale_from, safe_bounds), "out-cubic"),
             Keyframe(end, 1.0, "out-cubic")]))
     elif key == "tracking-in":
         node.track("opacity", Track([
@@ -127,11 +182,12 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
             Keyframe(onset, tokens.px(14), "out-expo"),
             Keyframe(end, 0.0, "out-expo")]))
     elif key == "scale-focus":
+        start_scale = _safe_scale(node, spec.scale_from, safe_bounds)
         node.track("opacity", Track([
             Keyframe(onset, 0.0, "out-cubic"),
             Keyframe(onset + duration * .45, 1.0, "out-cubic")]))
         node.track("scale", Track([
-            Keyframe(onset, spec.scale_from, "out-expo"),
+            Keyframe(onset, start_scale, "out-expo"),
             Keyframe(end, 1.0, "out-expo")]))
     else:  # pragma: no cover - canonical_preset already guards this
         raise ValueError(f"Unhandled preset {key!r}")

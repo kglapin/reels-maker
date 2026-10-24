@@ -127,6 +127,68 @@ class StockMediaTests(unittest.TestCase):
         self.assertEqual(asset.attribution,"Artist / source")
         self.assertEqual(asset.provider_url,"https://commons.wikimedia.org")
 
+    def test_commons_video_search_filters_by_filetype_and_mediatype(self):
+        def fetch(url, headers=None):
+            self.assertIn("filetype%3Avideo", url)
+            self.assertIn("mediatype", url)
+            return {"query": {"pages": {
+                "7": {"pageid": 7, "imageinfo": [{
+                    "url": "https://upload.wikimedia.org/clip.webm",
+                    "thumburl": "https://upload.wikimedia.org/thumb.jpg",
+                    "descriptionurl": "https://commons.wikimedia.org/wiki/File:C",
+                    "width": 1920, "height": 1080, "mime": "video/webm",
+                    "mediatype": "VIDEO",
+                    "extmetadata": {"LicenseShortName": {"value": "CC BY 4.0"}}}]},
+                "8": {"pageid": 8, "imageinfo": [{
+                    "url": "https://upload.wikimedia.org/photo.jpg",
+                    "descriptionurl": "https://commons.wikimedia.org/wiki/File:P",
+                    "width": 100, "height": 100, "mime": "image/jpeg",
+                    "mediatype": "BITMAP", "extmetadata": {}}]}}}}
+        assets = search_wikimedia_commons("turbine", media_type="video", fetch=fetch)
+        self.assertEqual(len(assets), 1)
+        self.assertEqual(assets[0].media_type, "video")
+        self.assertEqual(assets[0].download_url,
+                         "https://upload.wikimedia.org/clip.webm")
+
+    def test_commons_audio_search_returns_zero_dimension_audio_candidates(self):
+        def fetch(url, headers=None):
+            self.assertIn("filetype%3Aaudio", url)
+            return {"query": {"pages": {
+                "9": {"pageid": 9, "imageinfo": [{
+                    "url": "https://upload.wikimedia.org/sfx.ogg",
+                    "descriptionurl": "https://commons.wikimedia.org/wiki/File:S",
+                    "width": 0, "height": 0, "mime": "application/ogg",
+                    "mediatype": "AUDIO",
+                    "extmetadata": {
+                        "Artist": {"value": "Field Recordist"},
+                        "LicenseShortName": {"value": "CC0"}}}]}}}}
+        assets = search_wikimedia_commons("whoosh", media_type="audio", fetch=fetch)
+        self.assertEqual(len(assets), 1)
+        asset = assets[0]
+        self.assertEqual((asset.media_type, asset.width, asset.height),
+                         ("audio", 0, 0))
+        self.assertEqual(asset.license, "CC0")
+        self.assertEqual(asset.author, "Field Recordist")
+
+    def test_commons_image_search_drops_video_and_audio_results(self):
+        def fetch(url, headers=None):
+            self.assertNotIn("filetype", url)
+            return {"query": {"pages": {
+                "1": {"pageid": 1, "imageinfo": [{
+                    "url": "https://upload.wikimedia.org/photo.jpg",
+                    "descriptionurl": "page", "width": 800, "height": 600,
+                    "mediatype": "BITMAP", "extmetadata": {}}]},
+                "2": {"pageid": 2, "imageinfo": [{
+                    "url": "https://upload.wikimedia.org/clip.webm",
+                    "descriptionurl": "page", "width": 800, "height": 600,
+                    "mediatype": "VIDEO", "extmetadata": {}}]}}}}
+        assets = search_wikimedia_commons("turbine", fetch=fetch)
+        self.assertEqual([a.media_type for a in assets], ["image"])
+
+    def test_commons_rejects_unknown_media_type(self):
+        with self.assertRaises(ValueError):
+            search_wikimedia_commons("x", media_type="document", fetch=lambda u, h: {})
+
     def test_openverse_preserves_item_level_rights_fields(self):
         def fetch(url,headers=None):
             self.assertIn("api.openverse.org/v1/images/",url)

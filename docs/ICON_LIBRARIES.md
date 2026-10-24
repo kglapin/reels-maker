@@ -17,8 +17,15 @@ already present; on macOS install it with Homebrew:
 brew install cairo
 ```
 
-Put only the cairo libraries on the dynamic-loader path when running tests or
-renders locally. Pointing `DYLD_LIBRARY_PATH` at the whole Homebrew `lib/`
+Rasterization auto-detects a Homebrew libcairo under `/opt/homebrew/lib` at
+render time by appending it to `DYLD_FALLBACK_LIBRARY_PATH`. The fallback
+loader only supplies libraries nothing else resolved, so bundled PIL font
+libraries are never substituted. For a non-standard prefix, point
+`DYLD_FALLBACK_LIBRARY_PATH` (or the environment) at it before launching.
+
+If cairo still is not found, put only the cairo libraries on the
+dynamic-loader path when running tests or renders locally. Pointing
+`DYLD_LIBRARY_PATH` at the whole Homebrew `lib/`
 directory makes the loader substitute Homebrew's freetype/fontconfig for the
 system copies, which changes PIL font antialiasing and desynchronizes the
 pixel-exact golden frames:

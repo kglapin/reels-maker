@@ -314,15 +314,36 @@ def track_unsplash_download(asset: StockAsset, *, fetch: Callable | None = None)
         fetch, cache_response=False, retries=0)
 
 
+_WIKIMEDIA_MEDIATYPES = {
+    # Commons' own mediatype classification; "" tolerates older API responses
+    # that omit the field so mocks/fixtures without it still pass.
+    "image": {"BITMAP", "DRAWING", ""},
+    "video": {"VIDEO"},
+    "audio": {"AUDIO"},
+}
+_WIKIMEDIA_FILETYPE_TERMS = {"video": "filetype:video", "audio": "filetype:audio"}
+
+
 def search_wikimedia_commons(query: str, *, per_page: int = 12,
+                             media_type: str = "image",
                              fetch: Callable | None = None) -> list[StockAsset]:
-    """Search Commons files and return imageinfo/extmetadata as candidates."""
+    """Search Commons files and return imageinfo/extmetadata as candidates.
+
+    ``media_type`` may be ``image`` (default), ``video`` or ``audio``; non-image
+    kinds add the CirrusSearch ``filetype:`` term and are additionally filtered
+    by the API's own mediatype classification. No API key is required.
+    """
     if not 1 <= per_page <= 50:
         raise ValueError("per_page must be 1..50")
+    if media_type not in _WIKIMEDIA_MEDIATYPES:
+        raise ValueError(f"media_type must be one of {sorted(_WIKIMEDIA_MEDIATYPES)}")
+    gsrsearch = query.strip()
+    if media_type in _WIKIMEDIA_FILETYPE_TERMS:
+        gsrsearch = f"{gsrsearch} {_WIKIMEDIA_FILETYPE_TERMS[media_type]}"
     url = "https://commons.wikimedia.org/w/api.php?" + urlencode({
         "action": "query", "format": "json", "generator": "search",
-        "gsrsearch": query, "gsrnamespace": 6, "gsrlimit": per_page,
-        "prop": "imageinfo", "iiprop": "url|size|extmetadata",
+        "gsrsearch": gsrsearch, "gsrnamespace": 6, "gsrlimit": per_page,
+        "prop": "imageinfo", "iiprop": "url|size|mime|mediatype|extmetadata",
         "iiurlwidth": 640,
     })
     payload = _provider_fetch("wikimedia_commons", url, {"User-Agent": "reels-maker/1.0 (media candidate search)"}, fetch)
@@ -330,6 +351,9 @@ def search_wikimedia_commons(query: str, *, per_page: int = 12,
     results = []
     for page in pages.values():
         info = (page.get("imageinfo") or [{}])[0]
+        mediatype = str(info.get("mediatype") or "").upper()
+        if mediatype not in _WIKIMEDIA_MEDIATYPES[media_type]:
+            continue
         meta = info.get("extmetadata", {})
         def value(name: str) -> str:
             item = meta.get(name, {})
@@ -340,6 +364,7 @@ def search_wikimedia_commons(query: str, *, per_page: int = 12,
             info.get("thumburl", info.get("url", "")), file_url,
             value("Artist") or "Unknown", int(info.get("width", 0)),
             int(info.get("height", 0)), info.get("url", ""), file_url,
+            media_type=media_type,
             license=value("LicenseShortName") or value("License"),
             license_url=value("LicenseUrl"), attribution=value("Attribution"),
             provider_url="https://commons.wikimedia.org"))
@@ -377,7 +402,7 @@ def rank_assets(assets: list[StockAsset], *, aspect: float,
     def score(asset: StockAsset) -> tuple[float, str]:
         ratio = asset.width / max(1, asset.height)
         import math
-        crop_loss = abs(math.log(ratio / aspect))
+        crop_loss = abs(math.log(ratio / aspect)) if ratio > 0 else 0.0
         resolution_penalty = (max(0, min_width - asset.width) / min_width
                               + max(0, min_height - asset.height) / min_height)
         return (crop_loss + 2*resolution_penalty, asset.asset_id)

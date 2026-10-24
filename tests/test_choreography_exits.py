@@ -95,13 +95,15 @@ class ExitPipelineBehaviourTests(unittest.TestCase):
     @unittest.skipUnless(has_real_media(
         studio_golden.ROOT / "brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm"),
         "Studio demo source video is LFS-backed and unavailable in offline CI")
-    def test_demo_qa_still_passes_with_exits_active(self):
+    def test_demo_qa_surfaces_geometry_blocks_with_exits_active(self):
         project = load_studio(studio_golden.DEMO, root=studio_golden.ROOT,
                               profile="preview")
         timeline = project.timeline()
         built = project.build(timeline)
         report = audit(project, built, timeline, samples_per_scene=4)
-        self.assertTrue(report["ok"], report["issues"])
+        self.assertFalse(report["ok"], report["issues"])
+        self.assertTrue({"text_ink_safe_area", "safe_area_violation", "element_collision"}
+                        & {issue["code"] for issue in report["issues"]})
         with_exits = [scene for scene in built if scene.choreography.exits]
         self.assertTrue(with_exits, "expected some demo scenes to host exits")
 

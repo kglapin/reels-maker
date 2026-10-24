@@ -93,7 +93,7 @@ def validate_creative_spec(spec):
         _keys(shot,{"id","intent","headline","subtitle","duration","asset",
                     "composition","layout","camera","typography","transition",
                     "value","visual","icon_library","icon_assets","rotation",
-                    "kicker","allow_repeat_reason"},p)
+                    "chart","kicker","allow_repeat_reason"},p)
         sid=_text(shot.get("id"),p+".id",80)
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*",sid):
             raise CreativeSpecError(p+".id","invalid scene identifier")
@@ -120,6 +120,51 @@ def validate_creative_spec(spec):
                 raise CreativeSpecError(p+".composition","use layout for camera_canvas")
             if shot["composition"] not in STUDIO_COMPOSITIONS:
                 raise CreativeSpecError(p+".composition","unsupported composition")
+        selected_chart = shot.get("composition", layout) == "line-chart"
+        chart = shot.get("chart")
+        if selected_chart and mode != "studio":
+            raise CreativeSpecError(p+".chart","line-chart is Studio-only")
+        if selected_chart and not isinstance(chart, dict):
+            raise CreativeSpecError(p+".chart","line-chart requires explicit chart data")
+        if chart is not None:
+            if not selected_chart or mode != "studio":
+                raise CreativeSpecError(p+".chart","chart data is supported only with Studio line-chart")
+            _keys(chart,{"points","x_axis_type","x_axis_label","y_axis_label","y_domain"},p+".chart")
+            points=chart.get("points")
+            if not isinstance(points,list) or not 2<=len(points)<=12:
+                raise CreativeSpecError(p+".chart.points","expected 2..12 explicit points")
+            labels=[]
+            values=[]
+            for point_index,point in enumerate(points):
+                pp=f"{p}.chart.points[{point_index}]"
+                point=_object(point,pp)
+                _keys(point,{"label","value"},pp)
+                labels.append(_text(point.get("label"),pp+".label",80))
+                values.append(_number(point.get("value"),pp+".value",-1e15,1e15))
+            if len(set(labels))!=len(labels):
+                raise CreativeSpecError(p+".chart.points","labels must be unique")
+            axis_type=chart.get("x_axis_type","category")
+            if axis_type not in ("category","date"):
+                raise CreativeSpecError(p+".chart.x_axis_type","choose category or date")
+            _text(chart.get("x_axis_label"),p+".chart.x_axis_label",80)
+            _text(chart.get("y_axis_label"),p+".chart.y_axis_label",80)
+            domain=chart.get("y_domain")
+            if not isinstance(domain,list) or len(domain)!=2:
+                raise CreativeSpecError(p+".chart.y_domain","requires two explicit bounds")
+            lower=_number(domain[0],p+".chart.y_domain[0]",-1e15,1e15)
+            upper=_number(domain[1],p+".chart.y_domain[1]",-1e15,1e15)
+            if upper<=lower:
+                raise CreativeSpecError(p+".chart.y_domain","maximum must exceed minimum")
+            if any(value<lower or value>upper for value in values):
+                raise CreativeSpecError(p+".chart.y_domain","must contain every point value")
+            if axis_type=="date":
+                from datetime import date
+                try:
+                    parsed=[date.fromisoformat(label) for label in labels]
+                except ValueError as exc:
+                    raise CreativeSpecError(p+".chart.points","date labels must use ISO YYYY-MM-DD") from exc
+                if any(current<=previous for previous,current in zip(parsed,parsed[1:])):
+                    raise CreativeSpecError(p+".chart.points","date labels must be strictly increasing")
         camera=_object(shot.get("camera",{}),p+".camera")
         _keys(camera,{"x","y","angle","zoom","move_duration","reveal_delay",
                       "reveal_duration"},p+".camera")

@@ -229,39 +229,87 @@ def _reveal_bbox(box: BBox, reveal: Mapping[str, Any]) -> BBox:
     return (x0, y0, x0 + width * progress, y1)
 
 
+def build_transform_hierarchy(root: Node, *, max_depth: int = 128):
+    """Build the shared affine hierarchy for a retained Studio scene tree.
+
+    Node children remain in their existing authored coordinate convention;
+    this adapter records those transforms as explicit local/parent/world edges
+    without changing renderer behavior. The returned path map is stable for the
+    lifetime of the supplied tree and distinguishes equal roles/sibling nodes.
+    """
+    from .transforms import Affine2D, Space, TransformHierarchy, TransformNode
+
+    graph = TransformHierarchy(max_depth=max_depth)
+    path_ids: dict[tuple[int, ...], str] = {}
+    active: set[int] = set()
+
+    def validate_tree(node: Node, depth: int, branch: set[int]) -> None:
+        if id(node) in branch:
+            raise ValueError("Cyclic Node parent/child hierarchy")
+        if depth > max_depth:
+            raise ValueError(f"Node hierarchy exceeds depth limit {max_depth}")
+        next_branch = branch | {id(node)}
+        for child in node.children:
+            validate_tree(child, depth + 1, next_branch)
+
+    # Validate topology first: groups compute their bounds from descendants,
+    # so transform construction must reject cycles before asking a group for
+    # its anchor/base bounds.
+    validate_tree(root, 1, set())
+
+    def visit(node: Node, path: tuple[int, ...], parent_id: str | None) -> None:
+        if id(node) in active:
+            raise ValueError("Cyclic Node parent/child hierarchy")
+        if len(path) + 1 > max_depth:
+            raise ValueError(f"Node hierarchy exceeds depth limit {max_depth}")
+        node_id = "root" if not path else "root/" + "/".join(map(str, path))
+        active.add(id(node))
+        try:
+            edge = node.local_to_parent_transform()
+            target = Space.WORLD if parent_id is None else Space.PARENT
+            edge = Affine2D(edge.a, edge.b, edge.c, edge.d, edge.e, edge.f,
+                            Space.LOCAL, target)
+            graph.add(TransformNode(node_id, edge, parent_id))
+            path_ids[path] = node_id
+            for index, child in enumerate(node.children):
+                visit(child, path + (index,), node_id)
+        finally:
+            active.remove(id(node))
+
+    visit(root, (), None)
+    return graph, path_ids
+
+
 def collect_qa_elements(root: Node) -> list[dict[str, Any]]:
     """Flatten visible text/control nodes into QA-friendly records."""
+    from .transforms import Bounds, LocalSpace
+
+    hierarchy, transform_ids = build_transform_hierarchy(root)
     result = []
 
-    def transform(box: BBox, node: Node) -> BBox:
-        from .transforms import Bounds, LocalSpace
-        mapped = node.local_to_parent_transform().map_bounds(Bounds[LocalSpace](*box))
-        return (mapped.left, mapped.top, mapped.right, mapped.bottom)
-
     def walk(node: Node, ancestors: tuple[Node, ...],
-             parent_opacity: float) -> None:
+             parent_opacity: float, path: tuple[int, ...]) -> None:
         if not node.visible():
             return
         effective_opacity = parent_opacity * node.opacity
         if node.children:
             # A group is a transform/opacity container. Its own control class
             # is deliberately omitted; leaf text and controls are checked.
-            for child in node.children:
-                walk(child, ancestors + (node,), effective_opacity)
+            for index, child in enumerate(node.children):
+                walk(child, ancestors + (node,), effective_opacity,
+                     path + (index,))
             return
         if node.qa_class not in ("text", "control"):
             return
-        box = node.world_bounds()
+        box = node.base_bounds()
         if box is not None and node.meta.get("bounds"):
             raw = node.meta["bounds"]
             box = (raw[0], raw[1], raw[2], raw[3])
-            # Apply the leaf's actual transform, then the containing groups
-            # from inner to outer, mirroring the renderer's nested layers.
-            box = transform(box, node)
         if box is None:
             return
-        for ancestor in reversed(ancestors):
-            box = transform(box, ancestor)
+        mapped = hierarchy.world_transform(transform_ids[path]).map_bounds(
+            Bounds[LocalSpace](*box))
+        box = (mapped.left, mapped.top, mapped.right, mapped.bottom)
         if box[2] <= box[0] or box[3] <= box[1]:
             return
         result.append({
@@ -275,5 +323,5 @@ def collect_qa_elements(root: Node) -> list[dict[str, Any]]:
             "meta": dict(node.meta),
         })
 
-    walk(root, (), 1.0)
+    walk(root, (), 1.0, ())
     return result

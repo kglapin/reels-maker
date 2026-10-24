@@ -25,7 +25,7 @@ class ProviderClientTests(unittest.TestCase):
             seen = []
             client = ProviderClient(cache=SearchCache(), transport=lambda url, headers: seen.append((url, headers)) or {})
             client.get_json("pixabay", "https://pixabay.com/api/?key=test-key")
-            self.assertEqual(seen[0][1], {})
+            self.assertEqual(seen[0][1], {"User-Agent": "reels-maker/1.0"})
             self.assertNotIn("test-key", repr(client.cache._entries))
 
     def test_cache_is_ttl_bounded_and_pixabay_ttl_is_at_least_24h(self):
@@ -143,15 +143,17 @@ class ProviderClientTests(unittest.TestCase):
         finally:
             POLICIES["openverse"] = original
 
-    def test_openverse_requires_oauth_token_and_sends_bearer_header(self):
+    def test_openverse_anonymous_tier_and_optional_bearer_header(self):
         seen = []
         client = ProviderClient(cache=SearchCache(), transport=lambda url, headers: seen.append(headers) or {})
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(ProviderError, "OPENVERSE_ACCESS_TOKEN"):
-                client.get_json("openverse", "https://api.openverse.org/v1/images/?q=test")
+            client.get_json("openverse", "https://api.openverse.org/v1/images/?q=anon",
+                            cache_response=False)
+        self.assertNotIn("Authorization", seen[-1])
         with patch.dict(os.environ, {"OPENVERSE_ACCESS_TOKEN": "mock-token"}):
             client.get_json("openverse", "https://api.openverse.org/v1/images/?q=test")
-        self.assertEqual(seen, [{"Authorization": "Bearer mock-token"}])
+        self.assertEqual(seen[-1], {"Authorization": "Bearer mock-token",
+                                    "User-Agent": "reels-maker/1.0"})
 
 
 if __name__ == "__main__":

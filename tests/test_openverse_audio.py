@@ -43,13 +43,14 @@ class OpenverseAudioTests(unittest.TestCase):
         self.assertIn("/v1/audio/?q=soft+wind&page_size=4", seen[0][0])
         self.assertEqual(seen[0][1]["Authorization"], "Bearer mock-token")
 
-    def test_missing_token_fails_before_transport(self):
-        calls = []
-        client = ProviderClient(cache=SearchCache(), transport=lambda *_: calls.append(1) or {})
+    def test_missing_token_uses_anonymous_tier_without_auth_header(self):
+        seen = []
+        client = ProviderClient(cache=SearchCache(), transport=lambda url, headers: (
+            seen.append(headers) or {"results": []}))
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(ProviderError, "OPENVERSE_ACCESS_TOKEN"):
-                search_openverse_audio("ambient", client=client)
-        self.assertEqual(calls, [])
+            search_openverse_audio("ambient", client=client)
+        self.assertEqual(len(seen), 1)
+        self.assertNotIn("Authorization", seen[0])
 
     def test_optional_evidence_and_duration_are_safe_when_absent_or_malformed(self):
         client = ProviderClient(cache=SearchCache(), transport=lambda *_: {

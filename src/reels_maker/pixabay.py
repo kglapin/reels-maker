@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -60,6 +61,18 @@ class PixabayError(ProjectError):
     """Raised for blocked, unreadable or unparsable Pixabay access."""
 
 
+def _challenge_message(url: str) -> str:
+    return ("Pixabay showed a Cloudflare challenge (blocked automated "
+            f"access to {url}). Open the page in your browser and either:\n"
+            "  a) save the rendered page and rerun with --page-file <file>, "
+            "or\n"
+            "  b) export your cf_clearance cookie and pass it as "
+            "--cookies 'cf_clearance=...'\n"
+            "  c) copy cdn.pixabay.com MP3 urls from the browser network "
+            "tab and rerun with --tracks-file <file>\n"
+            "Do not retry blindly; respect the site's access terms.")
+
+
 def http_get(url: str, *, cookies: str | None = None,
              timeout: int = 30) -> bytes:
     """Fetch a URL with a browser-like UA; raise PixabayError on challenge."""
@@ -77,6 +90,17 @@ def http_get(url: str, *, cookies: str | None = None,
             return response.read()
     except PixabayError:
         raise
+    except HTTPError as exc:
+        # Cloudflare answers plain clients with HTTP 403/503 challenge pages;
+        # urllib raises before the body is read, so inspect it here and give
+        # the operator the documented workarounds instead of a bare error.
+        try:
+            body = exc.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        if exc.code in (401, 403, 429, 503) or _looks_like_challenge(body):
+            raise PixabayError(_challenge_message(url)) from exc
+        raise PixabayError(f"Pixabay answered HTTP {exc.code} for {url}") from exc
     except Exception as exc:  # urllib errors are not uniformly typed
         raise PixabayError(f"Cannot fetch {url}: {exc}") from exc
 
@@ -100,14 +124,7 @@ def fetch_search_page(query: str, kind: str = "music", *, lang: str = "pl",
     body = http_get(url, cookies=cookies)
     text = body.decode("utf-8", "replace")
     if _looks_like_challenge(text):
-        raise PixabayError(
-            "Pixabay showed a Cloudflare challenge (blocked automated "
-            f"access to {url}). Open the page in your browser and either:\n"
-            "  a) save the rendered page and rerun with --page-file <file>, "
-            "or\n"
-            "  b) export your cf_clearance cookie and pass it as "
-            "--cookies 'cf_clearance=...'\n"
-            "Do not retry blindly; respect the site's access terms.")
+        raise PixabayError(_challenge_message(url))
     return text
 
 

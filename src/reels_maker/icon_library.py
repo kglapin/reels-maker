@@ -10,8 +10,10 @@ from __future__ import annotations
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
+import os
 import re
 import hashlib
+import sys
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -261,13 +263,35 @@ def asset(library: str, name: str, *, style: str | None = None,
     return target
 
 
+def _homebrew_cairo_fallback() -> None:
+    """Let dyld find Homebrew libcairo without overriding other libraries.
+
+    cairocffi/dlopen does not search /opt/homebrew/lib on macOS. Appending it
+    to DYLD_FALLBACK_LIBRARY_PATH (lazy-read at dlopen time) only supplies
+    libraries nothing else resolved — Pillow's bundled font libraries are
+    never substituted, unlike a broad DYLD_LIBRARY_PATH export.
+    """
+    if sys.platform != "darwin":
+        return
+    prefix = "/opt/homebrew/lib"
+    if not Path(prefix, "libcairo.2.dylib").is_file():
+        return
+    existing = os.environ.get("DYLD_FALLBACK_LIBRARY_PATH")
+    if not existing:
+        os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = prefix
+    elif prefix not in existing.split(":"):
+        os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = f"{existing}:{prefix}"
+
+
 @lru_cache(maxsize=512)
 def _raster(cache_path: str, colour: str, size: int, stroke_width: float) -> Image.Image:
+    _homebrew_cairo_fallback()
     try:
         import cairosvg
-    except ImportError as exc:
+    except (ImportError, OSError) as exc:
         raise IconLibraryError(
-            'SVG icons require pip install -e ".[icons]"') from exc
+            'SVG icons require pip install -e ".[icons]" and system cairo '
+            "(brew install cairo)") from exc
     svg = Path(cache_path).read_bytes()
     root = _validated(svg)
     if not HEX_PATTERN.fullmatch(colour):
@@ -281,6 +305,12 @@ def _raster(cache_path: str, colour: str, size: int, stroke_width: float) -> Ima
                 node.set(key, colour)
         if stroke_width > 0 and "stroke-width" in node.attrib:
             node.set("stroke-width", str(stroke_width))
+    # Filled-icon packs (Material Symbols, solid variants) ship paths without a
+    # fill attribute; an unset fill inherits black, so inject the brand colour
+    # at the root. Packs whose root is explicitly fill="none" (stroke-based)
+    # must stay unfilled or every glyph becomes a solid blob.
+    if (root.get("fill") or "").lower() not in ("none", "transparent"):
+        root.set("fill", colour)
     root.set("color", colour)
     png = cairosvg.svg2png(
         bytestring=ET.tostring(root, encoding="utf-8"),

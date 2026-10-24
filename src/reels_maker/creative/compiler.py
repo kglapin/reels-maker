@@ -104,6 +104,7 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
             scene["typography_motion"]=decision["typography_motion"]
             if "value" in shot:scene["value"]=shot["value"]
             if "visual" in shot:scene["visual"]=shot["visual"]
+            if "chart" in shot:scene.update(copy.deepcopy(shot["chart"]))
             if "rotation" in shot:scene["editorial_rotation"]=copy.deepcopy(shot["rotation"])
             if "icon_library" in shot:scene["icon_library"]=shot["icon_library"]
             if "icon_assets" in shot:scene["icon_assets"]=copy.deepcopy(shot["icon_assets"])

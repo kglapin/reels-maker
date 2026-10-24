@@ -73,6 +73,39 @@ class CreativePipelineTests(unittest.TestCase):
         self.assertEqual(graph.backend, "camera_canvas_manifest_v1")
         self.assertTrue(all("camera_canvas" in node.payload for node in graph.scenes))
 
+    def test_explicit_line_chart_data_compiles_through_typed_pipeline(self):
+        source = spec()
+        shot = source["shots"][0]
+        shot["layout"] = "line-chart"
+        shot["chart"] = {
+            "points": [{"label": "2026-01-01", "value": 15},
+                       {"label": "2026-01-03", "value": 42}],
+            "x_axis_type": "date", "x_axis_label": "Day",
+            "y_axis_label": "Energy (kWh)", "y_domain": [0, 50],
+        }
+        intent = creative_intent(source)
+        graph = render_graph(intent, plan_motion(intent), check_assets=False)
+        scene = graph.to_renderer_input()["scenes"][0]
+        self.assertEqual(scene["composition"], "line-chart")
+        self.assertEqual(scene["points"], shot["chart"]["points"])
+        self.assertEqual(scene["y_domain"], [0, 50])
+
+    def test_line_chart_data_is_rejected_when_semantics_are_incomplete(self):
+        source = spec()
+        source["shots"][0]["layout"] = "line-chart"
+        source["shots"][0]["chart"] = {
+            "points": [{"label":"2026-02-01","value":1},
+                       {"label":"2026-01-01","value":2}],
+            "x_axis_type":"date", "x_axis_label":"Period",
+            "y_axis_label":"Output (kWh)", "y_domain":[0,3],
+        }
+        with self.assertRaisesRegex(CreativeSpecError, "strictly increasing"):
+            creative_intent(source)
+        source["shots"][0]["chart"]["points"].reverse()
+        del source["shots"][0]["chart"]["y_domain"]
+        with self.assertRaisesRegex(CreativeSpecError, "y_domain"):
+            creative_intent(source)
+
 
 if __name__ == "__main__":
     unittest.main()

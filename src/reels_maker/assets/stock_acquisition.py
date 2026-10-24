@@ -99,7 +99,7 @@ def candidate_asset(record: dict) -> StockAsset:
     if record.get("rights_status", "unknown") != "unknown":
         raise ValueError("Candidate records cannot embed rights clearance")
     if not all(isinstance(record.get(key), str) and record[key] for key in required[:5]) \
-            or record.get("media_type") not in ("image", "video"):
+            or record.get("media_type") not in ("image", "video", "audio"):
         raise ValueError("Candidate is missing provider, id, type or source/download URLs")
     if any(type(record.get(key)) is not int or record[key] < 0
            for key in ("width", "height")):
@@ -141,7 +141,7 @@ def rank_candidates(assets: Iterable[StockAsset], *, aspect: float,
 
     def key(asset: StockAsset) -> tuple:
         ratio = asset.width / max(1, asset.height)
-        crop = abs(math.log(ratio / aspect))
+        crop = abs(math.log(ratio / aspect)) if ratio > 0 else 0.0
         resolution = (max(0, min_width - asset.width) / min_width
                       + max(0, min_height - asset.height) / min_height)
         return (crop + 2 * resolution, asset.provider, asset.asset_id,
@@ -237,6 +237,16 @@ def _network_transport(url: str, *, provider: str, timeout: float,
         return DownloadResponse(final_url, None, response.headers.get("Content-Type", ""))
 
 
+def _ffprobe_metadata(path: Path, media_type: str,
+                      probe: Callable[[Path, str], dict] | None) -> dict:
+    if probe is not None:
+        return probe(path, media_type)
+    completed = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path)],
+        check=True, capture_output=True, text=True, timeout=DOWNLOAD_TIMEOUT_SECONDS)
+    return json.loads(completed.stdout)
+
+
 def _verify_file(path: Path, media_type: str,
                  probe: Callable[[Path, str], dict] | None) -> dict:
     if media_type == "image":
@@ -247,16 +257,23 @@ def _verify_file(path: Path, media_type: str,
             width, height = image.size
             image.verify()
         return {"format": image_format, "width": width, "height": height}
-    if media_type != "video":
+    if media_type not in ("video", "audio"):
         raise ValueError("Unsupported stock media type")
-    if probe is not None:
-        metadata = probe(path, "video")
-    else:
-        completed = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path)],
-            check=True, capture_output=True, text=True, timeout=DOWNLOAD_TIMEOUT_SECONDS)
-        metadata = json.loads(completed.stdout)
+    metadata = _ffprobe_metadata(path, media_type, probe)
     streams = metadata.get("streams", [])
+    if media_type == "audio":
+        audio = next((stream for stream in streams
+                      if stream.get("codec_type") == "audio"), None)
+        if audio is None:
+            raise ValueError("FFprobe did not verify a valid audio stream")
+        raw_duration = metadata.get("format", {}).get("duration") or audio.get("duration")
+        duration = float(raw_duration) if raw_duration not in (None, "N/A") else None
+        sample_rate = audio.get("sample_rate")
+        return {"format": metadata.get("format", {}).get("format_name", "unknown"),
+                "codec": audio.get("codec_name", "unknown"),
+                "duration_seconds": duration,
+                "channels": audio.get("channels"),
+                "sample_rate": int(sample_rate) if sample_rate else None}
     video = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
     if not video or not int(video.get("width", 0)) or not int(video.get("height", 0)):
         raise ValueError("FFprobe did not verify a valid video stream")
@@ -287,6 +304,13 @@ def _format_suffix(metadata: dict, media_type: str) -> str:
             raise ValueError("Image format is not in the supported safe-format set")
         return suffix
     formats = set(str(metadata.get("format", "")).lower().split(","))
+    if media_type == "audio":
+        for name, suffix in (("mp3", ".mp3"), ("wav", ".wav"), ("ogg", ".ogg"),
+                             ("flac", ".flac"), ("m4a", ".m4a"), ("aac", ".aac"),
+                             ("opus", ".opus"), ("webm", ".webm")):
+            if name in formats:
+                return suffix
+        raise ValueError("Audio container is unsupported")
     if "mp4" in formats or "mov" in formats:
         return ".mp4"
     if "webm" in formats:

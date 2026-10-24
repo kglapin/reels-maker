@@ -160,10 +160,13 @@ def rich_text_node(role: str, runs: Iterable[Run], style: TextStyle,
     runs = list(runs)
     style = TextStyle(**{**style.__dict__, "align": align})
     block = typeset_runs(runs, style, max(4.0, rect.w), fonts)
-    while block.height > rect.h + .5 and style.size > 10:
+    # Rich run scales and per-word tracking can make ink exceed the column even
+    # when the total line box fits vertically. Shrink to satisfy both hard
+    # dimensions instead of leaving a headline that Studio QA must later reject.
+    while (block.height > rect.h + .5 or block.overflow) and style.size > 10:
         style = TextStyle(**{**style.__dict__, "size": int(style.size * .94)})
         block = typeset_runs(runs, style, max(4.0, rect.w), fonts)
-    if block.height > rect.h + .5:
+    if block.height > rect.h + .5 or block.overflow:
         raise ValueError("Rich headline exceeds its region; shorten the copy")
     if valign == "top":
         y = rect.y
@@ -284,7 +287,9 @@ def apply_choreography(ctx: SceneContext, elements: dict[str, Node],
                        specs: Iterable[ElementSpec], cues: Mapping[str, float] | None
                        ) -> Choreography:
     plan = choreograph(ctx, specs, cues)
-    plan.apply(elements, ctx.tokens, seed=ctx.seed)
+    safe = ctx.layout.safe
+    plan.apply(elements, ctx.tokens, seed=ctx.seed,
+               safe_bounds=(safe.x, safe.y, safe.right, safe.bottom))
     return plan
 
 

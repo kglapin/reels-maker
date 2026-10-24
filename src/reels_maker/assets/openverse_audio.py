@@ -62,10 +62,11 @@ def search_openverse_audio(query: str, *, per_page: int = 12,
                            ) -> list[OpenverseAudioResult]:
     """Search official Openverse audio API using the shared OAuth-aware client.
 
-    ``OPENVERSE_ACCESS_TOKEN`` must contain an operator-provisioned OAuth bearer
-    token. The shared ProviderClient enforces this requirement and caches only
-    search metadata. A license reported by Openverse is evidence for human review,
-    not confirmation of reuse rights on any platform.
+    Without credentials the shared ProviderClient uses Openverse's documented
+    anonymous tier (server-advertised 20/min burst, 200/day). When
+    ``OPENVERSE_ACCESS_TOKEN`` is set it is sent as an OAuth bearer, raising
+    the upstream limits. A license reported by Openverse is evidence for human
+    review, not confirmation of reuse rights on any platform.
     """
     if not 1 <= per_page <= 20:
         raise ValueError("per_page must be 1..20")

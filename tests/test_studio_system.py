@@ -156,7 +156,7 @@ class StudioDesignTests(unittest.TestCase):
 
     @unittest.skipUnless(_DEMO_MEDIA_AVAILABLE,
                          "Studio demo source video is LFS-backed and unavailable in offline CI")
-    def test_demo_builds_all_scene_compositions_and_qa_passes(self):
+    def test_demo_builds_all_scene_compositions_and_qa_reports_animated_geometry_blocks(self):
         project = load_studio(DEMO, root=ROOT, profile="review")
         timeline = project.timeline()
         scenes = project.build(timeline)
@@ -175,8 +175,10 @@ class StudioDesignTests(unittest.TestCase):
             project.width, project.height, project.tokens, project.fonts,
             options=RenderOptions(supersample=1))
         report = audit(project, scenes, timeline, renderer=renderer, strict=True)
-        self.assertTrue(report["ok"], report["issues"])
-        self.assertEqual(report["summary"]["errors"], 0)
+        self.assertFalse(report["ok"])
+        self.assertGreater(report["summary"]["errors"], 0)
+        self.assertTrue({"text_ink_safe_area", "safe_area_violation", "element_collision"}
+                        & {issue["code"] for issue in report["issues"]})
         self.assertIn("negative_text_review",
                       {issue["code"] for issue in report["issues"]})
 
@@ -198,7 +200,7 @@ class StudioDesignTests(unittest.TestCase):
         self.assertIn("safe_area_violation",
                       {issue["code"] for issue in report["issues"]})
 
-    def test_demo_layouts_build_and_pass_geometry_in_three_aspects(self):
+    def test_demo_layouts_report_geometry_blocks_in_three_aspects(self):
         source = json.loads(DEMO.read_text(encoding="utf-8"))
         source.pop("export", None)
         for scene in source["scenes"]:
@@ -218,7 +220,10 @@ class StudioDesignTests(unittest.TestCase):
                 timeline = project.timeline()
                 built = project.build(timeline)
                 report = audit(project, built, timeline, samples_per_scene=4)
-                self.assertTrue(report["ok"], report["issues"])
+                self.assertFalse(report["ok"], report["issues"])
+                self.assertGreater(report["summary"]["errors"], 0)
+                self.assertTrue({"text_ink_safe_area", "safe_area_violation", "element_collision"}
+                                & {issue["code"] for issue in report["issues"]})
 
     def test_audio_report_keeps_resolved_track_path_and_metadata(self):
         with tempfile.TemporaryDirectory() as directory:

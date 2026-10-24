@@ -10,6 +10,7 @@ from pathlib import Path
 from .brand import brand_directory
 from .asset_reviews import load_media_reviews
 from .catalog import catalog
+from .envfile import load_env
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
 from .renderer import preflight, render
@@ -25,6 +26,7 @@ def _emit(payload: dict, error: bool = False) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_env(ROOT / ".env")
     parser = argparse.ArgumentParser(prog="reels-maker",
         description="Render manifest-driven videos in project-defined formats")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -210,7 +212,8 @@ def main(argv: list[str] | None = None) -> int:
     media_search.add_argument("query", help="Search terms")
     media_search.add_argument("--provider", choices=("all", "pexels", "pixabay",
         "unsplash", "wikimedia_commons", "openverse"), default="all")
-    media_search.add_argument("--kind", choices=("image", "video"), default="image")
+    media_search.add_argument("--kind", choices=("image", "video", "audio"),
+                              default="image")
     media_search.add_argument("--limit", type=int, default=12,
                               help="Candidates requested from each provider (1..50)")
     media_search.add_argument("--aspect", type=float, default=9/16,
@@ -633,7 +636,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "media-search":
             from .assets.stock_acquisition import candidate_record, search_with_fallback
             from .assets.stock_media import (
-                search_openverse, search_pexels, search_pexels_videos,
+                StockAsset, search_openverse, search_pexels, search_pexels_videos,
                 search_pixabay, search_pixabay_videos, search_unsplash,
                 search_wikimedia_commons,
             )
@@ -643,15 +646,20 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Search query must contain non-whitespace text")
             if not math.isfinite(args.aspect) or args.aspect <= 0:
                 raise ValueError("--aspect must be a finite positive number")
+            kind_providers = {
+                "image": ("pexels", "pixabay", "unsplash",
+                          "wikimedia_commons", "openverse"),
+                "video": ("pexels", "pixabay", "wikimedia_commons"),
+                "audio": ("wikimedia_commons", "openverse"),
+            }[args.kind]
             if args.provider == "all":
-                providers = (("pexels", "pixabay") if args.kind == "video" else
-                             ("pexels", "pixabay", "unsplash",
-                              "wikimedia_commons", "openverse"))
+                providers = kind_providers
             else:
-                providers = (args.provider,)
-                if args.kind == "video" and args.provider not in ("pexels", "pixabay"):
+                if args.provider not in kind_providers:
                     raise ValueError(
-                        "Video search is currently supported only by Pexels/Pixabay")
+                        f"{args.kind} search is supported only by: "
+                        f"{', '.join(kind_providers)}")
+                providers = (args.provider,)
             orientation = ("landscape" if args.aspect > 1.2 else
                            "portrait" if args.aspect < 0.85 else "square")
             provider_limits = {"unsplash": 30, "openverse": 20}
@@ -672,7 +680,23 @@ def main(argv: list[str] | None = None) -> int:
                 elif provider == "unsplash":
                     fn = lambda query, limit=per_page: search_unsplash(query, per_page=limit)
                 elif provider == "wikimedia_commons":
-                    fn = lambda query, limit=per_page: search_wikimedia_commons(query, per_page=limit)
+                    fn = (lambda query, limit=per_page, kind=args.kind:
+                          search_wikimedia_commons(query, per_page=limit,
+                                                   media_type=kind))
+                elif provider == "openverse" and args.kind == "audio":
+                    from .assets.openverse_audio import search_openverse_audio
+
+                    def fn(query, limit=per_page):
+                        return [StockAsset(
+                            "openverse", item.asset_id, item.audio_url,
+                            item.source_url, item.creator, 0, 0,
+                            item.audio_url, item.source_url,
+                            media_type="audio", license=item.license,
+                            license_url=item.license_url,
+                            attribution=item.attribution,
+                            provider_url="https://openverse.org",
+                            duration_seconds=item.duration_seconds)
+                            for item in search_openverse_audio(query, per_page=limit)]
                 else:
                     fn = lambda query, limit=per_page: search_openverse(query, per_page=limit)
                 fn.__name__ = provider

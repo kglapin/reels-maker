@@ -20,7 +20,8 @@ CAMERA_LAYOUTS = ("photo-above", "photo-left", "offset", "diagonal")
 CAMERA_TEXT_MOTIONS = ("fade", "slide-up", "mask-rise", "scale-focus")
 STUDIO_COMPOSITIONS = (
     "statement", "stack-center", "split-editorial", "full-bleed-type",
-    "spotlight", "quote", "amount", "stats", "bars", "checklist", "cta",
+    "spotlight", "quote", "amount", "stats", "bars", "line-chart",
+    "checklist", "cta",
 )
 CAMERA_SHOT_LIMIT = 6
 
@@ -113,7 +114,11 @@ class CapabilityRegistry:
                     {"name": "reels-maker-procedural", "media": ["sound-effects"],
                      "status": "partial", "authentication": "none",
                      "workflow": "deterministic procedural WAV generated only into imports/audio quarantine",
-                     "limitations": ["rights_status remains unknown; generated sound still needs human editorial/right-to-use review before publication."]},
+                      "limitations": ["rights_status remains unknown; generated sound still needs human editorial/right-to-use review before publication."]},
+                    {"name": "wikimedia_commons", "media": ["audio"],
+                     "status": "implemented", "authentication": "none",
+                     "workflow": "official API returns per-file source/license metadata; acquisition requires an exact reviewed decision",
+                     "limitations": ["Search metadata is evidence only; files remain rights-unknown until reviewer, attribution and platform are recorded."]},
                     {"name": "pixabay", "media": ["music", "sound-effects"],
                      "status": "partial",
                      "workflow": "operator-assisted search and explicit quarantine download",
@@ -121,8 +126,8 @@ class CapabilityRegistry:
                                      "Downloaded audio remains quarantined pending human review."]},
                     {"name": "openverse", "media": ["audio"],
                      "status": "partial", "authentication": "OPENVERSE_ACCESS_TOKEN (OAuth bearer token)",
-                     "workflow": "official metadata-only audio search; downloaded files are not rights-cleared",
-                     "limitations": ["No audio download; item-level license review and platform rights decision required."]},
+                     "workflow": "official metadata search; generic downloader can stage only an exact reviewed item in quarantine",
+                     "limitations": ["OAuth client registration/token refresh is not implemented; item-level license review and platform decision required."]},
                 ],
             },
             "icon_packs": [
@@ -145,6 +150,14 @@ class CapabilityRegistry:
                 "stock_image_search": {"status": "implemented"},
                 "stock_video_search": {"status": "implemented",
                                         "providers": ["pexels", "pixabay"]},
+                "data_visualization": {
+                    "status": "partial",
+                    "limitations": ["Studio has bars/donut/stat-grid, ordered bars, explicit vector line_chart, 100%-stacked bars and a basic stable-row-ID table. Typed LoadedData bridges support a line series and table only; no general DataSpec compiler, row pagination or animated cell transitions."],
+                },
+                "vector_line_chart": {
+                    "status": "partial",
+                    "limitations": ["One explicitly configured series is supported through the Studio component; axes labels and y-domain are required. Typed Data Director -> renderer compilation and richer chart families are not implemented."],
+                },
                 "semantic_icon_suggestions": {
                     "status": "implemented",
                     "limitations": ["Finite reviewed role map; unknown concepts return no suggestions."],

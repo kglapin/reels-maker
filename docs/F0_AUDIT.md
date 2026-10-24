@@ -119,15 +119,22 @@ creative, legal or owner approval.
 - **DM-002:** synthetic-only Decimal aggregation/division and calculation ledger
   are implemented; invalid typed values, unauthorized inputs, null aggregates,
   currency mismatch and zero denominators fail closed.
-- **DM-003:** chart-family recommendations are planning-only, include rationale,
-  alternatives, exact fields/units and missing requirements. Renderer support is
-  explicitly `not_assessed`; no chart families are claimed as implemented.
+- **DM-003/004/005:** chart-family recommendations include rationale,
+  alternatives, field types/units and missing requirements. Narrow renderer
+  bridges map authorized typed local data to an explicit-domain vector line
+  chart and a stable-row-ID table. Synthetic line and table MP4 tests pass;
+  source hash and exact values/row order are retained. Studio also supports a
+  100%-stacked vector-bar component requiring matching segment IDs and explicit
+  values per category, plus a stable-row-ID table bridge. Neither infers totals,
+  missing segments, display order or formatting. This is not a general
+  DataSpec/visualization compiler; table pagination and cell animation remain
+  unimplemented.
 - **MD-203 early QA slice:** Studio samples FreeType per-word ink bounding boxes
   after its existing node/ancestor affine transforms and checks them against the
   layout-safe rectangle. This is not glyph-outline intersection, Camera Canvas
   review, or every-keyframe-extremum coverage. The latest offline-capable suite
-  passed (362 run, 356 pass, 6 optional skips for unavailable platform/media
-  fixtures); the QA
+  passed (403 run, 396 pass, 7 optional skips for unavailable LFS/media and
+  default-off live-provider tests); the QA
   remains technical evidence, not a human phone-size approval.
 - **MD-104:** pinned Tabler, Phosphor and Material Symbols SVG adapters now use
   the sanitizer/cache, finite non-hallucinatory semantic suggestion map,
@@ -142,9 +149,9 @@ creative, legal or owner approval.
   MP4/storyboard sampled authored rotation at entry/settle/exit. Downloaded
   SVGs and both test MP4s remain outside the repository.
 
-Latest complete local suite after media acquisition and CI test-guard updates:
-362 run, 356 passed, 6 skipped in 25.737s; skips guard missing optional Cairo
-and LFS-backed media/review fixtures. Existing golden-frame ResourceWarnings and
+Latest complete local suite after MD-202/DM-004/DM-005 synthetic additions:
+403 run, 396 passed, 7 skipped in 36.784s; skips guard unavailable LFS media and
+default-off live-provider tests. Existing golden-frame ResourceWarnings and
 Pillow deprecation warnings are non-fatal. This is technical evidence only, not
 human reference, asset-rights or creative approval.
 

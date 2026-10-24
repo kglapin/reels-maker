@@ -186,6 +186,56 @@ class StockAcquisitionTests(unittest.TestCase):
             self.assertEqual(result["approval"], "not_approved")
             self.assertEqual(len(list((brand / "imports").glob("stock-*.mp4"))), 1)
 
+    def test_audio_candidate_round_trip_and_quarantined_download(self):
+        audio = StockAsset("wikimedia_commons", "sfx-1", "preview", "source",
+                           "recordist", 0, 0, "https://upload.wikimedia.org/sfx.wav",
+                           "source", media_type="audio")
+        record = candidate_record(audio)
+        loaded = candidate_asset(record)
+        self.assertEqual(loaded.media_type, "audio")
+        cleared = self.cleared(loaded)
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "sfx.wav"
+            subprocess.run([
+                "ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi",
+                "-i", "sine=frequency=440:duration=0.2", str(source),
+            ], check=True, capture_output=True, timeout=30)
+            content = source.read_bytes()
+            brand = Path(temp) / "brands" / "demo"
+            brand.mkdir(parents=True)
+            result = download_cleared_asset(
+                cleared, brand="demo", root=temp,
+                target_platform="instagram_reels",
+                transport=lambda url, **kw: DownloadResponse(url, content, "audio/wav"),
+                resolve=public_dns)
+            path = Path(result["path"])
+            self.assertEqual(path.suffix, ".wav")
+            self.assertEqual(result["verification"]["codec"], "pcm_s16le")
+            self.assertEqual(result["verification"]["channels"], 1)
+            self.assertEqual(result["approval"], "not_approved")
+
+    def test_audio_download_rejects_non_audio_payload_and_transcode(self):
+        cleared = self.cleared(StockAsset(
+            "wikimedia_commons", "sfx-2", "preview", "source", "recordist",
+            0, 0, "https://upload.wikimedia.org/sfx.mp3", "source",
+            media_type="audio"))
+        with tempfile.TemporaryDirectory() as temp:
+            brand = Path(temp) / "brands" / "demo"
+            brand.mkdir(parents=True)
+            with self.assertRaisesRegex(ValueError, "audio stream"):
+                download_cleared_asset(
+                    cleared, brand="demo", root=temp,
+                    target_platform="instagram_reels",
+                    transport=lambda url, **kw: DownloadResponse(url, b"junk"),
+                    probe=lambda path, kind: {"streams": []},
+                    resolve=public_dns)
+            with self.assertRaisesRegex(ValueError, "video assets only"):
+                download_cleared_asset(
+                    cleared, brand="demo", root=temp,
+                    target_platform="instagram_reels", transcode_format="h264_mp4",
+                    transport=lambda *a, **kw: None, resolve=public_dns)
+            self.assertEqual(list((brand / "imports").iterdir()), [])
+
     def test_unsupported_transcode_fails_before_network(self):
         asset = self.cleared()
         calls = []

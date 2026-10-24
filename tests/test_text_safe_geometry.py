@@ -1,5 +1,6 @@
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
 from reels_maker.core.transforms import Affine2D
 from reels_maker.textkit.safe_geometry import SafePolygon, check_text_block
@@ -83,6 +84,39 @@ class SafeGeometryTests(unittest.TestCase):
         block = typeset("   ", self.style, 500, self.fonts)
         with self.assertRaisesRegex(ValueError, "no measurable"):
             check_text_block(block, self.fonts, (rectangle(0, 0, 500, 200),))
+
+
+class FontBookResolutionTests(unittest.TestCase):
+    """Installed "<Family>-<Weight>.ttf" files resolve by family name alone."""
+
+    def _with_home(self, tmp: str):
+        import os
+        previous = os.environ.get("HOME")
+        os.environ["HOME"] = tmp
+        self.addCleanup(
+            (lambda: os.environ.pop("HOME")) if previous is None else
+            (lambda: os.environ.__setitem__("HOME", previous)))
+
+    def test_generic_family_resolves_user_font_directory(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            self._with_home(tmp)
+            fonts_dir = Path(tmp) / "Library" / "Fonts"
+            fonts_dir.mkdir(parents=True)
+            for weight in ("Regular", "Bold"):
+                (fonts_dir / f"UnitTestSans-{weight}.ttf").touch()
+            book = FontBook(family="Unit Test Sans")
+            self.assertEqual(Path(book.path("regular")).name,
+                             "UnitTestSans-Regular.ttf")
+            self.assertEqual(Path(book.path("bold")).name,
+                             "UnitTestSans-Bold.ttf")
+
+    def test_unknown_family_without_files_falls_back_to_defaults(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            self._with_home(tmp)
+            book = FontBook(family="Definitely Missing Family")
+            self.assertTrue(Path(book.path()).is_file())
 
 
 if __name__ == "__main__":

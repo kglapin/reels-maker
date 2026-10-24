@@ -70,13 +70,15 @@ class Choreography:
         return self.entries[role]
 
     def apply(self, nodes: Mapping[str, Node], tokens: DesignTokens,
-              *, seed: int = 0) -> dict[str, Node]:
+              *, seed: int = 0,
+              safe_bounds: tuple[float, float, float, float] | None = None) -> dict[str, Node]:
         result = {}
         for role, node in nodes.items():
             if role in self.entries:
                 entry = self.entries[role]
                 apply_entrance(node, entry.preset, entry.onset,
-                               entry.duration, tokens, seed=seed)
+                               entry.duration, tokens, seed=seed,
+                               safe_bounds=safe_bounds)
                 node.meta["motion"] = entry.preset
                 node.meta["onset"] = round(entry.onset, 4)
             if role in self.exits:

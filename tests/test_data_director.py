@@ -31,7 +31,9 @@ class DataDirectorTests(unittest.TestCase):
         self.assertIn("month", plan.variants[0].required_labels)
         self.assertIn("value (widgets)", plan.variants[0].required_labels)
         self.assertTrue(plan.planning_only)
-        self.assertTrue(all(v.planning_only and v.renderer_status == "not_assessed" for v in plan.variants))
+        self.assertEqual(plan.variants[0].renderer_status, "partial")
+        self.assertIn("axis labels and y-domain", plan.variants[0].missing_fields[-1])
+        self.assertTrue(all(v.planning_only for v in plan.variants))
         self.assertEqual(plan.source_sha256, "a" * 64)
 
     def test_question_and_intent_are_mandatory_and_variants_bounded(self):

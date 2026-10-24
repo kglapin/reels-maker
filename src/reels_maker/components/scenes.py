@@ -44,6 +44,9 @@ TYPE_COMPOSITION = {
     "checklist": "checklist",
     "stats": "stat-grid",
     "bars": "data-panel",
+    "line_chart": "data-panel",
+    "stacked_bars_100": "data-panel",
+    "table": "table",
     "energy": "energy-flow",
     "quote": "quote",
     "product": "spotlight",
@@ -70,6 +73,8 @@ def _scene_type(scene: dict) -> str:
     # unambiguous; recipes map back only when exactly one component owns them.
     if composition in BUILDERS:
         return composition
+    if composition == "line-chart":
+        return "line_chart"
     if composition in ("stack-center", "full-bleed-type", "split-editorial"):
         return "custom"
     if composition == "hero-number":
@@ -470,8 +475,10 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     for role, node in elements.items():
         entry = plan.entries.get(role)
         if entry:
+            safe = layout.safe
             apply_entrance(node, entry.preset, entry.onset, entry.duration,
-                           ctx.tokens, seed=ctx.seed)
+                           ctx.tokens, seed=ctx.seed,
+                           safe_bounds=(safe.x, safe.y, safe.right, safe.bottom))
             node.meta["motion"] = entry.preset
             node.meta["onset"] = round(entry.onset, 4)
         exit_entry = plan.exits.get(role)
@@ -1517,6 +1524,145 @@ def build_stats(ctx: SceneContext, scene: dict) -> BuiltScene:
     return plan
 
 
+# ------------------------------------------------------------------- data table
+def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
+    """Build a compact table from explicit ordered columns and stable row IDs.
+
+    Cell values must already be formatted strings. Width weights and alignments
+    are caller data; this component neither formats numbers nor drops rows.
+    """
+    theme = _theme(ctx, scene)
+    headline = _headline(scene)
+    columns = scene.get("columns")
+    rows = scene.get("rows")
+    if not isinstance(columns, list) or not 2 <= len(columns) <= 6:
+        raise ValueError("table requires 2..6 explicit columns")
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 8:
+        raise ValueError("table requires 1..8 explicit rows; pagination is not implemented")
+
+    parsed_columns = []
+    seen_columns = set()
+    for index, column in enumerate(columns):
+        if not isinstance(column, dict):
+            raise ValueError(f"table column {index} must be an object")
+        key, label = column.get("id"), column.get("label")
+        width = column.get("width")
+        align = column.get("align")
+        if not isinstance(key, str) or not key.strip() or key in seen_columns:
+            raise ValueError("table column IDs must be unique non-empty strings")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"table column {key!r} requires a label")
+        if (isinstance(width, bool) or not isinstance(width, (int, float))
+                or not math.isfinite(width) or width <= 0):
+            raise ValueError(f"table column {key!r} requires a positive width weight")
+        if align not in ("left", "center", "right"):
+            raise ValueError(f"table column {key!r} requires an explicit alignment")
+        seen_columns.add(key)
+        parsed_columns.append({"id": key, "label": label.strip(),
+                               "width": float(width), "align": align})
+    weight_total = sum(column["width"] for column in parsed_columns)
+    if not math.isclose(weight_total, 1.0, rel_tol=0, abs_tol=1e-6):
+        raise ValueError("table column width weights must sum to 1.0")
+
+    parsed_rows = []
+    seen_rows = set()
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"table row {index} must be an object")
+        row_id, values = row.get("id"), row.get("values")
+        if not isinstance(row_id, str) or not row_id.strip() or row_id in seen_rows:
+            raise ValueError("table row IDs must be unique non-empty strings")
+        if not isinstance(values, dict) or set(values) != seen_columns:
+            raise ValueError(f"table row {row_id!r} values must match all declared column IDs")
+        if any(not isinstance(value, str) or not value.strip()
+               for value in values.values()):
+            raise ValueError(f"table row {row_id!r} cells must be explicit non-empty strings")
+        seen_rows.add(row_id)
+        parsed_rows.append({"id": row_id,
+                            "values": {column["id"]: values[column["id"]]
+                                       for column in parsed_columns}})
+
+    width = ctx.layout.safe.w
+    headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
+                                        align="center", balance=True)
+    body = str(scene.get("subtitle") or _subtitle(scene) or "")
+    body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
+                                    align="center")
+    layout = ctx.layout.layout("data-panel", {
+        "headline": _measure(headline, headline_style, width, ctx),
+        "body": _measure(body, body_style, width, ctx),
+    })
+    table_region = layout.region("chart")
+    outer_x = table_region.x + table_region.w * .02
+    table_width = table_region.w * .96
+    header_height = min(ctx.tokens.px(46), table_region.h * .12)
+    rows_height = table_region.h - header_height - ctx.tokens.px(8)
+    row_height = rows_height / len(parsed_rows)
+    if row_height < ctx.tokens.px(30):
+        raise ValueError("table rows do not fit safely in the available region")
+    elements: dict[str, Node] = {
+        "headline": text_node("headline", headline, headline_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center")
+    }
+    table_children: list[Node] = []
+    header_y = table_region.y
+    table_children.append(panel_node(
+        "table-header", Rect(outer_x, header_y, table_width, header_height),
+        ctx.tokens, fill=theme["accent"], radius="sm", shadow=False))
+    header_style = TextStyle(max(12, ctx.tokens.px(17)), theme["base"], "bold",
+                             uppercase=False, line_height=1.0)
+    cell_style = TextStyle(max(12, min(ctx.tokens.px(20), row_height * .52)),
+                           theme["ink"], "regular", line_height=1.0)
+    x = outer_x
+    for column in parsed_columns:
+        cell_width = table_width * column["width"]
+        header = text_node(
+            f"table-header-{column['id']}", column["label"], header_style,
+            Rect(x + cell_width * .04, header_y, cell_width * .92, header_height),
+            ctx.fonts, align=column["align"], valign="center", fit=True)
+        if header:
+            table_children.append(header)
+        x += cell_width
+
+    for row_index, row in enumerate(parsed_rows):
+        y = header_y + header_height + ctx.tokens.px(8) + row_index * row_height
+        row_nodes = [panel_node(
+            f"table-row-bg-{row_index}", Rect(outer_x, y, table_width, row_height),
+            ctx.tokens,
+            fill=(theme["surface"] if row_index % 2 == 0
+                  else mix(theme["surface"], theme["base"], .06)),
+            radius="sm", shadow=False)]
+        x = outer_x
+        for column in parsed_columns:
+            cell_width = table_width * column["width"]
+            cell = text_node(
+                f"table-cell-{row_index}-{column['id']}",
+                row["values"][column["id"]], cell_style,
+                Rect(x + cell_width * .04, y, cell_width * .92, row_height),
+                ctx.fonts, align=column["align"], valign="center", fit=True)
+            if cell:
+                row_nodes.append(cell)
+            x += cell_width
+        table_children.append(Node(
+            kind="group", role=f"table-row-{row_index}", children=row_nodes,
+            qa_class="control", meta={"stable_row_id": row["id"]}))
+    elements["table"] = Node(kind="group", role="table", children=table_children,
+                              qa_class="control",
+                              meta={"row_ids": [row["id"] for row in parsed_rows]})
+    if body and layout.optional("body"):
+        elements["body"] = text_node("body", body, body_style,
+                                      layout.region("body"), ctx.fonts,
+                                      align="center", valign="center")
+    specs = [_spec("headline", 7), _spec("table", 9, "control"),
+             _spec("body", 3)]
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   elements, specs, decor=_decor(ctx, scene, theme),
+                   meta={"component": "table",
+                         "columns": parsed_columns, "row_ids": [row["id"]
+                                                                   for row in parsed_rows]})
+
+
 # ----------------------------------------------------------------------- bars
 def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
@@ -1530,6 +1676,20 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                "value": safe_number(item.get("value", 0)),
                "suffix": str(item.get("suffix", "")),
                "prefix": str(item.get("prefix", ""))} for item in data]
+    data_order = scene.get("data_order", "source")
+    if data_order not in ("source", "ascending", "descending"):
+        raise ValueError("bars data_order must be source, ascending or descending")
+    if data_order != "source":
+        labels = [item["label"].strip() for item in parsed]
+        if any(not label for label in labels) or len(set(labels)) != len(labels):
+            raise ValueError("ranked bars require unique non-empty category labels")
+        if any(item["value"] < 0 for item in parsed):
+            raise ValueError("ranked bars currently require non-negative values")
+        indexed = list(enumerate(parsed))
+        indexed.sort(key=(lambda item: (-item[1]["value"], item[0]))
+                     if data_order == "descending" else
+                     (lambda item: (item[1]["value"], item[0])))
+        parsed = [item for _, item in indexed]
     max_value = max(item["value"] for item in parsed) or 1
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
@@ -1591,7 +1751,8 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
         specs.append(_spec("body", 3))
     plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
-                   meta={"component": "bars", "data": parsed})
+                   meta={"component": "bars", "data": parsed,
+                         "data_order": data_order})
     for index, item in enumerate(parsed):
         entry = plan.choreography.entries.get(f"bar-row-{index}")
         if entry:
@@ -1602,6 +1763,328 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                                      max(.3, entry.duration * 1.4),
                                      easing="out-quart")
     return plan
+
+
+def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
+    """Render caller-provided positive categories as 100% vector-stacked bars.
+
+    Each row is normalized only by its explicitly supplied segment sum. Category
+    and segment IDs/order are preserved; the source values and computed shares
+    are reported. No missing segment is imputed as zero.
+    """
+    theme = _theme(ctx, scene)
+    headline = _headline(scene)
+    categories = scene.get("categories")
+    if not isinstance(categories, list) or not 1 <= len(categories) <= 4:
+        raise ValueError("stacked_bars_100 requires 1..4 explicit categories")
+    segment_specs = None
+    parsed_categories = []
+    category_ids = set()
+    for category_index, category in enumerate(categories):
+        if not isinstance(category, dict):
+            raise ValueError(f"stacked category {category_index} must be an object")
+        category_id = category.get("id")
+        label = category.get("label")
+        segments = category.get("segments")
+        if not isinstance(category_id, str) or not category_id.strip() or category_id in category_ids:
+            raise ValueError("stacked category IDs must be unique non-empty strings")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"stacked category {category_id!r} requires a label")
+        if not isinstance(segments, list) or not 2 <= len(segments) <= 4:
+            raise ValueError(f"stacked category {category_id!r} requires 2..4 segments")
+        parsed_segments = []
+        for segment_index, segment in enumerate(segments):
+            if not isinstance(segment, dict):
+                raise ValueError("stacked segments must be objects")
+            segment_id, segment_label = segment.get("id"), segment.get("label")
+            value = safe_number(segment.get("value"))
+            if not isinstance(segment_id, str) or not segment_id.strip():
+                raise ValueError("stacked segment IDs must be non-empty strings")
+            if not isinstance(segment_label, str) or not segment_label.strip():
+                raise ValueError(f"stacked segment {segment_id!r} requires a label")
+            if value < 0:
+                raise ValueError("100% stacked bars require non-negative segment values")
+            parsed_segments.append({"id": segment_id, "label": segment_label,
+                                    "value": value})
+        ids = tuple(segment["id"] for segment in parsed_segments)
+        labels = tuple(segment["label"] for segment in parsed_segments)
+        if len(set(ids)) != len(ids):
+            raise ValueError("segment IDs must be unique within a category")
+        if segment_specs is None:
+            segment_specs = tuple((item["id"], item["label"])
+                                  for item in parsed_segments)
+        elif tuple(zip(ids, labels)) != segment_specs:
+            raise ValueError("every category must provide the same ordered segment IDs and labels")
+        total = sum(segment["value"] for segment in parsed_segments)
+        if total <= 0:
+            raise ValueError(f"stacked category {category_id!r} has zero total")
+        parsed_categories.append({
+            "id": category_id, "label": label.strip(),
+            "segments": [{**segment, "share": segment["value"] / total}
+                         for segment in parsed_segments],
+            "total": total,
+        })
+        category_ids.add(category_id)
+
+    subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
+    width = ctx.layout.safe.w
+    title_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
+                                     align="center", balance=True)
+    body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
+                                    align="center")
+    layout = ctx.layout.layout("data-panel", {
+        "headline": _measure(headline, title_style, width, ctx),
+        "body": _measure(subtitle, body_style, width, ctx),
+    })
+    chart = layout.region("chart")
+    plot = Rect(chart.x + chart.w * .23, chart.y + chart.h * .15,
+                chart.w * .75, chart.h * .62)
+    row_height = plot.h / len(parsed_categories)
+    colors = [theme["accent"], theme["ink"],
+              mix(theme["accent"], theme["base"], .48),
+              mix(theme["ink"], theme["base"], .55)]
+    children: list[Node] = []
+    category_style = TextStyle(max(12, ctx.tokens.px(18)), theme["ink"], "bold")
+    for row_index, category in enumerate(parsed_categories):
+        y = plot.y + row_index * row_height
+        category_node = text_node(
+            f"stack-category-{category['id']}", category["label"], category_style,
+            Rect(chart.x, y, plot.x - chart.x - ctx.tokens.px(8), row_height),
+            ctx.fonts, align="right", valign="center", fit=True)
+        if category_node:
+            children.append(category_node)
+        x = plot.x
+        for segment_index, segment in enumerate(category["segments"]):
+            segment_width = plot.w * segment["share"]
+            if segment_width > 0:
+                children.append(Node(
+                    kind="rect", role=f"stack-{category['id']}-{segment['id']}",
+                    props={"x": x, "y": y + row_height * .18,
+                           "w": segment_width, "h": row_height * .64,
+                           "fill": colors[segment_index]}, qa_class="decor",
+                    meta={"category_id": category["id"],
+                          "segment_id": segment["id"],
+                          "source_value": segment["value"],
+                          "share": segment["share"]}))
+            x += segment_width
+
+    # A percentage axis is intrinsic to the declared 100%-normalization.
+    for index in range(5):
+        fraction = index / 4
+        x = plot.x + plot.w * fraction
+        children.append(Node(kind="line", role=f"stack-grid-{index}",
+                             props={"x1": x, "y1": plot.y,
+                                    "x2": x, "y2": plot.bottom,
+                                    "width": 1,
+                                    "color": mix(theme["base"], theme["ink"], .18)},
+                             qa_class="decor"))
+        tick = text_node(f"stack-tick-{index}", f"{index * 25}%",
+                         TextStyle(max(12, ctx.tokens.px(15)), theme["muted"],
+                                   "regular", align="center"),
+                         Rect(x - plot.w * .08, plot.bottom + ctx.tokens.px(5),
+                              plot.w * .16, ctx.tokens.px(24)), ctx.fonts,
+                         align="center", valign="center")
+        if tick:
+            children.append(tick)
+    legend_width = chart.w / len(segment_specs)
+    legend_y = chart.bottom - ctx.tokens.px(32)
+    for index, (segment_id, label) in enumerate(segment_specs):
+        x = chart.x + index * legend_width
+        children.append(Node(kind="round", role=f"stack-legend-mark-{segment_id}",
+                             props={"x": x + ctx.tokens.px(4), "y": legend_y + ctx.tokens.px(6),
+                                    "w": ctx.tokens.px(12), "h": ctx.tokens.px(12),
+                                    "r": ctx.tokens.px(3), "fill": colors[index]},
+                             qa_class="decor"))
+        legend = text_node(
+            f"stack-legend-{segment_id}", label,
+            TextStyle(max(11, ctx.tokens.px(14)), theme["muted"], "regular"),
+            Rect(x + ctx.tokens.px(20), legend_y,
+                 legend_width - ctx.tokens.px(22), ctx.tokens.px(26)),
+            ctx.fonts, valign="center", fit=True)
+        if legend:
+            children.append(legend)
+
+    elements: dict[str, Node] = {
+        "headline": text_node("headline", headline, title_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center"),
+        "chart": Node(kind="group", role="chart", children=children,
+                       qa_class="control"),
+    }
+    if subtitle and layout.optional("body"):
+        elements["body"] = text_node("body", subtitle, body_style,
+                                      layout.region("body"), ctx.fonts,
+                                      align="center", valign="center")
+    specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+             _spec("body", 3)]
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   elements, specs, decor=_decor(ctx, scene, theme),
+                   meta={"component": "stacked_bars_100",
+                         "normalization": "segment value / explicit category total",
+                         "data": parsed_categories})
+
+
+# ------------------------------------------------------------- line/time-series
+def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
+    """Render one explicit, typed-by-contract vector line series.
+
+    Axis labels and a numeric domain are mandatory. Date labels preserve the
+    supplied order and are positioned by elapsed days; categorical labels use
+    evenly spaced slots. No units, dates, missing points or y-domain are guessed.
+    """
+    from datetime import date
+
+    theme = _theme(ctx, scene)
+    headline = _headline(scene)
+    raw_points = scene.get("points")
+    if not isinstance(raw_points, list) or not 2 <= len(raw_points) <= 12:
+        raise ValueError("line_chart requires 2..12 explicit points")
+    x_axis_label = scene.get("x_axis_label")
+    y_axis_label = scene.get("y_axis_label")
+    if not isinstance(x_axis_label, str) or not x_axis_label.strip():
+        raise ValueError("line_chart requires an explicit x_axis_label")
+    if not isinstance(y_axis_label, str) or not y_axis_label.strip():
+        raise ValueError("line_chart requires an explicit y_axis_label including units")
+    x_axis_type = scene.get("x_axis_type", "category")
+    if x_axis_type not in ("category", "date"):
+        raise ValueError("line_chart x_axis_type must be category or date")
+    domain = scene.get("y_domain")
+    if not isinstance(domain, list) or len(domain) != 2:
+        raise ValueError("line_chart requires an explicit two-value y_domain")
+    low, high = (safe_number(value) for value in domain)
+    if high <= low:
+        raise ValueError("line_chart y_domain maximum must exceed its minimum")
+
+    parsed = []
+    seen = set()
+    for index, point in enumerate(raw_points):
+        if not isinstance(point, dict):
+            raise ValueError(f"line_chart point {index} must be an object")
+        label = point.get("label")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"line_chart point {index} requires a non-empty label")
+        if label in seen:
+            raise ValueError(f"line_chart point labels must be unique: {label!r}")
+        seen.add(label)
+        value = safe_number(point.get("value"))
+        if not low <= value <= high:
+            raise ValueError(f"line_chart value for {label!r} is outside explicit y_domain")
+        parsed.append({"label": label, "value": value})
+
+    if x_axis_type == "date":
+        try:
+            dates = [date.fromisoformat(item["label"]) for item in parsed]
+        except ValueError as exc:
+            raise ValueError("date-axis labels must use ISO YYYY-MM-DD") from exc
+        if any(current <= previous for previous, current in zip(dates, dates[1:])):
+            raise ValueError("date-axis labels must be strictly increasing")
+        first_day = dates[0].toordinal()
+        day_span = dates[-1].toordinal() - first_day
+        x_values = [(item.toordinal() - first_day) / day_span for item in dates]
+    else:
+        x_values = [index / (len(parsed) - 1) for index in range(len(parsed))]
+
+    subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
+    width = ctx.layout.safe.w
+    headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
+                                        align="center", balance=True)
+    body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
+                                    align="center")
+    layout = ctx.layout.layout("data-panel", {
+        "headline": _measure(headline, headline_style, width, ctx),
+        "body": _measure(subtitle, body_style, width, ctx),
+    })
+    chart = layout.region("chart")
+    plot = Rect(chart.x + chart.w * .20, chart.y + chart.h * .13,
+                chart.w * .77, chart.h * .63)
+    elements: dict[str, Node] = {
+        "headline": text_node("headline", headline, headline_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center")
+    }
+    children: list[Node] = []
+    tick_values = [low + (high - low) * index / 4 for index in range(5)]
+    step = (high - low) / 4
+    decimals = 0 if float(step).is_integer() else min(4, max(1, math.ceil(-math.log10(step)) + 1))
+    tick_style = TextStyle(max(12, ctx.tokens.px(15)), theme["muted"], "regular",
+                           align="right")
+    grid_color = mix(theme["base"], theme["ink"], .18)
+    for index, tick in enumerate(tick_values):
+        y = plot.bottom - plot.h * index / 4
+        children.append(Node(kind="line", role=f"y-grid-{index}",
+                             props={"x1": plot.x, "y1": y, "x2": plot.right,
+                                    "y2": y, "width": 1, "color": grid_color},
+                             qa_class="decor"))
+        label = text_node(
+            f"y-tick-{index}", format_value(tick, {"decimals": decimals,
+                                                      "thousands": " "}),
+            tick_style, Rect(chart.x, y - ctx.tokens.px(14),
+                             plot.x - chart.x - ctx.tokens.px(7),
+                             ctx.tokens.px(28)), ctx.fonts, align="right",
+            valign="center")
+        if label:
+            children.append(label)
+    children.append(Node(kind="line", role="x-axis",
+                         props={"x1": plot.x, "y1": plot.bottom,
+                                "x2": plot.right, "y2": plot.bottom,
+                                "width": 2, "color": theme["ink"]},
+                         qa_class="decor"))
+    y_points = [plot.bottom - (item["value"] - low) / (high - low) * plot.h
+                for item in parsed]
+    x_points = [plot.x + fraction * plot.w for fraction in x_values]
+    for index in range(len(parsed) - 1):
+        children.append(Node(kind="line", role=f"series-segment-{index}",
+                             props={"x1": x_points[index], "y1": y_points[index],
+                                    "x2": x_points[index + 1], "y2": y_points[index + 1],
+                                    "width": max(2, ctx.tokens.px(4)),
+                                    "color": theme["accent"]}, qa_class="decor"))
+    point_radius = max(3, ctx.tokens.px(7))
+    label_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "regular",
+                            align="center")
+    x_label_y = plot.bottom + ctx.tokens.px(7)
+    x_boundaries = [chart.x]
+    x_boundaries.extend((x_points[index - 1] + x_points[index]) / 2
+                        for index in range(1, len(x_points)))
+    x_boundaries.append(chart.right)
+    for index, item in enumerate(parsed):
+        children.append(Node(kind="circle", role=f"series-point-{index}",
+                             props={"cx": x_points[index], "cy": y_points[index],
+                                    "r": point_radius, "fill": theme["accent"]},
+                             qa_class="decor"))
+        point_label = text_node(
+            f"x-label-{index}", item["label"], label_style,
+            Rect(x_boundaries[index], x_label_y,
+                 x_boundaries[index + 1] - x_boundaries[index],
+                 ctx.tokens.px(32)),
+            ctx.fonts, align="center", valign="top")
+        if point_label:
+            children.append(point_label)
+    axis_style = TextStyle(max(13, ctx.tokens.px(18)), theme["ink"], "bold",
+                           align="center")
+    x_title = text_node("x-axis-title", x_axis_label.strip(), axis_style,
+                        Rect(plot.x, chart.bottom - ctx.tokens.px(34),
+                             plot.w, ctx.tokens.px(28)), ctx.fonts,
+                        align="center", valign="center")
+    y_title = text_node("y-axis-title", y_axis_label.strip(), axis_style,
+                        Rect(chart.x, chart.y + ctx.tokens.px(2),
+                             chart.w, ctx.tokens.px(28)), ctx.fonts,
+                        align="center", valign="center")
+    children.extend(item for item in (x_title, y_title) if item)
+    elements["chart"] = Node(kind="group", role="chart", children=children,
+                              qa_class="control")
+    if subtitle and layout.optional("body"):
+        elements["body"] = text_node("body", subtitle, body_style,
+                                      layout.region("body"), ctx.fonts,
+                                      align="center", valign="center")
+    specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+             _spec("body", 3)]
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   elements, specs, decor=_decor(ctx, scene, theme),
+                   meta={"component": "line_chart", "data": parsed,
+                         "x_axis_type": x_axis_type,
+                         "x_axis_label": x_axis_label,
+                         "y_axis_label": y_axis_label,
+                         "y_domain": [low, high]})
 
 
 # ------------------------------------------------------------------ energy flow
@@ -1719,6 +2202,9 @@ BUILDERS = {
     "checklist": build_checklist,
     "stats": build_stats,
     "bars": build_bars,
+    "line_chart": build_line_chart,
+    "stacked_bars_100": build_stacked_bars_100,
+    "table": build_table,
     "energy": build_energy,
     "quote": build_quote,
 }

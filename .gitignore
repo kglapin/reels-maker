@@ -18,6 +18,11 @@ renders/
 .idea/
 .vscode/
 
+# Local provider credentials — never commit real keys
+.env
+.env.*
+!.env.example
+
 # Website scan proposals / logo candidates are not approved brand assets
 brands/*/imports/
 

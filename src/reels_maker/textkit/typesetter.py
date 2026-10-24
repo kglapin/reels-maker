@@ -156,6 +156,16 @@ class FontBook:
         family = (self.family or "").lower().replace(" ", "")
         if family in FAMILY_CANDIDATES:
             result.extend(FAMILY_CANDIDATES[family][weight])
+        elif self.family:
+            # Any installed "<Family>-<Weight>.ttf" (e.g. a Google Fonts
+            # download in ~/Library/Fonts) resolves by family name alone.
+            stem = (f'{self.family.replace(" ", "")}-'
+                    f'{"Bold" if weight == "bold" else "Regular"}.ttf')
+            result.extend([
+                str(Path.home() / "Library/Fonts" / stem),
+                f"/Library/Fonts/{stem}",
+                stem,
+            ])
         for directory in self.extra_dirs:
             result.extend(str(path) for path in
                           sorted(Path(directory).glob("*.tt[fc]")))

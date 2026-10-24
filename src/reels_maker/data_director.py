@@ -132,6 +132,7 @@ def recommend_visualizations(
                 missing.append("date or category column")
             if not primary_measure:
                 missing.append("numeric measure")
+            missing.append("explicit axis labels and y-domain confirmation for renderer")
             labels = tuple(_field_label(data, name) for name in axes)
         elif family == "scatter":
             axes = tuple(col.name for col in numeric[:2])
@@ -182,8 +183,11 @@ def recommend_visualizations(
         )
         if missing:
             rationale += " Required but absent or untyped fields: " + ", ".join(missing) + "."
+        renderer_status = "partial" if family in ("bar", "line", "donut", "kpi_cards") \
+            else "not_assessed"
         variants.append(VisualizationVariant(
-            family, rank, rationale, rejected, axes, labels, tuple(missing)))
+            family, rank, rationale, rejected, axes, labels, tuple(missing),
+            renderer_status=renderer_status))
 
     return VisualizationPlan(
         question=question.strip(), intent=intent, row_count=len(data.rows),

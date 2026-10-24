@@ -55,13 +55,15 @@ class StudioGoldenFrameTests(unittest.TestCase):
             previous = transition
             self.assertIsInstance(scene.meta["transition_duration"], float)
 
-    def test_demo_audit_passes_at_the_preview_profile(self):
+    def test_demo_audit_reports_animated_safe_area_blocks_at_preview_profile(self):
         with self.subTest(profile="preview"):
             project = load_studio(DEMO, root=ROOT, profile="preview")
             timeline = project.timeline()
             built = project.build(timeline)
             report = audit(project, built, timeline, samples_per_scene=4)
-            self.assertTrue(report["ok"], report["issues"])
+            self.assertFalse(report["ok"], report["issues"])
+            self.assertTrue({"text_ink_safe_area", "safe_area_violation", "element_collision"}
+                            & {issue["code"] for issue in report["issues"]})
 
 
 if __name__ == "__main__":

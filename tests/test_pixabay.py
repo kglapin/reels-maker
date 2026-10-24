@@ -1,10 +1,13 @@
 """MD-06 support: Pixabay audio acquisition is guarded and quarantine-first."""
 from __future__ import annotations
 
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from reels_maker import pixabay
 from reels_maker.pixabay import (PixabayError, download_candidates,
@@ -90,6 +93,26 @@ class PixabayParsingTests(unittest.TestCase):
         with self.assertRaises(PixabayError) as ctx:
             parse_tracks("<title>Just a moment...</title>")
         self.assertIn("challenge", str(ctx.exception))
+
+    def test_http_403_challenge_emits_workaround_guidance(self):
+        body = io.BytesIO(b"<html><title>Just a moment...</title></html>")
+        error = HTTPError("https://pixabay.com/pl/music/search/x/", 403,
+                          "Forbidden", {}, body)
+        with patch("reels_maker.pixabay.urlopen", side_effect=error):
+            with self.assertRaises(PixabayError) as ctx:
+                pixabay.fetch_search_page("x")
+        message = str(ctx.exception)
+        self.assertIn("--page-file", message)
+        self.assertIn("--tracks-file", message)
+        self.assertIn("cf_clearance", message)
+
+    def test_http_error_without_challenge_keeps_plain_status(self):
+        body = io.BytesIO(b"server exploded")
+        error = HTTPError("https://pixabay.com/x", 404, "Not Found", {}, body)
+        with patch("reels_maker.pixabay.urlopen", side_effect=error):
+            with self.assertRaises(PixabayError) as ctx:
+                pixabay.http_get("https://pixabay.com/x")
+        self.assertIn("HTTP 404", str(ctx.exception))
 
     def test_region_slugs(self):
         self.assertEqual(

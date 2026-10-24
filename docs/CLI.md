@@ -57,12 +57,21 @@ reels-maker media-search "solar panels" --provider all --kind image \
   --aspect 0.5625 --output candidates.json --json
 reels-maker media-search "solar farm" --provider pexels --kind video \
   --limit 12 --output video-candidates.json --json
+reels-maker media-search "whoosh" --provider all --kind audio \
+  --output sfx-candidates.json --json
 ```
 
 Image providers are Pexels, Pixabay, Unsplash, Wikimedia Commons and Openverse.
-Video search is currently Pexels/Pixabay only. Credentials are supplied through
-`PEXELS_API_KEY`, `PIXABAY_API_KEY`, `UNSPLASH_ACCESS_KEY`, and
-`OPENVERSE_ACCESS_TOKEN` (OAuth); Wikimedia image search needs no API key.
+Video search supports Pexels, Pixabay and Wikimedia Commons; audio search
+supports Wikimedia Commons and Openverse. Wikimedia needs no API key for any
+kind, so it also covers video and sound-effect discovery when no credentials
+are configured. Credentials are supplied through `PEXELS_API_KEY`,
+`PIXABAY_API_KEY`, and `UNSPLASH_ACCESS_KEY`, either as environment variables
+or as `NAME=value` lines in the repository root `.env` file (git-ignored;
+real environment variables always win — see `.env.example`). Openverse needs
+no account: it runs on the API's anonymous tier (20 requests/minute, 200/day,
+enforced locally as well). Setting `OPENVERSE_ACCESS_TOKEN` in `.env` upgrades
+to the provider's registered-OAuth limits but is never required.
 Inspect the returned `providers` outcomes and each candidate's source, creator,
 license and exact `download_url`. The result has `search_status: "ok"`,
 `"partial"` or `"unavailable"`; provider errors are included in `providers`
@@ -99,8 +108,9 @@ reels-maker media-download candidates.json --provider wikimedia_commons \
   --brand <slug> --target-platform instagram_reels --json
 ```
 
-Downloads are host/IP, redirect, size and time checked; images/videos are
-verified, hashed and staged only in `brands/<slug>/imports/` quarantine. The
+Downloads are host/IP, redirect, size and time checked; images, videos and
+audio files are verified, hashed and staged only in `brands/<slug>/imports/`
+quarantine. The
 result remains `approval: "not_approved"`; copy nothing into `media/` and do not
 publish until editorial and library review is complete. Unsplash is deliberately
 not locally downloaded by this command because its API workflow requires
@@ -206,12 +216,17 @@ Use `--jobs 1..8` based on available CPU and memory. `--no-cache` forces
 rebuilds; `--cache-dir` selects another cache location.
 
 Do not assume `brand.json` font-family guidance automatically installs or
-embeds a font. Until explicit font-file selection is implemented and tested,
-the renderer uses a locally installed compatible fallback.
+embeds a font. The renderer resolves `branding.font_family` /
+`identity.typography.primary` to an installed `<Family>-Regular.ttf` /
+`<Family>-Bold.ttf` (for example a Google Fonts download in
+`~/Library/Fonts`), then brand `fonts/` directories, then compatible system
+fallbacks. Explicit `branding.font_regular`/`font_bold` or
+`identity.typography.regular`/`bold` file paths take precedence; font
+licensing remains the operator's responsibility.
 
 ## Brand-safe typography and performance timings
 
-The renderer uses optional `branding.safe_areas` from the individual project to position its logo and text. The brand preset never imposes resolution, aspect ratio, frame rate or platform-specific margins. `branding.font_family` chooses an installed Open Sans family when available, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
+The renderer uses optional `branding.safe_areas` from the individual project to position its logo and text. The brand preset never imposes resolution, aspect ratio, frame rate or platform-specific margins. `branding.font_family` resolves an installed family by name (`Open Sans`, `Montserrat`, `JetBrains Mono`, ...) to `<Family>-<Weight>.ttf` files in the user/system font directories, otherwise DejaVu Sans (no bundled fonts). Explicit `font_regular`/`font_bold` file paths can override font discovery; font licensing is the operator's responsibility.
 
 Each render reports `timings_seconds.preflight`, `scene_encoding`, `assembly_audio_validation`, and `total` plus `cache_hit_rate`. Compare a cold render to a repeated warm render before choosing a concurrency level. These are measurements, not promised speed-ups.
 

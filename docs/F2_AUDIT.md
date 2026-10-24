@@ -1,8 +1,9 @@
 # F2 architecture audit — Master Plan 2.0
 
-Audit basis: local branch `master-plan-2` based on `origin/main` `eb44810`;
-read-only source review (2026-10-23). This records existing code versus the F2
-acceptance contract; it does not claim the planned unified renderer exists.
+Audit origin: read-only source review on `master-plan-2` based on `origin/main`
+`eb44810` (2026-10-23). The implementation notes below were extended on
+`feat/plan2-scene-hierarchy-20261024`; the original branch/base details are
+historical. This audit does not claim the planned unified renderer exists.
 
 ## Existing foundations
 
@@ -22,10 +23,11 @@ acceptance contract; it does not claim the planned unified renderer exists.
   (`src/reels_maker/layout/composition_optimizer.py`); the current Director
   supplies heuristic constraints, not validity derived from every rendered
   intermediate frame.
-- Studio QA defaults to six representative time samples per scene and checks
-  collision, rectangular safe area, text and contrast. Camera QA documents
-  approximate checks. This is not keyframe-extremum plus in-between coverage of
-  a shared graph.
+- Studio QA retains six representative time samples per scene and additionally
+  samples authored track keys plus quarter/mid/three-quarter probes between
+  adjacent key times. It checks collision, rectangular safe area, text and
+  contrast. Camera QA documents approximate checks. This is not analytical
+  easing-extremum coverage or QA over a shared cross-renderer graph.
 
 ## Planned/unsupported claims
 
@@ -53,16 +55,18 @@ intent-bound deterministic Motion Plan, and timed Render Graph adapter. It
 compiles back to the existing Studio/Camera Canvas manifest and does not unify
 the renderer paths. Focused tests verify v1 parity and fail-closed validation.
 
-The first MD-202 slice is in `src/reels_maker/core/transforms.py`: typed 2D
-coordinate spaces, affine composition/inversion, bounded hierarchy traversal,
-and world/camera/viewport point and bounds mapping. `Node.local_to_parent_transform`
-now maps Studio's existing scale/rotation/translation through that shared affine
-contract for bounds and QA calculations. Camera Canvas now builds its Pillow
-viewport-to-world sampling matrix from the same affine type, preserving its
-existing camera behavior. Synthetic tests cover nested transforms, round trips,
-invalid values, singular maps, cycles/depth, Node parity and Camera Canvas matrix
-parity. The renderers still do not share one object parent/child graph; this does
-not complete MD-202, establish glyph-safe geometry, or implement 3D/depth.
+The MD-202 slice is in `src/reels_maker/core/transforms.py`: typed 2D coordinate
+spaces, affine composition/inversion, bounded hierarchy traversal, and
+world/camera/viewport point and bounds mapping. `build_transform_hierarchy`
+derives a stable path-based graph from Studio's retained Node tree; Studio QA
+maps text/control bounds through its world transforms. `Node.local_to_parent_transform`
+maps Studio scale/rotation/translation through the shared affine contract.
+Camera Canvas builds its Pillow viewport-to-world sampling matrix from the same
+affine type, preserving its existing camera behavior. Synthetic tests cover
+nested transforms, round trips, invalid values, singular maps, cycles/depth, Node
+parity and Camera Canvas matrix parity. The renderer-neutral graph is not yet
+consumed by Camera Canvas or every object kind; this does not complete MD-202,
+establish glyph-outline-safe geometry, or implement 3D/depth.
 
 An initial MD-203 primitive exists in `src/reels_maker/textkit/safe_geometry.py`:
 it measures per-word FreeType ink bounding boxes, tests them against validated

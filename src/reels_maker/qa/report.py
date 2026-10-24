@@ -842,10 +842,7 @@ def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6
     # Reuse measured type rules in storyboard candidate QA and layout repair.
     for finding in audit_typography_blocks(
             _text_blocks(Node(kind="group", children=built.at(0.0))),
-            width=round(1080 * built.tokens.scale) if hasattr(built, "tokens") else
-                  round(built.layout.safe.right - built.layout.safe.x),
-            height=round(1920 * built.tokens.scale) if hasattr(built, "tokens") else
-                   round(built.layout.safe.bottom - built.layout.safe.y)):
+            width=built.context.width, height=built.context.height):
         issues.append(Issue(
             finding["code"], finding["severity"], finding["message"],
             built.index + 1, None, [finding["role"]], finding["suggestion"]))

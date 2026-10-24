@@ -109,6 +109,7 @@ All guidance is anchored to **1080 px on the shorter side**. Resolution `360×64
 - `typography_tight_leading` and `typography_long_copy_leading` — **warnings**: compressed line-height.
 - `typography_extreme_tracking` — **warning**: unusual per-glyph spacing.
 - `typography_weak_hierarchy` and `typography_subtitle_body_hierarchy` — **warnings**: competing text levels.
+- `typography_cramped_stack` — **warning**: two vertically stacked, horizontally overlapping core text roles have insufficient optical whitespace (conservative threshold 12px at the 1080 short-side design reference). Side-by-side columns, overlaps already checked by geometry QA, and chart micro-labels are excluded.
 
 `audit_typography_tokens()` additionally flags non-monotonic type or spacing scales. The existing hard checks for truncation, collisions, contrast and UI-safe geometry continue independently.
 

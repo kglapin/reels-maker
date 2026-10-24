@@ -103,6 +103,11 @@ creative, legal or owner approval.
 - **MD-105:** an OAuth-backed Openverse audio metadata-only search adapter is
   implemented. Music/SFX files, curated sync licenses, actual mixes and
   playback/legal review are still not supplied or approved.
+- **MD-106:** mock provider/acquisition tests are in the default suite. An
+  opt-in `tests/test_media_live_optin.py` can run one live provider search and,
+  only with a separate exact-item human-reviewed decision, stage one test
+  download in a temporary quarantine. It is skipped by default and has not
+  been run against external APIs.
 - A deterministic procedural SFX prototype generates WAV PCM-16 click/whoosh/
   riser/hit samples and writes only to `brands/<slug>/imports/audio/` with a
   recipe/hash sidecar. It remains `rights_status: unknown` and quarantine-only;

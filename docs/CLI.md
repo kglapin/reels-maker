@@ -109,6 +109,21 @@ render path. Openverse external hosts beyond the fixed provider allowlist are
 accepted only when the exact item URL is included in a human rights decision and
 the resolved host is public HTTPS.
 
+MD-106 live connectivity checks are deliberately opt-in and are never enabled in
+CI by default:
+
+```sh
+PYTHONPATH=src:tests REELS_MAKER_LIVE_MEDIA_TESTS=1 \
+REELS_MAKER_LIVE_MEDIA_PROVIDER=wikimedia_commons \
+.venv/bin/python -m unittest test_media_live_optin -v
+```
+
+The search smoke test does not download bytes or clear rights. A real acquisition
+smoke additionally requires `REELS_MAKER_LIVE_MEDIA_DOWNLOAD=1`, the exact
+`REELS_MAKER_LIVE_ASSET_ID`, and a reviewed JSON decision path in
+`REELS_MAKER_LIVE_RIGHTS_DECISION`; it stages only into a temporary directory.
+Do not add credentials or a download-decision file to the repository.
+
 ## Asset-library rights gate
 
 ```sh

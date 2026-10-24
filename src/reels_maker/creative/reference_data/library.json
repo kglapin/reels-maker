@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-10-24",
+  "usage": "Study abstract craft only. Reference links are not licensed reusable assets and have no verified frame-specific annotations here.",
+  "sources": [
+    {
+      "id": "apple-motion",
+      "kind": "standard",
+      "title": "Apple Human Interface Guidelines — Motion",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+      "craft": "Purposeful motion, restraint, clear relationship between elements."
+    },
+    {
+      "id": "material-motion",
+      "kind": "standard",
+      "title": "Material Design — Duration and easing",
+      "url": "https://m1.material.io/motion/duration-easing.html",
+      "craft": "Distance-aware timing, easing, intentional transitions."
+    },
+    {
+      "id": "nng-duration",
+      "kind": "research",
+      "title": "Nielsen Norman Group — Executing UX Animations",
+      "url": "https://www.nngroup.com/articles/animation-duration/",
+      "craft": "Motion has trigger, transformation, duration and easing; avoid arbitrary movement."
+    },
+    {
+      "id": "meta-reels",
+      "kind": "platform",
+      "title": "Meta for Business — Reels ads",
+      "url": "https://www.facebook.com/business/ads/facebook-instagram-reels-ads",
+      "craft": "Vertical 9:16, sound, captions and placement-safe key messages."
+    },
+    {
+      "id": "iab-short-video",
+      "kind": "platform",
+      "title": "IAB Polska — Short Social Video",
+      "url": "https://www.iab.org.pl/wp-content/uploads/2024/05/Short_Social_Video_IAB_Polska_052024.pdf",
+      "craft": "Editorial construction, captions, safe areas and rights for short social video."
+    },
+    {
+      "id": "wcag-flash",
+      "kind": "accessibility",
+      "title": "W3C WCAG 2.2 — Three Flashes or Below Threshold",
+      "url": "https://www.w3.org/TR/WCAG22/#three-flashes-or-below-threshold",
+      "craft": "Avoid potentially seizure-inducing flashing; assess final video separately."
+    },
+    {
+      "id": "datawrapper-bars",
+      "kind": "dataviz",
+      "title": "Datawrapper Academy — Customizing your bar chart",
+      "url": "https://www.datawrapper.de/academy/customizing-your-bar-chart",
+      "craft": "Sort, label, annotate, cite sources and review mobile layout."
+    },
+    {
+      "id": "lucide",
+      "kind": "assets",
+      "title": "Lucide Icons",
+      "url": "https://lucide.dev/",
+      "craft": "Consistent open-source outline icon set; verify applicable license and selected icon."
+    },
+    {
+      "id": "heroicons",
+      "kind": "assets",
+      "title": "Heroicons",
+      "url": "https://heroicons.com/",
+      "craft": "Consistent UI icon families; avoid arbitrary mixtures of line weights."
+    },
+    {
+      "id": "buck-airbnb",
+      "kind": "showcase",
+      "title": "BUCK — Get an Airbnb: Surrounded",
+      "url": "https://buck.co/work/get-an-airbnb",
+      "craft": "One coherent authored 3D world and recurring visual metaphor.",
+      "verified_timecodes": []
+    },
+    {
+      "id": "ordinary-folk-gemini",
+      "kind": "showcase",
+      "title": "Ordinary Folk — Gemini",
+      "url": "https://ordinaryfolk.co/project/gemini",
+      "craft": "Semantic typography; motion changes the meaning rather than decorating words.",
+      "verified_timecodes": []
+    },
+    {
+      "id": "state-dell",
+      "kind": "showcase",
+      "title": "State — Dell All The Right Moves",
+      "url": "https://statedesign.tv/work/dell-all-the-right-moves",
+      "craft": "Live-action moves motivate graphic overlay direction.",
+      "verified_timecodes": []
+    },
+    {
+      "id": "giant-ant-slack",
+      "kind": "showcase",
+      "title": "Giant Ant — Slack brand campaign",
+      "url": "https://www.giantant.ca/slack-brand-campaign",
+      "craft": "A consistent visual grammar across deliverables and formats.",
+      "verified_timecodes": []
+    },
+    {
+      "id": "manvsmachine-imac",
+      "kind": "showcase",
+      "title": "ManvsMachine — iMac Pro",
+      "url": "https://manvsmachine.co/work/imac-pro",
+      "craft": "Frame precision, spatial axes and disciplined product-focused sequences.",
+      "verified_timecodes": []
+    }
+  ],
+  "principles": [
+    {
+      "id": "P01",
+      "category": "Narrative",
+      "rule": "One core proposition per scene; show an actual proof moment, not multiple unexplained claims.",
+      "source_ids": [
+        "buck-airbnb",
+        "ordinary-folk-gemini"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P02",
+      "category": "Motion",
+      "rule": "Every moving element must have a reason: object motion, idea, hierarchy, camera or audio cue.",
+      "source_ids": [
+        "apple-motion",
+        "material-motion"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P03",
+      "category": "Pacing",
+      "rule": "Build contrast between fast entrances, legible holds and clean cuts; avoid identical duration loops.",
+      "source_ids": [
+        "nng-duration",
+        "material-motion"
+      ],
+      "verification": "heuristic"
+    },
+    {
+      "id": "P04",
+      "category": "Typography",
+      "rule": "One typographic hero at a time; consistent grid, measured Polish diacritics and deliberate scale contrast.",
+      "source_ids": [
+        "ordinary-folk-gemini"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P05",
+      "category": "Layout",
+      "rule": "Keep primary information clear of platform overlays; preview at phone size.",
+      "source_ids": [
+        "meta-reels",
+        "iab-short-video"
+      ],
+      "verification": "render_qa"
+    },
+    {
+      "id": "P06",
+      "category": "Video",
+      "rule": "Do not paste decorations on unrelated footage. Align overlays to the movement, focus and exposure of the plate.",
+      "source_ids": [
+        "state-dell"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P07",
+      "category": "Sound",
+      "rule": "Use voice, music and SFX as the editorial timeline; no automatic whoosh on every transition.",
+      "source_ids": [
+        "iab-short-video"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P08",
+      "category": "Charts",
+      "rule": "Never animate invented data. Preserve identities, magnitudes, scale, units, sources and the final value.",
+      "source_ids": [
+        "datawrapper-bars"
+      ],
+      "verification": "data_qa"
+    },
+    {
+      "id": "P09",
+      "category": "Icons",
+      "rule": "Use one consistent icon family/weight per sequence, semantically linked to the message.",
+      "source_ids": [
+        "lucide",
+        "heroicons"
+      ],
+      "verification": "heuristic"
+    },
+    {
+      "id": "P10",
+      "category": "Brand",
+      "rule": "One reusable visual grammar per campaign, not unrelated styles shot by shot.",
+      "source_ids": [
+        "giant-ant-slack",
+        "buck-airbnb"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P11",
+      "category": "Safety",
+      "rule": "Do not use rapid high-contrast flashing; review the final encoded video for photosensitivity.",
+      "source_ids": [
+        "wcag-flash"
+      ],
+      "verification": "render_qa"
+    },
+    {
+      "id": "P12",
+      "category": "Craft",
+      "rule": "Prefer fewer well-designed objects, restrained compositing and actual evidence over generic FX or synthetic filler.",
+      "source_ids": [
+        "apple-motion",
+        "manvsmachine-imac"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P13",
+      "category": "Authenticity",
+      "rule": "All third-party assets require rights review; never copy frames, logos, palettes, music, or scripts from showcases.",
+      "source_ids": [
+        "meta-reels"
+      ],
+      "verification": "manual"
+    },
+    {
+      "id": "P14",
+      "category": "Evaluation",
+      "rule": "Passing static/geometry QA is not creative approval: inspect continuous motion and real phone/audio output.",
+      "source_ids": [
+        "nng-duration"
+      ],
+      "verification": "manual"
+    }
+  ],
+  "anti_patterns": [
+    {
+      "id": "A01",
+      "name": "Template treadmill",
+      "symptom": "Same reveal/zoom timing, same composition and cut cadence in every shot.",
+      "repair": "Vary information density and duration; reuse brand grammar but not identical scene timing.",
+      "heuristic": "flat_duration"
+    },
+    {
+      "id": "A02",
+      "name": "Generic marketing slogans",
+      "symptom": "Many empty superlatives without facts, demo or specific value.",
+      "repair": "Replace adjectives with evidence and one demonstrable claim.",
+      "heuristic": "generic_copy"
+    },
+    {
+      "id": "A03",
+      "name": "Decorative motion without cause",
+      "symptom": "Random spin, glitch, bloom, bounce, camera shake or zoom for emphasis.",
+      "repair": "Link each action to narrative semantics or audio/plate movement.",
+      "heuristic": "human_only"
+    },
+    {
+      "id": "A04",
+      "name": "Text as a wall",
+      "symptom": "Paragraphs arrive together, tiny captions, rushed reading.",
+      "repair": "Split claims and stagger headline, annotation and proof.",
+      "heuristic": "subtitle_density"
+    },
+    {
+      "id": "A05",
+      "name": "Synthetic asset soup",
+      "symptom": "Incoherent polished stock, invented imagery, unrelated characters and mismatched lighting.",
+      "repair": "Use clean licensed footage and one visual motif; color-match chosen shots.",
+      "heuristic": "human_only"
+    },
+    {
+      "id": "A06",
+      "name": "Arbitrary icon mix",
+      "symptom": "Different strokes, inconsistent fill/outline conventions, icons unrelated to claims.",
+      "repair": "Select one pinned SVG pack and normalize stroke and optical sizes.",
+      "heuristic": "icon_mixture"
+    },
+    {
+      "id": "A07",
+      "name": "Data theater",
+      "symptom": "Counters with no source, fabricated growth trajectories, incorrect axes or moving numbers that disagree with labels.",
+      "repair": "Validate the dataset and provenance; animate only the verified transformation.",
+      "heuristic": "chart_requires_provenance_review"
+    },
+    {
+      "id": "A08",
+      "name": "Fake polish",
+      "symptom": "Glows, gradients, lens flares, swooshes and glass cards hide a weak story.",
+      "repair": "Remove decoration; sharpen hierarchy, typography and evidence.",
+      "heuristic": "human_only"
+    },
+    {
+      "id": "A09",
+      "name": "Unsafe cut and flash",
+      "symptom": "Multiple strong white/red flashes and disorienting continuous motion.",
+      "repair": "Replace with motivated hard cuts or low-intensity dissolves; inspect final encoded frames.",
+      "heuristic": "human_only"
+    },
+    {
+      "id": "A10",
+      "name": "Recycled hero still",
+      "symptom": "A single asset carries most scenes without changing the informational perspective.",
+      "repair": "Add relevant proof views, real comparisons or intentional graphic-only beats.",
+      "heuristic": "asset_repetition"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "R01",
+      "name": "Editorial proof-first reel",
+      "use_for": [
+        "case_study",
+        "business",
+        "explainer"
+      ],
+      "style": "editorial-premium",
+      "sequence": [
+        "0-2s: one specific claim + attractive live-action evidence",
+        "2-6s: one detail reveal, motion follows real plate",
+        "6-12s: proof data or authentic process",
+        "last beat: sparse brand CTA"
+      ],
+      "typography": "Large single hero, modest caption, calm 1-2 entrance mechanisms.",
+      "motion": "Hard cuts unless motivated; camera/overlay direction consistent.",
+      "reject": [
+        "showing six decorative icons",
+        "full-screen paragraphs"
+      ],
+      "reference_ids": [
+        "state-dell",
+        "giant-ant-slack"
+      ]
+    },
+    {
+      "id": "R02",
+      "name": "Semantic kinetic typography",
+      "use_for": [
+        "announcement",
+        "positioning",
+        "narration"
+      ],
+      "style": "kinetic-advertising",
+      "sequence": [
+        "Hook: one meaningful word",
+        "Build: 2-3 staggered messages with semantic transformations",
+        "Proof: a number, image or evidence",
+        "Resolve: static resting composition"
+      ],
+      "typography": "Conspicuous weight and scale contrast; real text geometry and generous holds.",
+      "motion": "Mask/reveal/tracking varied by semantics, never spin for variety.",
+      "reject": [
+        "word-by-word fireworks",
+        "endless same reveal"
+      ],
+      "reference_ids": [
+        "ordinary-folk-gemini"
+      ]
+    },
+    {
+      "id": "R03",
+      "name": "Data story — chart and table",
+      "use_for": [
+        "statistics",
+        "comparison",
+        "analysis"
+      ],
+      "style": "editorial-premium",
+      "sequence": [
+        "Question + units",
+        "Reveal baseline/axes and data context",
+        "Emphasize only the relevant rows/series",
+        "Number settle at actual values",
+        "Show verified takeaway + source"
+      ],
+      "typography": "Metric and unit readable throughout; reveal labels before or with marks.",
+      "motion": "Object-identity-preserving transitions; monotonic counters; sensible easing.",
+      "reject": [
+        "fabricated numbers",
+        "animated axis changes that alter the message",
+        "unreadable ticks"
+      ],
+      "reference_ids": [
+        "datawrapper-bars",
+        "manvsmachine-imac"
+      ]
+    },
+    {
+      "id": "R04",
+      "name": "Photography montage / real projects",
+      "use_for": [
+        "portfolio",
+        "realizations",
+        "social_proof"
+      ],
+      "style": "kinetic-advertising",
+      "sequence": [
+        "Immediate human/installation hero",
+        "Contrast wide and close-up shots",
+        "2-3 proof moments rhythmically edited",
+        "One clear endpoint"
+      ],
+      "typography": "No decorative wall of captions; save text for necessary moments.",
+      "motion": "Match cuts to action or audio accents; shutter SFX only when meaningful.",
+      "reject": [
+        "identical transitions for every shot",
+        "overlaid pre-baked brand plate"
+      ],
+      "reference_ids": [
+        "state-dell",
+        "buck-airbnb"
+      ]
+    },
+    {
+      "id": "R05",
+      "name": "Single product hero / 3D",
+      "use_for": [
+        "product",
+        "hardware",
+        "technical"
+      ],
+      "style": "editorial-premium",
+      "sequence": [
+        "Object and silhouette",
+        "Reveal surface/material",
+        "Functional component/benefit",
+        "One data-backed payoff"
+      ],
+      "typography": "Typography after object settles, with strong contrast and optical spacing.",
+      "motion": "Controlled lighting, occlusion, depth-of-field; no gratuitous orbit.",
+      "reject": [
+        "floating fake 3D product with incorrect construction",
+        "too many camera tricks"
+      ],
+      "reference_ids": [
+        "manvsmachine-imac",
+        "buck-airbnb"
+      ]
+    }
+  ],
+  "heuristic_policy": {
+    "min_shots_for_rhythm_test": 4,
+    "equal_duration_tolerance_seconds": 0.05,
+    "subtitle_reading_characters_per_second": 20,
+    "minimum_subtitle_length_for_density_test": 35,
+    "max_same_asset_count": 3,
+    "marketing_cliche_threshold": 2,
+    "marketing_cliches": [
+      "rewolucyjny",
+      "niesamowity",
+      "niezwykły",
+      "innowacyjny",
+      "game changer",
+      "revolutionary",
+      "next level",
+      "cutting-edge"
+    ],
+    "forbidden_placeholders": [
+      "lorem ipsum",
+      "placeholder text",
+      "sample text",
+      "todo:",
+      "[insert",
+      "tbd"
+    ],
+    "human_gate_dimensions": [
+      "hierarchy",
+      "typography",
+      "motion",
+      "rhythm",
+      "image_treatment",
+      "branding",
+      "audio",
+      "narrative",
+      "platform",
+      "data_truth",
+      "licensing"
+    ]
+  }
+}

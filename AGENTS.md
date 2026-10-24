@@ -7,6 +7,14 @@
 - Human rights, claims, reference-viewing and phone/rubric approvals cannot be substituted by test results or agent-generated metadata.
 - Read the selected brand's `BRAND.md` and `brand.json` before authoring a project. For ASTA Energy, use `brands/asta-energy/`.
 
+
+## Curated professional reference library (mandatory at creative planning)
+- Before authoring any new Creative Spec, inspect `docs/REFERENCE_LIBRARY.md` and query the bundled curated library with `python -m reels_maker.creative.reference_library` or `--spec path/to/creative.json` to obtain a cited recipe and anti-pattern list.
+- For each authored Creative Spec run `python -m reels_maker.creative.reference_library --spec path/to/creative.json --audit`. The existing creative QA pipeline now incorporates this check automatically. Do not confuse warnings with creative approval; treat obvious placeholders as hard failures.
+- Each output requires the existing `docs/REVIEW_RUBRIC.md` human review on an actual device with sound. A passing render, unit test or heuristic score never certifies premium motion design.
+- Source examples are external study links only; never copy reference frames, music, brand assets or animations, and never commit downloads of third-party work without rights clearance. Never invent reference timecodes.
+- Review data motion against factual source provenance and immutable values. Review flashing in the encoded MP4, not only in JSON metadata.
+
 ## Media, paths and renders
 - Keep reusable engine code in `src/reels_maker/`; brand identity, media, and project manifests belong under `brands/<slug>/`.
 - Rendering and asset operations must go through the documented CLI/API contracts; do not inject a parallel rendering implementation or silently bypass validation.

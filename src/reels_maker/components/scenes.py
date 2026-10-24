@@ -817,7 +817,7 @@ def _calendar_card(ctx: SceneContext, region: Rect, day: str, month: str,
     day_node = text_node("calendar-day", day, day_style,
                          Rect(card.x, card.y + card.h * .20,
                               card.w, card.h * .48), ctx.fonts,
-                         align="center", valign="center", fit=False)
+                         align="center", valign="center", fit=True)
     month_node = text_node("calendar-month", month, month_style,
                            Rect(card.x + card.w * .08, card.y + card.h * .70,
                                 card.w * .84, card.h * .18), ctx.fonts,

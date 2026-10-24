@@ -68,7 +68,10 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: python -m pip install -e ".[brand]"
+      - name: Create test virtualenv used by integration subprocesses
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -e ".[brand]"
       # Runner images often already provide FFmpeg: avoid an unnecessary apt
       # update on every commit; install only if either executable is missing.
       - name: Make APT robust to unavailable optional mirrors
@@ -99,7 +102,7 @@ jobs:
           # FFmpeg binary and source version must remain visible in the logs.
           ffmpeg -version | head -n 1
           ffprobe -version | head -n 1
-      - run: python -m unittest discover -s tests -v
+      - run: .venv/bin/python -m unittest discover -s tests -v
 
 
   brandbook:

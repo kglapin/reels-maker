@@ -28,9 +28,12 @@ from reels_maker.renderers.studio import probe_output, render_studio
 from reels_maker.spec import Project
 from reels_maker.studio import StudioError, load_kinetic_studio, load_studio
 from reels_maker.textkit.typesetter import FontBook, Run
+from media_fixtures import has_real_media
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "brands/asta-energy/projects/asta-motion-system-demo.json"
+_DEMO_MEDIA_AVAILABLE = has_real_media(
+    ROOT / "brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm")
 
 
 class StudioDesignTests(unittest.TestCase):
@@ -151,6 +154,8 @@ class StudioDesignTests(unittest.TestCase):
             self.assertEqual([item[2] for item in resolved],
                              [item[1] for item in brands])
 
+    @unittest.skipUnless(_DEMO_MEDIA_AVAILABLE,
+                         "Studio demo source video is LFS-backed and unavailable in offline CI")
     def test_demo_builds_all_scene_compositions_and_qa_passes(self):
         project = load_studio(DEMO, root=ROOT, profile="review")
         timeline = project.timeline()
@@ -175,6 +180,8 @@ class StudioDesignTests(unittest.TestCase):
         self.assertIn("negative_text_review",
                       {issue["code"] for issue in report["issues"]})
 
+    @unittest.skipUnless(_DEMO_MEDIA_AVAILABLE,
+                         "Studio demo source video is LFS-backed and unavailable in offline CI")
     def test_qa_detects_collision_and_safe_area_regressions(self):
         project = load_studio(DEMO, root=ROOT, profile="review")
         timeline = project.timeline()

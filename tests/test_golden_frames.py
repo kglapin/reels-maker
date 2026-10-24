@@ -17,10 +17,19 @@ from pathlib import Path
 from reels_maker.renderer import render
 from reels_maker.spec import load_project
 from reels_maker.ffmpeg import execute, probe
+from media_fixtures import has_real_media
+
+_GOLDEN_MEDIA_AVAILABLE = all(has_real_media(path) for path in (
+    Path("brands/asta-energy/media/footage/2_dron-pv-dla-firm-asta.mp4"),
+    Path("brands/asta-energy/media/footage/5_reels-asta-pv-dla-branzy-drzewnej.mp4"),
+))
+_GOLDEN_FRAMES_AVAILABLE = Path("renders/asta-energy/golden").is_dir()
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
                      "FFmpeg/FFprobe required")
+@unittest.skipUnless(_GOLDEN_MEDIA_AVAILABLE and _GOLDEN_FRAMES_AVAILABLE,
+                     "Golden rendering requires local LFS media and ignored review frames")
 class GoldenFrameTests(unittest.TestCase):
     """Render known-good projects and extract key reference frames."""
 

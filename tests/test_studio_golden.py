@@ -9,11 +9,16 @@ from PIL import Image, ImageChops
 import studio_golden
 from reels_maker.qa.report import audit
 from reels_maker.studio import load_studio
+from media_fixtures import has_real_media
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "brands/asta-energy/projects/asta-motion-system-demo.json"
+_MEDIA_AVAILABLE = has_real_media(
+    ROOT / "brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm")
 
 
+@unittest.skipUnless(_MEDIA_AVAILABLE,
+                     "Studio golden rendering requires LFS media unavailable in offline CI")
 class StudioGoldenFrameTests(unittest.TestCase):
     def test_every_golden_strip_matches_the_current_engine(self):
         diffs = studio_golden.collect(write=False)

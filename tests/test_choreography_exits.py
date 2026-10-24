@@ -13,6 +13,7 @@ from reels_maker.studio import load_studio
 from reels_maker.textkit.typesetter import FontBook
 
 import studio_golden
+from media_fixtures import has_real_media
 
 ROOT = None  # imported helpers use absolute demo path
 
@@ -91,6 +92,9 @@ class ExitApplicationTests(unittest.TestCase):
 
 
 class ExitPipelineBehaviourTests(unittest.TestCase):
+    @unittest.skipUnless(has_real_media(
+        studio_golden.ROOT / "brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm"),
+        "Studio demo source video is LFS-backed and unavailable in offline CI")
     def test_demo_qa_still_passes_with_exits_active(self):
         project = load_studio(studio_golden.DEMO, root=studio_golden.ROOT,
                               profile="preview")
@@ -101,6 +105,9 @@ class ExitPipelineBehaviourTests(unittest.TestCase):
         with_exits = [scene for scene in built if scene.choreography.exits]
         self.assertTrue(with_exits, "expected some demo scenes to host exits")
 
+    @unittest.skipUnless(has_real_media(
+        studio_golden.ROOT / "brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm"),
+        "Studio demo source video is LFS-backed and unavailable in offline CI")
     def test_exit_renders_quieter_at_tail_than_mid_scene(self):
         _, built, renderer = studio_golden.build_demo()
         scene = next(item for item in built if item.choreography.exits)

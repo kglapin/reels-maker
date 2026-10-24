@@ -9,6 +9,7 @@ from pathlib import Path
 from reels_maker.renderer import render
 from reels_maker.spec import load_project, ProjectError
 from reels_maker.ffmpeg import execute
+from media_fixtures import has_real_media
 
 # Use the actual repo root for brand media references
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,16 @@ BRAND_DIR = REPO_ROOT / "brands/asta-energy"
 
 @unittest.skipUnless(shutil.which("ffmpeg"),
                      "FFmpeg required for matrix renders")
+@unittest.skipUnless(all(has_real_media(BRAND_DIR / "media/footage" / name)
+                         for name in (
+                             "1_fotowoltaika-25wp-budzyn.mp4",
+                             "2_dron-pv-dla-firm-asta.mp4",
+                             "10_tracker-pv.mp4",
+                             "11_chodzież-2x39,59kwp-fotowoltaika-asta.mp4",
+                             "12_pv na bloku.mp4",
+                             "14_Piła-pv-39,96-kwp.mp4",
+                         )),
+                     "ASTA footage is LFS-backed and unavailable in offline CI")
 class QAMatrixTests(unittest.TestCase):
 
     def _make_project(self, scenes: list, music: dict = None,

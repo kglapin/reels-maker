@@ -120,8 +120,9 @@ creative, legal or owner approval.
 - **MD-203 early QA slice:** Studio samples FreeType per-word ink bounding boxes
   after its existing node/ancestor affine transforms and checks them against the
   layout-safe rectangle. This is not glyph-outline intersection, Camera Canvas
-  review, or every-keyframe-extremum coverage. Full tests (362 run, 361 pass,
-  1 optional Cairo skip) pass; the QA
+  review, or every-keyframe-extremum coverage. The latest offline-capable suite
+  passed (362 run, 356 pass, 6 optional skips for unavailable platform/media
+  fixtures); the QA
   remains technical evidence, not a human phone-size approval.
 - **MD-104:** pinned Tabler, Phosphor and Material Symbols SVG adapters now use
   the sanitizer/cache, finite non-hallucinatory semantic suggestion map,
@@ -136,10 +137,11 @@ creative, legal or owner approval.
   MP4/storyboard sampled authored rotation at entry/settle/exit. Downloaded
   SVGs and both test MP4s remain outside the repository.
 
-Current complete local suite after media acquisition CLI integration: 362 run,
-361 passed, 1 skipped in 57.838s because Cairo was unavailable on the loader
-path. Existing golden-frame ResourceWarnings are non-fatal. This is technical
-evidence only, not human reference, asset-rights or creative approval.
+Latest complete local suite after media acquisition and CI test-guard updates:
+362 run, 356 passed, 6 skipped in 25.737s; skips guard missing optional Cairo
+and LFS-backed media/review fixtures. Existing golden-frame ResourceWarnings and
+Pillow deprecation warnings are non-fatal. This is technical evidence only, not
+human reference, asset-rights or creative approval.
 
 Safe local work may continue on synthetic fixtures, schemas, providers and
 tests. Do not promote quarantined or unknown media, mark human reference reviews

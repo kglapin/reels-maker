@@ -15,10 +15,20 @@ from pathlib import Path
 
 from reels_maker.renderer import render, CACHE_SCHEMA
 from reels_maker.spec import load_project
+from media_fixtures import has_real_media
+
+_REPO = Path(__file__).resolve().parents[1]
+_REQUIRED_MEDIA = (
+    _REPO / "brands/asta-energy/media/footage/2_dron-pv-dla-firm-asta.mp4",
+    _REPO / "brands/asta-energy/media/stock/pv-promo-cut.mp4",
+)
+_MEDIA_AVAILABLE = all(has_real_media(path) for path in _REQUIRED_MEDIA)
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
                      "FFmpeg/FFprobe required for perf tests")
+@unittest.skipUnless(_MEDIA_AVAILABLE,
+                     "Performance video fixtures are LFS-backed and unavailable in offline CI")
 class PerformanceBenchmarksTest(unittest.TestCase):
     """PERF-01, PERF-03: Benchmark and cache invalidation tests."""
 

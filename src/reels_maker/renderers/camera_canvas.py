@@ -26,10 +26,18 @@ def validate_camera_canvas(scenes):
             val=float(cfg.get(key,0 if key in ("angle","reveal_delay") else 1))
             if not math.isfinite(val) or not lo<=val<=hi:
                 raise ValueError(f"Invalid camera_canvas {key}")
-        if not scene.get("photo"):
-            raise ValueError("camera_canvas scene requires photo")
+        if not (scene.get("photo") or scene.get("video")):
+            raise ValueError("camera_canvas scene requires photo or video")
         if cfg.get("layout","photo-above") not in ("photo-above","photo-left","offset","diagonal"):
             raise ValueError("Unknown camera_canvas layout")
+        if cfg.get("crop") is not None:
+            crop = cfg["crop"]
+            if (not isinstance(crop, (list, tuple)) or len(crop) != 4
+                    or not (0.0 <= float(crop[0]) < float(crop[2]) <= 1.0
+                            and 0.0 <= float(crop[1]) < float(crop[3]) <= 1.0)):
+                raise ValueError("Invalid camera_canvas crop")
+        if cfg.get("mask", "rect") not in ("rect", "rounded", "circle", "pill"):
+            raise ValueError("Unknown camera_canvas mask")
     return True
 
 class CameraCanvasRenderer:
@@ -75,13 +83,27 @@ class CameraCanvasRenderer:
         boxes={"photo-above":(.10,.10,.80,.45),"photo-left":(.08,.17,.59,.52),
                "offset":(.22,.09,.68,.43),"diagonal":(.09,.18,.77,.43)}
         if photo:
+            from . import canvas as cv
+            cfg = scene["camera_canvas"]
             x,y,bw,bh=boxes[layout]
             x,y,pw,ph=int(x*w),int(y*h),int(bw*w),int(bh*h)
-            path=Path(scene["photo"])
+            asset_path = scene.get("video") or scene.get("photo")
+            path=Path(asset_path)
             if not path.is_file(): raise ValueError(f"Missing photo: {path}")
-            with Image.open(path) as source:
-                pic=ImageOps.fit(source.convert("RGB"),(pw,ph),method=Image.Resampling.LANCZOS)
-            tile.alpha_composite(pic.convert("RGBA"),(x,y))
+            source = cv.load_video_frame(
+                path,
+                float(cfg.get("sample_time", 0.0)),
+                trim_start=float(cfg.get("trim_start", 0.0)),
+                trim_end=cfg.get("trim_end"),
+            )
+            source = cv.crop_region(source, cfg.get("crop"))
+            pic=ImageOps.fit(source.convert("RGB"),(pw,ph),method=Image.Resampling.LANCZOS)
+            masked = cv.apply_shape_mask(
+                pic.convert("RGBA"),
+                cfg.get("mask", "rect"),
+                radius=float(cfg.get("radius", 18.0)),
+            )
+            tile.alpha_composite(masked,(x,y))
         else:
             title=scene.get("headline") or ""
             if isinstance(title,dict):
@@ -360,3 +382,35 @@ def plan_camera_path(
         "transitions": transitions,
         "violations": violations,
     }
+
+
+def bezier_camera_point(
+    p0: tuple[float, float],
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    t: float,
+) -> tuple[float, float]:
+    """Evaluate a 2D cubic-Bezier camera trajectory at normalized progress t in 0..1 (MD-504)."""
+    u = max(0.0, min(1.0, float(t)))
+    om = 1.0 - u
+    x = (om ** 3) * p0[0] + 3 * (om ** 2) * u * p1[0] + 3 * om * (u ** 2) * p2[0] + (u ** 3) * p3[0]
+    y = (om ** 3) * p0[1] + 3 * (om ** 2) * u * p1[1] + 3 * om * (u ** 2) * p2[1] + (u ** 3) * p3[1]
+    return (round(x, 4), round(y, 4))
+
+
+def apply_camera_motion_blur(
+    frame: Image.Image,
+    velocity_px: float,
+    *,
+    max_radius: float = 6.0,
+) -> Image.Image:
+    """Apply speed-proportional spatial blur during fast camera travel (MD-504)."""
+    from PIL import ImageFilter
+
+    if velocity_px <= 12.0 or max_radius <= 0:
+        return frame
+    radius = min(float(max_radius), (float(velocity_px) - 12.0) / 80.0)
+    if radius < 0.35:
+        return frame
+    return frame.filter(ImageFilter.GaussianBlur(radius=round(radius, 2)))

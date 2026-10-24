@@ -412,3 +412,67 @@ def _verify_studio_output(path: Path, project: StudioProject,
     return {"status": "pass", **metadata,
             "expected_frames": timeline.total_frames,
             "expected_duration": timeline.duration}
+
+
+FORMAT_MATRIX_DIMENSIONS: dict[str, tuple[int, int]] = {
+    "portrait": (360, 640),
+    "square": (480, 480),
+    "landscape": (640, 360),
+    "portrait_hd": (1080, 1920),
+    "square_hd": (1080, 1080),
+    "landscape_hd": (1920, 1080),
+}
+
+
+def render_master_format_matrix(
+    project: StudioProject,
+    output_dir: str | Path,
+    *,
+    formats: tuple[str, ...] = ("portrait", "square", "landscape"),
+    supersample: int = 1,
+) -> dict:
+    """Render and verify a Studio project across portrait/square/landscape formats (MD-405)."""
+    from dataclasses import replace
+    from ..qa.report import audit
+
+    out_root = Path(output_dir).resolve()
+    out_root.mkdir(parents=True, exist_ok=True)
+    if not formats:
+        raise RenderError("formats must not be empty")
+    deliveries: dict[str, dict] = {}
+    all_ok = True
+    for fmt_name in formats:
+        if fmt_name not in FORMAT_MATRIX_DIMENSIONS:
+            raise RenderError(f"Unknown matrix format {fmt_name!r}")
+        w, h = FORMAT_MATRIX_DIMENSIONS[fmt_name]
+        scaled_tokens = project.tokens.with_canvas(w, h)
+        variant_project = replace(
+            project,
+            width=w,
+            height=h,
+            tokens=scaled_tokens,
+            export={**project.export, "profile": None, "preset": "ultrafast", "crf": 26},
+        )
+        timeline = variant_project.timeline()
+        built = variant_project.build(timeline)
+        qa = audit(variant_project, built, timeline, samples_per_scene=4)
+        mp4_path = out_root / f"{project.name}-{fmt_name}.mp4"
+        render_report = render_studio(
+            variant_project, output=mp4_path, supersample=supersample
+        )
+        deliveries[fmt_name] = {
+            "width": w,
+            "height": h,
+            "output": str(mp4_path),
+            "qa_ok": qa["ok"],
+            "qa_errors": qa["summary"]["errors"],
+            "export_quality": render_report["export_quality"],
+        }
+        if not qa["ok"] or render_report["export_quality"]["status"] != "pass":
+            all_ok = False
+    return {
+        "schema_version": 1,
+        "ok": all_ok,
+        "formats": list(formats),
+        "deliveries": deliveries,
+    }

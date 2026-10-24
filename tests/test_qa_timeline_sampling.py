@@ -221,6 +221,27 @@ class TimelineGeometrySamplingTests(unittest.TestCase):
         self.assertGreater(len(repaired["attempts"]), 1)
         self.assertGreater(repaired["scene"]["duration"], 0.55)
 
+    def test_md306_polish_typography_regression_and_md603_inspector(self):
+        from reels_maker.creative.pipeline import export_scene_graph_inspector
+        from reels_maker.qa.report import run_polish_typography_regression
+        from reels_maker.renderers.camera_canvas import bezier_camera_point
+
+        reg = run_polish_typography_regression()
+        self.assertTrue(reg["ok"], reg["failures"])
+        self.assertEqual(reg["combinations_checked"], 32)
+
+        mid = bezier_camera_point((0.0, 0.0), (0.0, 100.0), (100.0, 100.0), (100.0, 0.0), 0.5)
+        self.assertEqual(mid, (50.0, 75.0))
+
+        tokens = resolve_tokens("editorial-premium", width=720, height=1280)
+        from reels_maker.components.base import SceneContext
+        from reels_maker.components.scenes import build_scene
+        ctx = SceneContext(720, 1280, 24, 2.5, tokens, "editorial-premium", FontBook())
+        built = build_scene(ctx, {"headline": "INSPEKTOR GRAFU", "duration": 2.5})
+        inspected = export_scene_graph_inspector([built])
+        self.assertEqual(len(inspected["scenes"]), 1)
+        self.assertTrue(any(n["motion_path_svg"] for n in inspected["scenes"][0]["nodes"]))
+
 
 if __name__ == "__main__":
     unittest.main()

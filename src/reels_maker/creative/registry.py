@@ -174,7 +174,9 @@ class CapabilityRegistry:
                 },
                 "vector_line_chart": {
                     "status": "partial",
-                    "limitations": ["One explicitly configured series is supported through the Studio component; axes labels and y-domain are required. Typed Data Director -> renderer compilation and richer chart families are not implemented."],
+                    "limitations": [
+                        "Explicitly configured line_chart scenes and typed LoadedData -> line_chart_scene / compile_visualization_scene compilation are supported; axes labels and y-domain are required.",
+                    ],
                 },
                 "semantic_icon_suggestions": {
                     "status": "implemented",

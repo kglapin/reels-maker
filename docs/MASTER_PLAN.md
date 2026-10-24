@@ -93,9 +93,9 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 | **MD-301** | P0 | partial; 8 distinct renderer-backed text mechanism families (`TEXT_MECHANISM_FAMILIES`) | Implement at least 8 genuinely distinct text mechanism families (`vertical-drift`, `curtain-mask`, `horizontal-wipe`, `lateral-slide`, `elastic-scale`, `optical-tracking`, `stagger-cascade`, `depth-focus`) with purpose and variation control (`select_text_mechanism`). | MD-202; MD-203 |
 | **MD-302** | P0 | partial; grouped timing/easing curves and quiet-hold choreography | Implement grouped timing/easing curves and semantic text hierarchy with quiet holds (`plan_choreography` + `TEXT_MECHANISM_FAMILIES`). | MD-301 |
 | **MD-303** | P0 | partial; arc-length vector path/line trim (`trim_polyline`) and `animate_icon_state` implemented | Native SVG/vector path/trim (`progress`/`trim_start` on `line` and `path` nodes) and icon state change animations (`animate_icon_state`). | MD-104; MD-202 |
-| **MD-304** | P0 | fragmenty istnieją — zweryfikować | Native video layer in Camera Canvas and conventional Studio, real trim/masks/crop. | MD-103; MD-202 |
+| **MD-304** | P0 | partial; `video_node`, `load_video_frame`, `crop_region` and `apply_shape_mask` wired in Studio and Camera Canvas | Native video layer in Camera Canvas and conventional Studio, real trim (`trim_start`/`trim_end`), masks (`rect`/`rounded`/`circle`/`pill`) and normalized crop (`crop_region`). | MD-103; MD-202 |
 | **MD-305** | P0 | partial; `verify_shared_element_continuity` checks cross-scene object anchor continuity | Motion-blur/overscan improvements and shared-element transitions with real object continuity (`verify_shared_element_continuity`). | MD-204; MD-304 |
-| **MD-306** | P0 | fragmenty istnieją — zweryfikować | Polish typography regression, cross-aspect ratio checks and multi-family demo approval. | MD-203; MD-301; MD-303; MD-304 |
+| **MD-306** | P0 | partial; `run_polish_typography_regression` passes 32 combinations (8 families × 4 aspects), human demo approval pending | Polish typography regression (`run_polish_typography_regression`), cross-aspect ratio checks (`9:16`, `4:5`, `1:1`, `16:9`) and multi-family demo verification. | MD-203; MD-301; MD-303; MD-304 |
 | **DM-004** | P0 | partial; vector line, ordered bars and 100% stacked bars + `bar_chart_scene` / `stacked_bars_100_scene` bridges | Studio renders explicit-domain line charts, ordered bars (`stable_row_id`) and 100%-normalized vector stacks; typed `LoadedData` bridges preserve source hash and exact values. | DM-003; MD-202; MD-203 |
 | **DM-005** | P0 | partial; stable-ID table scene + `sorted_table_scene` + `paginate_table_scenes` | Table renderer supports explicit row IDs, deterministic sorting (`sorted_table_scene`), lossless multi-scene pagination (`paginate_table_scenes`), ordered columns, width weights and alignments. | DM-001; MD-203 |
 | **DM-006** | P0 | partial; animated table row reorder (`dy` track), row/cell highlights, cell value counters and bar/line progress | Semantic animation choreography: bar grow, polyline trace, animated row reorder (`animate_from_row_ids`), row/cell highlights (`highlight_rows`/`highlight_cells`), and cell number replacement (`cell_transitions`). | DM-004; DM-005; MD-302 |
@@ -108,12 +108,12 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
 | **MD-401** | P0 | partial; `select_compatible_audio` filters/ranks legal cross-platform audio fail-closed | Autoselect legal cross-platform audio; music and SFX compatibility filtering (`select_compatible_audio` enforces `rights_status=='approved'` and `delivery_ready`). | MD-105 |
-| **MD-402** | P0 | fragmenty istnieją — zweryfikować | Beat/onset/cue model for animation/VO/SFX, bus mixing, ducking, loudness QC. | MD-401; MD-302 |
+| **MD-402** | P0 | partial; `plan_beat_cue_mix` builds beat grid, 3-bus gain staging, sidechain ducking envelopes and loudness QC | Beat/onset/cue model for animation/VO/SFX, bus mixing, ducking, loudness QC (`plan_beat_cue_mix`). | MD-401; MD-302 |
 | **MD-403** | P0 | partial; `PLATFORM_PROFILES` + `platform_safe_polygon` (6-vertex L-polygons for Reels/TikTok/Shorts) | Platform profile registry (`resolve_platform_profile`), safe-zone polygons (`platform_safe_polygon`), captions/subtitles and locale adjustments. | MD-203 |
 | **MD-404** | P0 | partial; `repair_scene_layout` runs bounded deterministic QA repair loop with audit trail | Frame-based quality repair loop, deterministic rerender, limited retries, audit report (`repair_scene_layout`). | MD-206; DM-007; MD-402 |
-| **MD-405** | P0 | fragmenty istnieją — zweryfikować | Full HD 1080x1920 30fps master + review/square/landscape and audio validation. | MD-403; MD-404 |
-| **DM-008** | P0 | do wdrożenia | 4 credible example videos with original datasets and signed art-director review. | DM-006; DM-007; MD-403 |
-| **MD-406** | P0 | fragmenty istnieją — zweryfikować | End-to-end brief->assets->render->rights/quality review->deliver test in a fresh runner. | MD-106; MD-405; MD-404; DM-008 |
+| **MD-405** | P0 | partial; `render_master_format_matrix` renders and probes portrait/square/landscape MP4s with per-format QA | Full HD 1080x1920 30fps master + review/square/landscape and audio validation (`render_master_format_matrix`). | MD-403; MD-404 |
+| **DM-008** | P0 | partial; `credible_data_story_examples` provides 4 original benchmark datasets + scenes passing QA, human sign-off pending | 4 credible example videos with original datasets (`pv_generation_annual`, `household_storage_finance`, `regional_oze_share`, `campaign_conversion_lookup` in `credible_data_story_examples`); human art-director sign-off pending. | DM-006; DM-007; MD-403 |
+| **MD-406** | P0 | partial; `run_end_to_end_delivery` executes brief->plan->data->QA/repair->MP4->provenance ledger in a fresh workspace | End-to-end brief->assets->render->rights/quality review->deliver runner (`run_end_to_end_delivery`). | MD-106; MD-405; MD-404; DM-008 |
 
 **Warunek odbioru F4:** Brief -> legalne media i dane -> animacja -> audio -> MP4 -> QA -> telefon; wymagane demo wyników kampanii, finansów i OZE.
 
@@ -121,24 +121,24 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
-| **MD-501** | P1 | do wdrożenia | Photo/subject segmentation and consistent 2.5D parallax. | MD-304; MD-203 |
-| **MD-502** | P1 | do wdrożenia | Character geometry/tracking/morph, variable fonts, per-character 3D only as meaningful accent. | MD-301; MD-203 |
-| **MD-503** | P1 | do wdrożenia | Rich SVG shapes/morph and tracked object animation. | MD-303 |
-| **MD-504** | P1 | do wdrożenia | Bézier camera travel, speed profile control, focal anchor interpolation and spatial motion blur. | MD-204; MD-305 |
-| **MD-505** | P1 | do wdrożenia | Larger layout style library + stronger rhythm/style reference matching. | MD-002; MD-205 |
-| **MD-506** | P1 | do wdrożenia | Video motion matching and source quality ranking. | MD-103; MD-304 |
-| **MD-507** | P1 | do wdrożenia | Multi-scene audio dramaturgy and adaptive timing without over-synchronization. | MD-402 |
-| **MD-508** | P1 | do wdrożenia | Creative Director renders 3 different storyboard candidates and chooses with measurable evidence. | MD-505; MD-205 |
-| **MD-509** | P1 | do wdrożenia | Human-feedback preference library and template learning only with authorized/licensed reference assets. | MD-508 |
-| **MD-510** | P1 | do wdrożenia | Support natural-language revisions with stable shot identity and partial render caching. | MD-201; MD-404 |
+| **MD-501** | P1 | partial; `parallax_25d_group` builds multi-plane depth-weighted `dx`/`dy`/`scale` parallax | Photo/subject segmentation and consistent 2.5D parallax (`parallax_25d_group`). | MD-304; MD-203 |
+| **MD-502** | P1 | partial; `character_accent_group` builds per-character staggered kinetic nodes with bounded tilt | Character geometry/tracking/morph, variable fonts, per-character 3D only as meaningful accent (`character_accent_group`). | MD-301; MD-203 |
+| **MD-503** | P1 | partial; `morph_polyline` and `animate_along_path` implement vertex morphing and path-tracked motion | Rich SVG shapes/morph (`morph_polyline`) and tracked object animation (`animate_along_path`). | MD-303 |
+| **MD-504** | P1 | partial; `bezier_camera_point` and `apply_camera_motion_blur` implement cubic-Bezier trajectory and velocity blur | Bézier camera travel (`bezier_camera_point`), speed profile control, focal anchor interpolation and spatial motion blur (`apply_camera_motion_blur`). | MD-204; MD-305 |
+| **MD-505** | P1 | partial; `match_reference_rhythm` scores shot cadence against reference-board pacing profiles | Larger layout style library + stronger rhythm/style reference matching (`match_reference_rhythm`). | MD-002; MD-205 |
+| **MD-506** | P1 | partial; `rank_video_sources` ranks clean-source footage by resolution, FPS and motion stability | Video motion matching and source quality ranking (`rank_video_sources`). | MD-103; MD-304 |
+| **MD-507** | P1 | partial; `plan_audio_dramaturgy` plans hook/build/climax/resolve energy curve without over-synchronization | Multi-scene audio dramaturgy and adaptive timing without over-synchronization (`plan_audio_dramaturgy`). | MD-402 |
+| **MD-508** | P1 | partial; `generate_and_select_storyboard` evaluates 3 storyboard candidates with rhythm and variety evidence | Creative Director renders 3 different storyboard candidates and chooses with measurable evidence (`generate_and_select_storyboard`). | MD-505; MD-205 |
+| **MD-509** | P1 | partial; `PreferenceLibrary` stores and recommends preferences gated on licensed/authorized reference provenance | Human-feedback preference library and template learning only with authorized/licensed reference assets (`PreferenceLibrary`). | MD-508 |
+| **MD-510** | P1 | partial; `apply_natural_language_revision` compiles NL edits while preserving shot IDs and reporting cache-valid shots | Support natural-language revisions with stable shot identity and partial render caching (`apply_natural_language_revision`). | MD-201; MD-404 |
 | **DM-101** | P1 | partial; `table_to_bars_scenes` compiles paired table -> bar scenes with shared `stable_row_id` and exact Decimal sum conservation | table -> chart transformation with shared object IDs and conservation checks (`table_to_bars_scenes` + `verify_shared_element_continuity`). | DM-005; DM-004; MD-202 |
-| **DM-102** | P1 | do wdrożenia | waterfall, diverging/slope, bullet, heatmap, scatter and funnel. | DM-004; DM-007 |
-| **DM-103** | P1 | do wdrożenia | Sankey/energy flows + animated process paths, total-conserving links. | DM-001; DM-004 |
-| **DM-104** | P1 | do wdrożenia | chart scene morphs preserving marks/scales and staged axis transitions. | DM-101; MD-305 |
-| **DM-105** | P1 | do wdrożenia | domain-aware presets for PV, finances, marketing, operations and sales. | DM-003; DM-102; DM-103 |
-| **DM-106** | P1 | do wdrożenia | data-aware narration/audio cue planning and camera choreography. | DM-006; MD-402 |
-| **DM-107** | P1 | do wdrożenia | automatic three-way choice of visual storytelling variants; responsive animated layouts. | DM-104; MD-508 |
-| **DM-108** | P1 | do wdrożenia | full regression suite and at least 10 types of approved golden data-motion reels. | DM-101; DM-102; DM-103; DM-104; DM-105; DM-106; DM-107 |
+| **DM-102** | P1 | partial; `build_waterfall`, `build_diverging_bar`, `build_bullet`, `build_heatmap`, `build_scatter`, `build_funnel` implemented in Studio | waterfall, diverging/slope, bullet, heatmap, scatter and funnel (`components/scenes.py`). | DM-004; DM-007 |
+| **DM-103** | P1 | partial; `build_sankey` renders total-conserving source->target flow links with animated progress | Sankey/energy flows + animated process paths, total-conserving links (`build_sankey`). | DM-001; DM-004 |
+| **DM-104** | P1 | partial; `morph_chart_scenes` builds staged axis-rescale and mark-interpolation morph descriptors | chart scene morphs preserving marks/scales and staged axis transitions (`morph_chart_scenes`). | DM-101; MD-305 |
+| **DM-105** | P1 | partial; `DOMAIN_PRESETS` and `resolve_domain_preset` cover `pv`, `finances`, `marketing`, `operations`, `sales` | domain-aware presets for PV, finances, marketing, operations and sales (`resolve_domain_preset`). | DM-003; DM-102; DM-103 |
+| **DM-106** | P1 | partial; `plan_data_narration_cues` links verified dataset peaks/troughs to narration cues and camera focus | data-aware narration/audio cue planning and camera choreography (`plan_data_narration_cues`). | DM-006; MD-402 |
+| **DM-107** | P1 | partial; `select_data_story_variant` evaluates up to 3 visual variants across portrait/square/landscape | automatic three-way choice of visual storytelling variants; responsive animated layouts (`select_data_story_variant`). | DM-104; MD-508 |
+| **DM-108** | P1 | partial; regression suite exercises all 11 Studio data-motion chart/table types (`test_data_renderer.py`), human golden sign-off pending | full regression suite across all 10+ types of data-motion scenes (`line_chart`, `bars`, `stacked_bars_100`, `table`, `waterfall`, `diverging_bar`, `bullet`, `heatmap`, `scatter`, `funnel`, `sankey`). | DM-101; DM-102; DM-103; DM-104; DM-105; DM-106; DM-107 |
 
 **Warunek odbioru F5:** Zaawansowane filmy i animacje tabel→wykresów, heatmap, waterfall, Sankey i przepływów energii zachowują dane i są ocenione wizualnie.
 
@@ -146,15 +146,15 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 
 | ID | Priorytet | Stan | Zadanie | Wymagane wcześniej |
 |---|---|---|---|---|
-| **MD-601** | P2 | do wdrożenia | Real 3D/Blender product scenes and camera lighting, not simulated planar rotations. | MD-202 |
-| **MD-602** | P2 | do wdrożenia | Depth maps / object tracking / compositing, advanced relighting only with approved models. | MD-501; MD-601 |
-| **MD-603** | P2 | do wdrożenia | Editable motion path GUI and scene graph visualization. | MD-201; MD-510 |
-| **MD-604** | P2 | do wdrożenia | Collaboration/approval portal, comparison slider, shot comments and release history. | MD-405; MD-510 |
-| **MD-605** | P2 | do wdrożenia | Cost-aware GPU render farm and brand-domain style optimization. | MD-406 |
-| **DM-201** | P2 | do wdrożenia | scheduled live data snapshots with audit trail and historical comparisons. | DM-001; DM-002 |
-| **DM-202** | P2 | do wdrożenia | advanced statistical/uncertainty animation and geographic maps. | DM-102; DM-103 |
-| **DM-203** | P2 | do wdrożenia | editable dashboard/storyboard GUI; custom data annotations and user-directed focus. | DM-108; MD-603 |
-| **DM-204** | P2 | do wdrożenia | truly spatial 3D data scenes only if they improve comprehension. | MD-601; DM-103 |
+| **MD-601** | P2 | partial; `validate_3d_product_scene` enforces 3D mesh + 3-point lighting rig and rejects planar 2D rotation | Real 3D/Blender product scenes and camera lighting, not simulated planar rotations (`validate_3d_product_scene`). | MD-202 |
+| **MD-602** | P2 | partial; `validate_depth_composite` enforces `APPROVED_DEPTH_MODELS` allowlist and occlusion masks | Depth maps / object tracking / compositing, advanced relighting only with approved models (`validate_depth_composite`). | MD-501; MD-601 |
+| **MD-603** | P2 | partial; `export_scene_graph_inspector` exports GUI-ready node trees, keyframe tracks and SVG motion paths | Editable motion path GUI and scene graph visualization (`export_scene_graph_inspector`). | MD-201; MD-510 |
+| **MD-604** | P2 | partial; `build_review_portal_bundle` packages A/B comparison slider pairs, timestamped shot comments and approval state | Collaboration/approval portal, comparison slider, shot comments and release history (`build_review_portal_bundle`). | MD-405; MD-510 |
+| **MD-605** | P2 | partial; `plan_render_farm_batch` schedules GPU/CPU workers with budget cap and brand-cache grouping | Cost-aware GPU render farm and brand-domain style optimization (`plan_render_farm_batch`). | MD-406 |
+| **DM-201** | P2 | partial; `snapshot_dataset_version` and `diff_dataset_snapshots` provide SHA-256 audit trails and historical diffs | scheduled live data snapshots with audit trail and historical comparisons (`snapshot_dataset_version`, `diff_dataset_snapshots`). | DM-001; DM-002 |
+| **DM-202** | P2 | partial; `add_uncertainty_band` validates and attaches confidence intervals to time-series charts | advanced statistical/uncertainty animation and geographic maps (`add_uncertainty_band`). | DM-102; DM-103 |
+| **DM-203** | P2 | partial; `annotate_chart_scene` attaches validated callout/threshold annotations and focus targets | editable dashboard/storyboard GUI; custom data annotations and user-directed focus (`annotate_chart_scene`). | DM-108; MD-603 |
+| **DM-204** | P2 | partial; `validate_3d_data_justification` rejects 3D bar/pie/line gimmicks and requires 3 spatial axes + rationale | truly spatial 3D data scenes only if they improve comprehension (`validate_3d_data_justification`). | MD-601; DM-103 |
 
 **Warunek odbioru F6:** Opcjonalne funkcje nie psują zatwierdzonych filmów bazowych i wykazują mierzalny wzrost jakości lub wydajności.
 

@@ -558,7 +558,11 @@ def _data_checks(built) -> list[Issue]:
                 issues.append(Issue(
                     "invalid_number", "error", f"{key} is not a finite number.",
                     built.index + 1, None, [], "Fix the manifest value."))
-    if meta.get("component") in ("table", "line_chart", "bars", "stacked_bars_100"):
+    if meta.get("component") in (
+        "table", "line_chart", "bars", "stacked_bars_100",
+        "waterfall", "diverging_bar", "bullet", "heatmap",
+        "scatter", "funnel", "sankey",
+    ):
         issues.extend(audit_data_scene(built))
     return issues
 
@@ -939,6 +943,68 @@ def repair_scene_layout(
         "attempts": attempts,
         "scene": best_scene,
         "built": best_built,
+    }
+
+
+def run_polish_typography_regression(
+    fonts: FontBook | None = None,
+    *,
+    fps: int = 24,
+) -> dict:
+    """Verify all 8 text mechanism families with Polish diacritics across 4 aspect ratios (MD-306)."""
+    from ..components.base import SceneContext
+    from ..components.scenes import build_scene
+    from ..design.tokens import resolve_tokens
+    from ..motionkit.presets import text_mechanism_families
+
+    fonts = fonts or FontBook()
+    aspects = (
+        ("portrait_9_16", 720, 1280),
+        ("portrait_4_5", 720, 900),
+        ("square_1_1", 720, 720),
+        ("landscape_16_9", 1280, 720),
+    )
+    families = text_mechanism_families()
+    results = []
+    failures = []
+    for aspect_name, w, h in aspects:
+        tokens = resolve_tokens("editorial-premium", width=w, height=h)
+        for family_name, spec in families.items():
+            ctx = SceneContext(
+                width=w, height=h, fps=fps, duration=3.0,
+                tokens=tokens, style="editorial-premium", fonts=fonts,
+            )
+            scene = {
+                "composition": "stack-center",
+                "duration": 3.0,
+                "kicker": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ",
+                "headline": "ŁĄCZNIE 19 000 ZŁ",
+                "subtitle": "Źródło czystej energii — sprawdź oszczędności",
+                "typography_motion": str(spec["preset"]),
+            }
+            built = build_scene(ctx, scene)
+            issues = _evaluate_built_scene_qa(built, fps=fps, samples_per_scene=4)
+            errors = [i.to_dict() for i in issues if i.severity == "error"]
+            if errors:
+                failures.append({
+                    "aspect": aspect_name,
+                    "family": family_name,
+                    "preset": spec["preset"],
+                    "errors": errors,
+                })
+            results.append({
+                "aspect": aspect_name,
+                "family": family_name,
+                "preset": spec["preset"],
+                "ok": not errors,
+            })
+    return {
+        "ok": not failures,
+        "combinations_checked": len(results),
+        "aspects": [a[0] for a in aspects],
+        "families": list(families),
+        "failures": failures,
+        "results": results,
     }
 
 

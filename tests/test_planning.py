@@ -181,6 +181,36 @@ class PlanningBriefTests(unittest.TestCase):
                         ["statement", "spotlight", "amount", "checklist",
                          "cta"])
 
+    def test_md405_format_matrix_and_md406_end_to_end_delivery(self):
+        from reels_maker.data_renderer import credible_data_story_examples
+        from reels_maker.planning import run_end_to_end_delivery
+        from reels_maker.renderers.studio import render_master_format_matrix
+        from reels_maker.studio import load_studio
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _brand(root, "energy", {"pv-aerial": "clean_source"})
+            brief = _brief("energy", duration=12.0)
+            pv_story = credible_data_story_examples()["pv_generation_annual"]["scenes"]
+            out_mp4 = root / "renders" / "e2e.mp4"
+            e2e = run_end_to_end_delivery(
+                brief, root=root, output_mp4=out_mp4,
+                extra_data_scenes=pv_story, render=False,
+            )
+            self.assertTrue(e2e["ok"])
+            self.assertEqual(len(e2e["provenance_ledger"]["data_provenance"]), 1)
+
+            project = load_studio(Path(e2e["manifest_path"]), root=root)
+            # Render a fast 1-scene project across portrait/square/landscape matrix
+            from dataclasses import replace
+            mini_project = replace(project, scenes=project.scenes[:1])
+            matrix = render_master_format_matrix(
+                mini_project, root / "matrix",
+                formats=("portrait", "square", "landscape"),
+            )
+            self.assertTrue(matrix["ok"])
+            self.assertEqual(set(matrix["deliveries"]), {"portrait", "square", "landscape"})
+
 
 if __name__ == "__main__":
     unittest.main()

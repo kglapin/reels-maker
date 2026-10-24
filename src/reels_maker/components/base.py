@@ -240,6 +240,49 @@ def image_node(role: str, path: str, rect: Rect, *,
         qa_class=qa_class, meta=dict(meta or {}))
 
 
+def video_node(
+    role: str,
+    path: str,
+    rect: Rect,
+    *,
+    trim_start: float = 0.0,
+    trim_end: float | None = None,
+    crop: tuple[float, float, float, float] | None = None,
+    mask: str = "rounded",
+    radius: float = 18.0,
+    qa_class: str = "control",
+    meta: Mapping | None = None,
+) -> Node:
+    """Place a native video layer with explicit trim, crop and shape mask (MD-304)."""
+    if trim_start < 0:
+        raise ValueError("trim_start must be non-negative")
+    if trim_end is not None and trim_end <= trim_start:
+        raise ValueError("trim_end must exceed trim_start")
+    if crop is not None:
+        if len(crop) != 4 or not (0.0 <= crop[0] < crop[2] <= 1.0 and 0.0 <= crop[1] < crop[3] <= 1.0):
+            raise ValueError("crop must be normalized (x0, y0, x1, y1) in 0..1")
+    if mask not in ("rect", "rounded", "circle", "pill"):
+        raise ValueError(f"Unsupported video mask {mask!r}")
+    return Node(
+        kind="video",
+        role=role,
+        props={
+            "path": str(path),
+            "x": rect.x,
+            "y": rect.y,
+            "w": rect.w,
+            "h": rect.h,
+            "trim_start": float(trim_start),
+            "trim_end": float(trim_end) if trim_end is not None else None,
+            "crop": tuple(float(v) for v in crop) if crop is not None else None,
+            "mask": mask,
+            "radius": float(radius),
+        },
+        qa_class=qa_class,
+        meta=dict(meta or {}),
+    )
+
+
 def rule_node(role: str, x: float, y: float, width: float, tokens: DesignTokens,
               *, color: tuple[int, int, int] | None = None,
               thickness: int | None = None) -> Node:
@@ -318,6 +361,142 @@ def animate_icon_state(primary: Node, secondary: Node, *,
         qa_class="control",
         meta={"switch_time": round(switch_time, 4), "duration": round(duration, 4)},
     )
+
+
+def parallax_25d_group(
+    planes: list[tuple[Node, float]],
+    *,
+    travel_dx: float = 28.0,
+    travel_dy: float = -14.0,
+    duration: float = 3.0,
+    role: str = "parallax-25d",
+) -> Node:
+    """Build a multi-plane 2.5D parallax group with depth-weighted motion tracks (MD-501).
+
+    Each entry in ``planes`` is ``(node, depth)`` with ``depth`` in ``0.0..1.0``
+    (0 = far background, 1 = near foreground).
+    """
+    if not planes:
+        raise ValueError("parallax_25d_group requires at least one (node, depth) plane")
+    if duration <= 0:
+        raise ValueError("duration must be positive")
+    children: list[Node] = []
+    for node, depth in planes:
+        z = float(depth)
+        if not 0.0 <= z <= 1.0:
+            raise ValueError("parallax depth must be between 0.0 and 1.0")
+        weight = 0.20 + 0.80 * z
+        dx_end = float(travel_dx) * weight
+        dy_end = float(travel_dy) * weight
+        scale_end = 1.0 + 0.04 * (0.5 + 0.5 * z)
+        node.track("dx", Track([
+            Keyframe(0.0, 0.0, "smooth"),
+            Keyframe(duration, dx_end, "smooth"),
+        ]))
+        node.track("dy", Track([
+            Keyframe(0.0, 0.0, "smooth"),
+            Keyframe(duration, dy_end, "smooth"),
+        ]))
+        node.track("scale", Track([
+            Keyframe(0.0, 1.0, "smooth"),
+            Keyframe(duration, scale_end, "smooth"),
+        ]))
+        node.meta["parallax_depth"] = round(z, 3)
+        children.append(node)
+    return Node(
+        kind="group",
+        role=role,
+        children=children,
+        qa_class="control",
+        meta={"plane_count": len(children), "component": "parallax_25d"},
+    )
+
+
+def character_accent_group(
+    text: str,
+    style: TextStyle,
+    rect: Rect,
+    fonts: FontBook,
+    *,
+    onset: float = 0.08,
+    stagger: float = 0.035,
+    tilt_deg: float = -8.0,
+    role: str = "char-accent",
+) -> Node:
+    """Build per-character staggered kinetic accent nodes with bounded tilt (MD-502)."""
+    clean = str(text or "").strip()
+    if not clean:
+        raise ValueError("character_accent_group requires non-empty text")
+    if not -25.0 <= tilt_deg <= 25.0:
+        raise ValueError("tilt_deg must stay within [-25, 25] degrees")
+    font = fonts.get(style.size, style.weight)
+    advances = [max(4.0, float(font.getlength(ch))) for ch in clean]
+    total_w = sum(advances)
+    cursor_x = rect.x + max(0.0, (rect.w - total_w) / 2.0)
+    children: list[Node] = []
+    for idx, (ch, adv) in enumerate(zip(clean, advances)):
+        if ch.isspace():
+            cursor_x += adv
+            continue
+        char_rect = Rect(cursor_x, rect.y, max(adv + 4.0, 12.0), rect.h)
+        cnode = text_node(
+            f"{role}-ch-{idx}", ch, style, char_rect, fonts,
+            align="left", valign="center",
+        )
+        if cnode is not None:
+            t0 = onset + idx * stagger
+            t1 = t0 + 0.32
+            cnode.track("opacity", Track([
+                Keyframe(0.0, 0.0 if t0 > 0 else 1.0, "out-cubic"),
+                Keyframe(t0, 0.0, "out-cubic"),
+                Keyframe(t1, 1.0, "out-cubic"),
+            ]))
+            cnode.track("dy", Track([
+                Keyframe(0.0, 18.0, "out-quart"),
+                Keyframe(t0, 18.0, "out-quart"),
+                Keyframe(t1, 0.0, "out-quart"),
+            ]))
+            cnode.track("rotation", Track([
+                Keyframe(0.0, float(tilt_deg), "out-cubic"),
+                Keyframe(t0, float(tilt_deg), "out-cubic"),
+                Keyframe(t1, 0.0, "out-cubic"),
+            ]))
+            children.append(cnode)
+        cursor_x += adv
+    return Node(
+        kind="group",
+        role=role,
+        children=children,
+        qa_class="text",
+        meta={"text": clean, "character_count": len(children)},
+    )
+
+
+def animate_along_path(
+    node: Node,
+    waypoints: list[tuple[float, float]],
+    *,
+    onset: float = 0.0,
+    duration: float = 1.0,
+    easing: str = "in-out-cubic",
+) -> Node:
+    """Animate a node's dx/dy offsets along a sequence of (dx, dy) waypoints (MD-503)."""
+    if len(waypoints) < 2:
+        raise ValueError("animate_along_path requires at least two waypoints")
+    if onset < 0 or duration <= 0:
+        raise ValueError("onset must be >= 0 and duration > 0")
+    step = duration / (len(waypoints) - 1)
+    dx_keys = [
+        Keyframe(round(onset + idx * step, 4), float(pt[0]), easing)
+        for idx, pt in enumerate(waypoints)
+    ]
+    dy_keys = [
+        Keyframe(round(onset + idx * step, 4), float(pt[1]), easing)
+        for idx, pt in enumerate(waypoints)
+    ]
+    node.track("dx", Track(dx_keys))
+    node.track("dy", Track(dy_keys))
+    return node
 
 
 def apply_choreography(ctx: SceneContext, elements: dict[str, Node],

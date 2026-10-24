@@ -87,3 +87,59 @@ def edit_creative_spec(spec,patches):
     except CreativeSpecError as exc:
         raise CreativeEditError(f"Patched document is invalid: {exc}") from exc
     return new,{"ok":True,"applied":report,"validation":summary}
+
+
+def apply_natural_language_revision(spec: dict, instruction: str) -> tuple[dict, dict]:
+    """Compile a structured natural-language revision into a shot-ID-preserving patch with cache report (MD-510)."""
+    import re
+
+    if not isinstance(instruction, str) or not instruction.strip():
+        raise CreativeEditError("Revision instruction must be a non-empty string")
+    text = instruction.strip()
+    patches: list[dict] = []
+    touched_shots: set[str] = set()
+
+    # Pattern 1: shorten/extend/set duration of shot <id> to <seconds>s
+    m_dur = re.search(
+        r"(?:shorten|extend|set\s+duration\s+of|duration)\s+shot\s+([A-Za-z0-9_-]+)\s+to\s+([\d.]+)\s*s?",
+        text, re.IGNORECASE,
+    )
+    if m_dur:
+        sid, val = m_dur.group(1), float(m_dur.group(2))
+        patches.append({"op": "replace", "path": f"/shots/@{sid}/duration", "value": val})
+        touched_shots.add(sid)
+
+    # Pattern 2: change/set headline of shot <id> to "<headline>"
+    m_head = re.search(
+        r"(?:change|set)\s+headline\s+of\s+shot\s+([A-Za-z0-9_-]+)\s+to\s+[\"']([^\"']+)[\"']",
+        text, re.IGNORECASE,
+    )
+    if m_head:
+        sid, headline = m_head.group(1), m_head.group(2)
+        patches.append({"op": "replace", "path": f"/shots/@{sid}/headline", "value": headline})
+        touched_shots.add(sid)
+
+    # Pattern 3: set style to <style>
+    m_style = re.search(
+        r"set\s+style\s+to\s+([A-Za-z0-9_-]+)",
+        text, re.IGNORECASE,
+    )
+    if m_style:
+        patches.append({"op": "replace", "path": "/style", "value": m_style.group(1)})
+        touched_shots.update(str(s.get("id")) for s in spec.get("shots", []))
+
+    if not patches:
+        raise CreativeEditError(
+            "Unsupported natural-language revision; use 'set duration of shot <id> to <N>s', "
+            "'change headline of shot <id> to \"...\"', or 'set style to <style>'"
+        )
+    updated, report = edit_creative_spec(spec, patches)
+    all_ids = [str(s["id"]) for s in updated["shots"]]
+    unchanged = [sid for sid in all_ids if sid not in touched_shots]
+    invalidated = [sid for sid in all_ids if sid in touched_shots]
+    return updated, {
+        **report,
+        "stable_shot_ids": all_ids,
+        "cache_preserved_shot_ids": unchanged,
+        "cache_invalidated_shot_ids": invalidated,
+    }

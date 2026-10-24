@@ -184,7 +184,11 @@ def recommend_visualizations(
         if missing:
             rationale += " Required but absent or untyped fields: " + ", ".join(missing) + "."
         renderer_status = (
-            "partial" if family in ("bar", "line", "stacked_bar", "table", "donut", "kpi_cards")
+            "partial" if family in (
+                "bar", "line", "stacked_bar", "table", "donut", "kpi_cards",
+                "waterfall", "diverging_bar", "bullet", "heatmap", "scatter",
+                "funnel", "sankey",
+            )
             else "not_assessed"
         )
         variants.append(VisualizationVariant(
@@ -210,3 +214,178 @@ def _field_label(data: LoadedData, name: str) -> str:
     if not qualifiers:
         return name
     return f"{name} ({', '.join(qualifiers)})"
+
+
+DOMAIN_PRESETS: dict[str, dict[str, object]] = {
+    "pv": {
+        "domain": "pv",
+        "preferred_families": ("line", "stacked_bar", "sankey", "bar"),
+        "default_units": ("kWh", "MWh", "kWp"),
+        "style": "editorial-premium",
+        "accent_hint": "#47A013",
+    },
+    "finances": {
+        "domain": "finances",
+        "preferred_families": ("waterfall", "table", "bar", "line"),
+        "default_units": ("PLN", "EUR", "%"),
+        "style": "editorial-premium",
+        "accent_hint": "#1E6F5C",
+    },
+    "marketing": {
+        "domain": "marketing",
+        "preferred_families": ("funnel", "bar", "line", "stacked_bar"),
+        "default_units": ("leads", "%", "PLN"),
+        "style": "kinetic-advertising",
+        "accent_hint": "#E05A2B",
+    },
+    "operations": {
+        "domain": "operations",
+        "preferred_families": ("bullet", "heatmap", "diverging_bar", "table"),
+        "default_units": ("h", "%", "items"),
+        "style": "editorial-premium",
+        "accent_hint": "#2A6496",
+    },
+    "sales": {
+        "domain": "sales",
+        "preferred_families": ("bar", "funnel", "waterfall", "bullet"),
+        "default_units": ("PLN", "units", "%"),
+        "style": "kinetic-advertising",
+        "accent_hint": "#2C8C4E",
+    },
+}
+
+
+def resolve_domain_preset(domain: str) -> dict[str, object]:
+    """Return a validated domain preset for PV, finances, marketing, operations or sales (DM-105)."""
+    if not isinstance(domain, str) or not domain.strip():
+        raise ValueError("domain must be a non-empty string")
+    key = domain.strip().lower()
+    if key not in DOMAIN_PRESETS:
+        raise ValueError(
+            f"Unknown domain preset {domain!r}; choose one of "
+            + ", ".join(sorted(DOMAIN_PRESETS))
+        )
+    spec = DOMAIN_PRESETS[key]
+    return {
+        "domain": spec["domain"],
+        "preferred_families": list(spec["preferred_families"]),
+        "default_units": list(spec["default_units"]),
+        "style": spec["style"],
+        "accent_hint": spec["accent_hint"],
+    }
+
+
+def plan_data_narration_cues(
+    data: LoadedData,
+    *,
+    label_column: str,
+    measure_column: str,
+    scene_duration: float = 3.5,
+) -> dict:
+    """Derive deterministic narration/audio cue anchors and camera focus from verified rows (DM-106)."""
+    validate_loaded_data(data)
+    if scene_duration <= 1.0:
+        raise ValueError("scene_duration must exceed 1.0s")
+    cols = {c.name: c for c in data.schema.columns}
+    if label_column not in cols or measure_column not in cols:
+        raise ValueError("label_column and measure_column must be declared schema columns")
+    if cols[measure_column].data_type not in ("integer", "decimal"):
+        raise ValueError("measure_column must be numeric")
+    rows_with_val = [
+        (idx, str(row[label_column]), float(row[measure_column]), str(row[measure_column]))
+        for idx, row in enumerate(data.rows)
+        if row[label_column] is not None and row[measure_column] is not None
+    ]
+    if not rows_with_val:
+        raise ValueError("Dataset has no non-null rows for cue planning")
+    peak = max(rows_with_val, key=lambda r: r[2])
+    trough = min(rows_with_val, key=lambda r: r[2])
+    return {
+        "schema_version": 1,
+        "source_sha256": data.sha256,
+        "cues": {
+            "headline": 0.08,
+            "chart": round(scene_duration * 0.18, 3),
+            "peak_callout": round(scene_duration * 0.48, 3),
+            "body": round(scene_duration * 0.62, 3),
+        },
+        "data_highlights": {
+            "peak_row_index": peak[0],
+            "peak_label": peak[1],
+            "peak_value_exact": peak[3],
+            "min_row_index": trough[0],
+            "min_label": trough[1],
+            "min_value_exact": trough[3],
+        },
+        "camera_focus": {
+            "target_role": f"row-{peak[0]}",
+            "onset": round(scene_duration * 0.45, 3),
+            "zoom": 1.04,
+        },
+    }
+
+
+def select_data_story_variant(
+    data: LoadedData,
+    *,
+    question: str,
+    candidate_scenes: list[dict],
+) -> dict:
+    """Evaluate 3 visual storytelling variants across responsive aspects and select the best (DM-107)."""
+    from .components.base import SceneContext
+    from .components.scenes import build_scene
+    from .design.tokens import resolve_tokens
+    from .qa.report import audit_data_scene
+    from .textkit.typesetter import FontBook
+
+    validate_loaded_data(data)
+    if not isinstance(candidate_scenes, list) or not 1 <= len(candidate_scenes) <= 3:
+        raise ValueError("candidate_scenes must contain 1..3 scene variants")
+    fonts = FontBook()
+    aspects = (("portrait", 360, 640), ("square", 480, 480), ("landscape", 640, 360))
+    evaluated = []
+    for idx, scene in enumerate(candidate_scenes):
+        variant_id = f"story-variant-{idx + 1}:{scene.get('type', 'unknown')}"
+        aspect_results = {}
+        total_issues = 0
+        for asp_name, w, h in aspects:
+            tokens = resolve_tokens("editorial-premium", width=w, height=h)
+            ctx = SceneContext(
+                width=w, height=h, fps=24,
+                duration=float(scene.get("duration", 3.0)),
+                tokens=tokens, style="editorial-premium", fonts=fonts,
+            )
+            try:
+                built = build_scene(ctx, scene)
+                issues = audit_data_scene(built)
+                errs = sum(1 for i in issues if i.severity == "error")
+                total_issues += errs
+                aspect_results[asp_name] = {"ok": errs == 0, "errors": errs}
+            except Exception as exc:
+                total_issues += 1
+                aspect_results[asp_name] = {"ok": False, "errors": 1, "error": str(exc)}
+        valid = total_issues == 0
+        # Prefer richer semantic forms when all 3 aspects pass cleanly
+        type_bonus = {
+            "waterfall": 0.95, "sankey": 0.94, "stacked_bars_100": 0.92,
+            "line_chart": 0.91, "bars": 0.90, "table": 0.88,
+            "bullet": 0.89, "diverging_bar": 0.89, "funnel": 0.88,
+            "heatmap": 0.87, "scatter": 0.86,
+        }.get(str(scene.get("type")), 0.80)
+        score = round(type_bonus if valid else 0.0, 4)
+        evaluated.append({
+            "variant_id": variant_id,
+            "scene_type": scene.get("type"),
+            "valid": valid,
+            "score": score,
+            "responsive_aspects": aspect_results,
+            "scene": scene,
+        })
+    evaluated.sort(key=lambda r: (not r["valid"], -r["score"], r["variant_id"]))
+    winner = next((r for r in evaluated if r["valid"]), None)
+    return {
+        "question": question,
+        "selected_variant_id": winner["variant_id"] if winner else None,
+        "selected_scene": winner["scene"] if winner else None,
+        "variants": evaluated,
+    }

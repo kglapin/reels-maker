@@ -106,6 +106,90 @@ class CreativePipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(CreativeSpecError, "y_domain"):
             creative_intent(source)
 
+    def test_f5_director_revisions_and_f6_contracts(self):
+        import copy
+        from reels_maker.audiokit.cues import plan_audio_dramaturgy, plan_beat_cue_mix
+        from reels_maker.creative.director import (
+            PreferenceLibrary, generate_and_select_storyboard,
+            match_reference_rhythm, rank_video_sources,
+        )
+        from reels_maker.creative.edit import apply_natural_language_revision
+        from reels_maker.creative.pipeline import (
+            build_review_portal_bundle, plan_render_farm_batch,
+            validate_3d_product_scene, validate_depth_composite,
+        )
+
+        # MD-505, MD-506, MD-507, MD-508, MD-509, MD-510
+        rhythm = match_reference_rhythm([3.2, 2.7, 3.5])
+        self.assertTrue(rhythm["has_pacing_contrast"])
+        ranked = rank_video_sources([
+            {"id": "promo", "editorial_state": "finished_promo", "duration": 5.0, "width": 1080, "height": 1920},
+            {"id": "clean-hd", "editorial_state": "clean_source", "duration": 5.0, "width": 1080, "height": 1920, "fps": 30},
+        ])
+        self.assertEqual([r["id"] for r in ranked], ["clean-hd"])
+
+        dram = plan_audio_dramaturgy([2.5, 2.5, 2.5, 2.5, 2.5])
+        self.assertFalse(dram["over_synchronized"])
+        mix_plan = plan_beat_cue_mix([3.0, 3.0], bpm=120.0, voiceover_segments=[(0.5, 2.5)])
+        self.assertTrue(mix_plan["buses"]["music"]["sidechain_ducked"])
+
+        sb = generate_and_select_storyboard(spec())
+        self.assertEqual(len(sb["candidates"]), 3)
+        self.assertIn(sb["selected_storyboard_id"], {c["storyboard_id"] for c in sb["candidates"]})
+
+        prefs = PreferenceLibrary()
+        with self.assertRaisesRegex(ValueError, "unlicensed"):
+            prefs.record(
+                reference_id="ref-1", intent="opening", preferred_layout="statement",
+                preferred_motion="mask-rise", reviewer="op", license_name="",
+                rights_authorized=False,
+            )
+        prefs.record(
+            reference_id="ref-1", intent="opening", preferred_layout="statement",
+            preferred_motion="mask-rise", reviewer="op", license_name="CC0-1.0",
+            rights_authorized=True,
+        )
+        self.assertEqual(prefs.recommend("opening")["preferred_layout"], "statement")
+
+        revised, rev_rep = apply_natural_language_revision(
+            spec(), "set duration of shot open to 3.4s"
+        )
+        self.assertEqual(revised["shots"][0]["duration"], 3.4)
+        self.assertEqual(rev_rep["cache_preserved_shot_ids"], ["close"])
+        self.assertEqual(rev_rep["cache_invalidated_shot_ids"], ["open"])
+
+        # MD-601..605
+        with self.assertRaisesRegex(ValueError, "planar"):
+            validate_3d_product_scene({"simulated_planar_rotation": True})
+        ok_3d = validate_3d_product_scene({
+            "mesh_path": "models/inverter.glb",
+            "camera": {"focal_length_mm": 50.0},
+            "lighting": {"key_light": {}, "fill_light": {}, "rim_light": {}},
+        })
+        self.assertTrue(ok_3d["ok"])
+
+        ok_depth = validate_depth_composite({
+            "depth_model": "depth-anything-v2-Metric-Indoor",
+            "depth_map_sha256": "a" * 64,
+            "occlusion_mask": "masks/fg.png",
+        })
+        self.assertTrue(ok_depth["ok"])
+
+        portal = build_review_portal_bundle(
+            "asta-demo",
+            renders={"v1": "renders/v1.mp4", "v2": "renders/v2.mp4"},
+            comments=[{"shot": 1, "timecode_s": 1.2, "text": "Approved", "resolved": True}],
+            release_version="2.0.0-rc1",
+        )
+        self.assertEqual(portal["approval_state"], "ready_for_signoff")
+
+        farm = plan_render_farm_batch([
+            {"id": "j1", "brand": "asta", "style": "editorial-premium", "duration_s": 15.0},
+            {"id": "j2", "brand": "asta", "style": "editorial-premium", "duration_s": 15.0},
+        ], budget_usd=2.0)
+        self.assertTrue(farm["ok"])
+        self.assertTrue(farm["schedule"][1]["warm_brand_cache"])
+
 
 if __name__ == "__main__":
     unittest.main()

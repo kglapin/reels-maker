@@ -149,6 +149,58 @@ class RotationalTypographyTests(unittest.TestCase):
         bad = verify_shared_element_continuity([s1, s2], max_anchor_jump_px=5.0)
         self.assertFalse(bad["ok"])
 
+    def test_md304_video_node_md501_parallax_md502_char_accent_md503_path_morph(self):
+        import tempfile
+        from pathlib import Path
+        from PIL import Image
+        from reels_maker.components.base import (
+            animate_along_path, character_accent_group, parallax_25d_group,
+            video_node,
+        )
+        from reels_maker.layout.engine import Rect
+        from reels_maker.renderers.canvas import (
+            apply_shape_mask, crop_region, load_video_frame, morph_polyline,
+        )
+        from reels_maker.textkit.typesetter import FontBook, TextStyle
+
+        with tempfile.TemporaryDirectory() as tmp:
+            img_path = Path(tmp) / "frame.png"
+            Image.new("RGB", (200, 200), (40, 140, 60)).save(img_path)
+            vnode = video_node(
+                "clip", str(img_path), Rect(20, 30, 160, 160),
+                trim_start=0.2, trim_end=1.8, crop=(0.1, 0.1, 0.9, 0.9),
+                mask="circle",
+            )
+            sampled = vnode.sample(0.5)
+            self.assertAlmostEqual(sampled.props["playback_time"], 0.5)
+            self.assertEqual(sampled.base_bounds(), (20.0, 30.0, 180.0, 190.0))
+            frame = load_video_frame(img_path, 0.5, trim_start=0.2, trim_end=1.8)
+            cropped = crop_region(frame, (0.1, 0.1, 0.9, 0.9))
+            masked = apply_shape_mask(cropped, "circle")
+            self.assertEqual(masked.mode, "RGBA")
+            # Corner pixel of circle mask is transparent
+            self.assertEqual(masked.getpixel((0, 0))[3], 0)
+
+        bg = Node(kind="rect", props={"x": 0, "y": 0, "w": 100, "h": 100})
+        fg = Node(kind="rect", props={"x": 20, "y": 20, "w": 40, "h": 40})
+        p25d = parallax_25d_group([(bg, 0.0), (fg, 1.0)], travel_dx=30.0, duration=2.0)
+        s_end = p25d.sample(2.0)
+        self.assertGreater(s_end.children[1].dx, s_end.children[0].dx)
+
+        fonts = FontBook()
+        c_group = character_accent_group(
+            "OZE", TextStyle(36, (255, 255, 255), "bold"),
+            Rect(50, 50, 300, 80), fonts,
+        )
+        self.assertEqual(c_group.meta["character_count"], 3)
+
+        mover = Node(kind="circle", props={"cx": 50, "cy": 50, "r": 10})
+        animate_along_path(mover, [(0, 0), (40, -20), (80, 0)], onset=0.0, duration=1.0)
+        self.assertAlmostEqual(mover.sample(0.5).dx, 40.0, places=2)
+
+        morphed = morph_polyline([(0.0, 0.0), (10.0, 0.0)], [(0.0, 10.0), (10.0, 10.0)], 0.5)
+        self.assertEqual(morphed, [(0.0, 5.0), (10.0, 5.0)])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -40,6 +40,105 @@ def load_image(path: str | Path) -> Image.Image:
     return _load(path, stat.st_mtime)
 
 
+_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"}
+
+
+@lru_cache(maxsize=64)
+def _load_video_frame_cached(path: str, mtime: float, quantized_time: float) -> Image.Image:
+    from io import BytesIO
+    import subprocess
+
+    cmd = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error",
+        "-ss", f"{max(0.0, quantized_time):.3f}",
+        "-i", path,
+        "-frames:v", "1",
+        "-f", "image2pipe", "-vcodec", "png", "-",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, check=False)
+    if proc.returncode != 0 or not proc.stdout:
+        raise ValueError(f"Could not decode video frame from {path} at {quantized_time:.3f}s")
+    img = Image.open(BytesIO(proc.stdout))
+    img.load()
+    return img.convert("RGBA")
+
+
+def load_video_frame(
+    path: str | Path,
+    timestamp: float = 0.0,
+    *,
+    trim_start: float = 0.0,
+    trim_end: float | None = None,
+) -> Image.Image:
+    """Decode an RGBA frame from a video or still asset with explicit trim bounds (MD-304)."""
+    resolved = Path(path).resolve()
+    if not resolved.is_file():
+        raise ValueError(f"Missing media asset: {resolved}")
+    if trim_start < 0:
+        raise ValueError("trim_start must be non-negative")
+    if trim_end is not None and trim_end <= trim_start:
+        raise ValueError("trim_end must exceed trim_start")
+    if resolved.suffix.lower() not in _VIDEO_EXTENSIONS:
+        return load_image(resolved)
+    target_t = float(trim_start) + max(0.0, float(timestamp))
+    if trim_end is not None:
+        target_t = min(target_t, max(float(trim_start), float(trim_end) - 1e-3))
+    stat = os.stat(resolved)
+    return _load_video_frame_cached(str(resolved), stat.st_mtime, round(target_t, 2)).copy()
+
+
+def crop_region(
+    image: Image.Image,
+    crop_box: tuple[float, float, float, float] | list[float] | None,
+) -> Image.Image:
+    """Apply a normalized (x0, y0, x1, y1) crop in 0..1 before cover-fitting (MD-304)."""
+    if crop_box is None:
+        return image
+    if len(crop_box) != 4:
+        raise ValueError("crop_box must be (x0, y0, x1, y1) in 0..1")
+    x0, y0, x1, y1 = (float(v) for v in crop_box)
+    if not (0.0 <= x0 < x1 <= 1.0 and 0.0 <= y0 < y1 <= 1.0):
+        raise ValueError("crop_box coordinates must satisfy 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1")
+    w, h = image.size
+    box = (
+        max(0, round(x0 * w)),
+        max(0, round(y0 * h)),
+        min(w, max(1, round(x1 * w))),
+        min(h, max(1, round(y1 * h))),
+    )
+    return image.crop(box)
+
+
+def apply_shape_mask(
+    image: Image.Image,
+    mask_kind: str | None,
+    *,
+    radius: float = 0.0,
+) -> Image.Image:
+    """Apply a geometric alpha mask (rect, rounded, circle, pill) to an RGBA layer (MD-304)."""
+    out = image.convert("RGBA")
+    kind = (mask_kind or "rect").strip().lower()
+    if kind == "rect" and radius <= 0:
+        return out
+    w, h = out.size
+    mask = Image.new("L", (w, h), 0)
+    draw = ImageDraw.Draw(mask)
+    if kind == "circle":
+        r = min(w, h) / 2.0
+        cx, cy = w / 2.0, h / 2.0
+        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=255)
+    elif kind == "pill":
+        r = min(w, h) / 2.0
+        draw.rounded_rectangle((0, 0, w - 1, h - 1), radius=r, fill=255)
+    elif kind in ("rounded", "rect"):
+        r = max(0.0, min(float(radius), min(w, h) / 2.0))
+        draw.rounded_rectangle((0, 0, w - 1, h - 1), radius=r, fill=255)
+    else:
+        raise ValueError(f"Unsupported mask kind {mask_kind!r}")
+    out.putalpha(Image.composite(out.getchannel("A"), Image.new("L", (w, h), 0), mask))
+    return out
+
+
 def cover(image: Image.Image, width: int, height: int,
           camera: Camera | None = None) -> Image.Image:
     """Cover-fit an image and apply a subtle camera transform."""
@@ -189,6 +288,21 @@ def trim_polyline(points: list[tuple[float, float]], progress: float,
                 out.append(p1)
         acc = next_acc
     return out if len(out) >= 2 else []
+
+
+def morph_polyline(
+    source_points: list[tuple[float, float]],
+    target_points: list[tuple[float, float]],
+    progress: float,
+) -> list[tuple[float, float]]:
+    """Interpolate between two polylines of matching vertex count at ``progress`` in 0..1 (MD-503)."""
+    if len(source_points) < 2 or len(source_points) != len(target_points):
+        raise ValueError("morph_polyline requires two polylines of equal length >= 2")
+    p = max(0.0, min(1.0, float(progress)))
+    return [
+        (ax + (bx - ax) * p, ay + (by - ay) * p)
+        for (ax, ay), (bx, by) in zip(source_points, target_points)
+    ]
 
 
 def line(image: Image.Image, points, color, width: float = 2,

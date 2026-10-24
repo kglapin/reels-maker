@@ -266,3 +266,107 @@ def select_compatible_audio(
         "eligible": eligible,
         "rejected": rejected,
     }
+
+
+def plan_beat_cue_mix(
+    scene_durations: list[float],
+    *,
+    bpm: float = 120.0,
+    voiceover_segments: list[tuple[float, float]] | None = None,
+    cues: Mapping[int, Mapping[str, float]] | None = None,
+    target_lufs: float = -14.0,
+) -> dict:
+    """Plan beat/onset/cue grid, 3-bus gain staging, sidechain ducking and loudness QC (MD-402)."""
+    if bpm <= 0 or bpm > 300:
+        raise ValueError("bpm must be between 0 and 300")
+    if not scene_durations or any(d <= 0 for d in scene_durations):
+        raise ValueError("scene_durations must be non-empty positive numbers")
+    total_duration = round(sum(float(d) for d in scene_durations), 4)
+    beat_interval = 60.0 / float(bpm)
+    beats = []
+    t = 0.0
+    while t <= total_duration + 1e-6:
+        beats.append(round(t, 4))
+        t += beat_interval
+
+    ducking_envelopes = []
+    for seg in (voiceover_segments or []):
+        if len(seg) != 2 or float(seg[1]) < float(seg[0]) or float(seg[0]) < 0:
+            raise ValueError("voiceover_segments entries must be (start, end) with 0 <= start <= end")
+        s, e = float(seg[0]), float(seg[1])
+        ducking_envelopes.append({
+            "voiceover_start": round(s, 4),
+            "voiceover_end": round(e, 4),
+            "attack_s": 0.06,
+            "release_s": 0.28,
+            "music_duck_db": -9.5,
+        })
+
+    sfx = sfx_plan(list(scene_durations), cues or {})
+    return {
+        "ok": True,
+        "bpm": float(bpm),
+        "beat_interval_s": round(beat_interval, 4),
+        "total_duration_s": total_duration,
+        "beat_grid": beats,
+        "buses": {
+            "voiceover": {"gain_db": 0.0, "priority": 1},
+            "music": {"gain_db": -12.0, "priority": 2, "sidechain_ducked": bool(ducking_envelopes)},
+            "sfx": {"gain_db": -18.0, "priority": 3},
+        },
+        "ducking_envelopes": ducking_envelopes,
+        "sfx_events": sfx,
+        "loudness_qc": {
+            "target_integrated_lufs": float(target_lufs),
+            "true_peak_ceiling_dbtp": -1.0,
+            "dialogue_intelligibility_margin_db": 9.5 if ducking_envelopes else 12.0,
+        },
+    }
+
+
+def plan_audio_dramaturgy(
+    scene_durations: list[float],
+    *,
+    style: str = "editorial-premium",
+) -> dict:
+    """Plan a multi-scene audio dramaturgy arc without over-synchronizing every cut (MD-507)."""
+    if not scene_durations or any(d <= 0 for d in scene_durations):
+        raise ValueError("scene_durations must be non-empty positive numbers")
+    n = len(scene_durations)
+    stages = []
+    accented_cuts = 0
+    cursor = 0.0
+    for idx, dur in enumerate(scene_durations):
+        if idx == 0:
+            phase, energy = "hook", 0.72
+            accent = True
+        elif idx == n - 1:
+            phase, energy = "resolve", 0.55
+            accent = True
+        elif idx == max(1, (n * 2) // 3):
+            phase, energy = "climax", 0.95
+            accent = True
+        else:
+            phase, energy = "build", 0.65 + 0.15 * (idx / max(1, n - 1))
+            # Deliberately skip accent hits on intermediate build cuts to avoid wall-of-SFX
+            accent = False
+        if accent:
+            accented_cuts += 1
+        stages.append({
+            "scene": idx + 1,
+            "start_s": round(cursor, 4),
+            "duration_s": round(float(dur), 4),
+            "phase": phase,
+            "energy": round(energy, 3),
+            "accent_hit": accent,
+        })
+        cursor += float(dur)
+    sync_density = accented_cuts / n
+    return {
+        "style": style,
+        "scene_count": n,
+        "accented_cuts": accented_cuts,
+        "sync_density": round(sync_density, 3),
+        "over_synchronized": sync_density > 0.75 and n >= 4,
+        "stages": stages,
+    }

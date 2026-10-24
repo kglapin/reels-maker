@@ -321,6 +321,9 @@ class SceneRenderer:
         if kind == "image":
             self._image(target, node, dx, dy)
             return
+        if kind == "video":
+            self._video(target, node, dx, dy)
+            return
         if kind == "text":
             block = props["block"]
             cv.text_block(target, block, (props["x"] + dx, props["y"] + dy),
@@ -386,6 +389,39 @@ class SceneRenderer:
             image.putalpha(Image.composite(
                 image.getchannel("A"), Image.new("L", image.size, 0), mask))
         target.alpha_composite(image.convert("RGBA"), (int(x), int(y)))
+
+    def _video(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
+        s = self.ss
+        props = node.props
+        path = Path(props["path"])
+        if not path.is_file():
+            raise ValueError(f"Missing video asset: {path}")
+        source = cv.load_video_frame(
+            path,
+            float(props.get("playback_time", 0.0)),
+            trim_start=float(props.get("trim_start", 0.0)),
+            trim_end=props.get("trim_end"),
+        )
+        source = cv.crop_region(source, props.get("crop"))
+        x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
+        w, h = props["w"] * s, props["h"] * s
+        zoom = float(props.get("zoom", 1.0))
+        framed = cv.cover(
+            source,
+            int(max(1, w)),
+            int(max(1, h)),
+            cv.Camera(
+                zoom=zoom,
+                x=float(props.get("pan_x", 0.0)),
+                y=float(props.get("pan_y", 0.0)),
+            ),
+        )
+        masked = cv.apply_shape_mask(
+            framed,
+            props.get("mask", "rounded"),
+            radius=float(props.get("radius", 0.0)) * s,
+        )
+        target.alpha_composite(masked, (int(x), int(y)))
 
     # -------------------------------------------------------------- transitions
     def _transition(self, image: Image.Image, name: str, time: float,

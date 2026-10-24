@@ -82,6 +82,8 @@ class Node:
             node.reveal = dict(node.reveal)
             if "progress" not in node.reveal:
                 node.reveal["progress"] = 1.0
+        if node.kind == "video" and "playback_time" not in node.props:
+            node.props["playback_time"] = float(time)
         return node
 
     # ------------------------------------------------------------------ bounds
@@ -118,7 +120,7 @@ class Node:
     def base_bounds(self) -> BBox | None:
         props = self.props
         kind = self.kind
-        if kind in ("rect", "round", "panel", "image", "icon", "block"):
+        if kind in ("rect", "round", "panel", "image", "video", "icon", "block"):
             x, y = float(props.get("x", 0)), float(props.get("y", 0))
             w, h = float(props.get("w", 0)), float(props.get("h", 0))
             if w < 0 or h < 0:

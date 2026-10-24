@@ -238,3 +238,76 @@ def load_data_source(
             checksum.update(chunk)
     digest = checksum.hexdigest()
     return LoadedData(tuple(rows), schema, str(source), digest, rights)
+
+
+def snapshot_dataset_version(
+    data: LoadedData,
+    *,
+    snapshot_id: str,
+    captured_at: str,
+) -> dict:
+    """Create an immutable, SHA-256-audited snapshot of a LoadedData dataset (DM-201)."""
+    if not isinstance(data, LoadedData):
+        raise DataSourceError("data must be a LoadedData instance")
+    if not data.rights.authorized:
+        raise DataSourceError("Cannot snapshot an unauthorized dataset")
+    if not str(snapshot_id or "").strip() or not str(captured_at or "").strip():
+        raise DataSourceError("snapshot_id and captured_at are required")
+    serialized_rows = [
+        {k: (v.isoformat() if hasattr(v, "isoformat") else str(v))
+         for k, v in row.items()}
+        for row in data.rows
+    ]
+    payload_bytes = json.dumps(serialized_rows, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    content_sha256 = hashlib.sha256(payload_bytes).hexdigest()
+    return {
+        "schema_version": 1,
+        "snapshot_id": str(snapshot_id).strip(),
+        "captured_at": str(captured_at).strip(),
+        "source_path": data.source_path,
+        "source_sha256": data.sha256,
+        "content_sha256": content_sha256,
+        "row_count": len(serialized_rows),
+        "rows": serialized_rows,
+        "rights": {
+            "license": data.rights.license_name,
+            "authorized": data.rights.authorized,
+        },
+    }
+
+
+def diff_dataset_snapshots(
+    older: dict,
+    newer: dict,
+    *,
+    key_column: str,
+    value_column: str,
+) -> dict:
+    """Compute a deterministic historical comparison between two dataset snapshots (DM-201)."""
+    if not isinstance(older, dict) or not isinstance(newer, dict):
+        raise DataSourceError("older and newer must be snapshot dicts")
+    old_map = {str(r[key_column]): Decimal(str(r[value_column])) for r in older.get("rows", [])}
+    new_map = {str(r[key_column]): Decimal(str(r[value_column])) for r in newer.get("rows", [])}
+    all_keys = sorted(set(old_map) | set(new_map))
+    deltas = []
+    for k in all_keys:
+        if k in old_map and k in new_map:
+            diff = new_map[k] - old_map[k]
+            deltas.append({
+                "key": k,
+                "status": "changed" if diff != 0 else "unchanged",
+                "old": str(old_map[k]),
+                "new": str(new_map[k]),
+                "delta": str(diff),
+            })
+        elif k in new_map:
+            deltas.append({"key": k, "status": "added", "old": None, "new": str(new_map[k]), "delta": None})
+        else:
+            deltas.append({"key": k, "status": "removed", "old": str(old_map[k]), "new": None, "delta": None})
+    return {
+        "older_snapshot_id": older.get("snapshot_id"),
+        "newer_snapshot_id": newer.get("snapshot_id"),
+        "older_sha256": older.get("content_sha256"),
+        "newer_sha256": newer.get("content_sha256"),
+        "deltas": deltas,
+    }

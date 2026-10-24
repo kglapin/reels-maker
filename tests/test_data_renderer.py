@@ -316,6 +316,151 @@ class DataRendererTests(unittest.TestCase):
         built_bar = build_scene(self.context(), bar_scene)
         self.assertEqual(set(built_tbl.meta["row_ids"]), set(built_bar.meta["row_ids"]))
 
+    def test_dm102_to_dm108_all_ten_chart_families_and_dm201_to_dm204(self):
+        from reels_maker.data_director import (
+            plan_data_narration_cues, resolve_domain_preset,
+            select_data_story_variant,
+        )
+        from reels_maker.data_renderer import (
+            add_uncertainty_band, annotate_chart_scene,
+            credible_data_story_examples, morph_chart_scenes,
+            validate_3d_data_justification,
+        )
+        from reels_maker.data_sources import (
+            diff_dataset_snapshots, snapshot_dataset_version,
+        )
+
+        ctx = self.context()
+        # DM-102 + DM-103: build all new chart families and verify QA
+        families_scenes = [
+            {
+                "type": "waterfall",
+                "duration": 3.0,
+                "headline": "Most kosztowy",
+                "steps": [
+                    {"kind": "opening", "label": "Start", "value": 100},
+                    {"kind": "delta", "label": "PV", "value": -45},
+                    {"kind": "delta", "label": "Magazyn", "value": -20},
+                    {"kind": "total", "label": "Koniec", "value": 35},
+                ],
+            },
+            {
+                "type": "diverging_bar",
+                "duration": 3.0,
+                "headline": "Odchylenia od planu",
+                "baseline": 0.0,
+                "items": [
+                    {"label": "Północ", "value": 18.5},
+                    {"label": "Południe", "value": -9.0},
+                    {"label": "Zachód", "value": 12.0},
+                ],
+            },
+            {
+                "type": "bullet",
+                "duration": 3.0,
+                "headline": "Realizacja KPI",
+                "metrics": [
+                    {"label": "Autokonsumpcja", "value": 78, "target": 70, "max": 100},
+                    {"label": "Redukcja CO2", "value": 64, "target": 60, "max": 100},
+                ],
+            },
+            {
+                "type": "heatmap",
+                "duration": 3.0,
+                "headline": "Profil godzinowy",
+                "row_labels": ["Rano", "Południe", "Wieczór"],
+                "col_labels": ["Wiosna", "Lato", "Jesień"],
+                "values": [[12, 24, 10], [48, 82, 36], [18, 29, 14]],
+            },
+            {
+                "type": "scatter",
+                "duration": 3.0,
+                "headline": "Moc a uzysk",
+                "x_domain": [0, 20],
+                "y_domain": [0, 20000],
+                "points": [
+                    {"x": 5, "y": 5200},
+                    {"x": 10, "y": 10400},
+                    {"x": 15, "y": 15800},
+                ],
+            },
+            {
+                "type": "funnel",
+                "duration": 3.0,
+                "headline": "Ścieżka klienta",
+                "stages": [
+                    {"label": "Zapytania", "value": 1000},
+                    {"label": "Audyty", "value": 420},
+                    {"label": "Instalacje", "value": 190},
+                ],
+            },
+            {
+                "type": "sankey",
+                "duration": 3.0,
+                "headline": "Bilans energii",
+                "links": [
+                    {"source": "PV", "target": "Dom", "value": 60},
+                    {"source": "PV", "target": "Magazyn", "value": 40},
+                    {"source": "Sieć", "target": "Dom", "value": 20},
+                ],
+            },
+        ]
+        for s in families_scenes:
+            built = build_scene(ctx, s)
+            self.assertEqual(audit_data_scene(built), [])
+
+        # DM-008: 4 credible story packages build and pass QA
+        stories = credible_data_story_examples()
+        self.assertEqual(len(stories), 4)
+        for pkg in stories.values():
+            for sc in pkg["scenes"]:
+                b = build_scene(ctx, sc)
+                self.assertEqual(audit_data_scene(b), [])
+
+        # DM-104: morph_chart_scenes
+        camp_scenes = stories["campaign_conversion_lookup"]["scenes"]
+        morph = morph_chart_scenes(camp_scenes[0], camp_scenes[1])
+        self.assertTrue(morph["conservation_verified"])
+
+        # DM-105, DM-106, DM-107
+        preset = resolve_domain_preset("pv")
+        self.assertEqual(preset["domain"], "pv")
+        fin_data = stories["household_storage_finance"]["data"]
+        cues = plan_data_narration_cues(
+            fin_data, label_column="tariff", measure_column="savings"
+        )
+        self.assertEqual(cues["data_highlights"]["peak_value_exact"], "6200")
+        choice = select_data_story_variant(
+            fin_data, question="Oszczędności", candidate_scenes=[families_scenes[0], camp_scenes[1]]
+        )
+        self.assertIsNotNone(choice["selected_variant_id"])
+
+        # DM-201, DM-202, DM-203, DM-204
+        snap1 = snapshot_dataset_version(fin_data, snapshot_id="s1", captured_at="2026-10-24T08:00:00Z")
+        snap2 = snapshot_dataset_version(fin_data, snapshot_id="s2", captured_at="2026-10-24T09:00:00Z")
+        diff = diff_dataset_snapshots(snap1, snap2, key_column="id", value_column="savings")
+        self.assertTrue(all(d["status"] == "unchanged" for d in diff["deltas"]))
+
+        pv_line = stories["pv_generation_annual"]["scenes"][0]
+        with_band = add_uncertainty_band(
+            pv_line, lower_bounds=[600, 1100, 800, 200], upper_bounds=[750, 1350, 980, 320]
+        )
+        self.assertIn("uncertainty_band", with_band)
+        annotated = annotate_chart_scene(
+            with_band,
+            annotations=[{"kind": "callout", "target_id": "2026-06-01", "text": "Szczyt letni"}],
+            focus_target="2026-06-01",
+        )
+        self.assertEqual(annotated["focus_target"], "2026-06-01")
+        with self.assertRaisesRegex(DataRenderError, "rejected"):
+            validate_3d_data_justification({"chart_type": "3d_bar", "axes": ["a", "b", "c"], "comprehension_rationale": "x"})
+        ok_3d = validate_3d_data_justification({
+            "chart_type": "spatial_scatter_3d",
+            "axes": ["azimuth", "tilt", "yield_kwh"],
+            "comprehension_rationale": "Joint roof-orientation surface requires 3 spatial axes",
+        })
+        self.assertTrue(ok_3d["approved"])
+
 
 if __name__ == "__main__":
     unittest.main()

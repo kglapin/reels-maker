@@ -352,3 +352,88 @@ def plan_brief(brief: dict, *, root: str | Path, brand: str | None = None
         raise PlanningError(
             "A plan requires a brand slug for asset scoping and licensing.")
     return BriefPlanner(root, brand_slug).plan(brief)
+
+
+def run_end_to_end_delivery(
+    brief: dict,
+    *,
+    root: str | Path,
+    output_mp4: str | Path,
+    extra_data_scenes: list[dict] | None = None,
+    render: bool = True,
+) -> dict:
+    """Execute end-to-end brief -> plan -> QA/repair -> MP4 -> provenance ledger (MD-406)."""
+    import json
+    from .qa.report import audit, repair_scene_layout
+    from .renderers.studio import probe_output, render_studio
+    from .studio import load_studio
+
+    workspace = Path(root).resolve()
+    manifest, plan_report = plan_brief(brief, root=workspace)
+    if extra_data_scenes:
+        # Insert validated data scenes before the final CTA scene
+        manifest["scenes"] = (
+            manifest["scenes"][:-1]
+            + list(extra_data_scenes)
+            + manifest["scenes"][-1:]
+        )
+    manifest_path = workspace / f"{manifest['name']}-e2e-manifest.json"
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    project = load_studio(manifest_path, root=workspace)
+    timeline = project.timeline()
+    built = project.build(timeline)
+    qa_report = audit(project, built, timeline, samples_per_scene=4)
+    repairs = []
+    if not qa_report["ok"]:
+        repaired_scenes = []
+        for idx, (raw_scene, loaded_scene, built_item) in enumerate(
+            zip(manifest["scenes"], project.scenes, built)
+        ):
+            rep = repair_scene_layout(built_item.context, loaded_scene, max_retries=2)
+            updated_raw = dict(raw_scene)
+            for key in ("duration", "composition", "typography_motion"):
+                if key in rep["scene"]:
+                    updated_raw[key] = rep["scene"][key]
+            repaired_scenes.append(updated_raw)
+            if rep["repaired"]:
+                repairs.append({"scene": idx + 1, "attempts": len(rep["attempts"])})
+        manifest["scenes"] = repaired_scenes
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        project = load_studio(manifest_path, root=workspace)
+        timeline = project.timeline()
+        built = project.build(timeline)
+        qa_report = audit(project, built, timeline, samples_per_scene=4)
+
+    render_report = None
+    probed = None
+    out_path = Path(output_mp4).resolve()
+    if render:
+        render_report = render_studio(project, output=out_path, supersample=1)
+        probed = probe_output(out_path)
+
+    data_provenance = [
+        s.get("data_provenance")
+        for s in manifest["scenes"]
+        if isinstance(s, dict) and s.get("data_provenance")
+    ]
+    return {
+        "schema_version": 1,
+        "status": "ok" if qa_report["ok"] else "review",
+        "ok": qa_report["ok"] and (not render or render_report["export_quality"]["status"] == "pass"),
+        "manifest_path": str(manifest_path),
+        "output_mp4": str(out_path) if render else None,
+        "plan_report": plan_report,
+        "qa_report": qa_report,
+        "repairs": repairs,
+        "render_report": render_report,
+        "probe": probed,
+        "provenance_ledger": {
+            "asset_choices": plan_report.get("asset_choices", []),
+            "data_provenance": data_provenance,
+            "human_review_required": True,
+        },
+    }

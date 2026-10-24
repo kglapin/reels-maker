@@ -9,7 +9,7 @@ from reels_maker.creative.quality import audit_creative_spec
 from reels_maker.creative.compiler import compile_creative_spec
 from reels_maker.design.tokens import resolve_tokens
 from reels_maker.design.typography_policy import (
-    audit_creative_typography, audit_typography_blocks, audit_typography_tokens,
+    audit_creative_typography, audit_typography_blocks, audit_typography_spacing, audit_typography_tokens,
     load_typography_profiles, suggested_typography,
 )
 from reels_maker.textkit.typesetter import FontBook, TextStyle, typeset
@@ -98,6 +98,29 @@ class TypographyPolicyTests(unittest.TestCase):
             [("headline", _block("KORZYŚCI", 112, line_height=1.08))],
             width=1080, height=1920)
         self.assertNotIn("typography_tight_leading", {x["code"] for x in findings})
+
+    def test_cramped_text_stacks_are_measured_but_columns_are_allowed(self):
+        vertical = audit_typography_spacing([
+            ("headline", (60, 70, 650, 160)),
+            ("subtitle", (60, 166, 700, 240)),
+        ], width=1080, height=1920)
+        self.assertIn("typography_cramped_stack", {item["code"] for item in vertical})
+        columns = audit_typography_spacing([
+            ("headline", (60, 70, 450, 180)),
+            ("subtitle", (600, 70, 980, 180)),
+        ], width=1080, height=1920)
+        self.assertEqual(columns, [])
+        comfortable = audit_typography_spacing([
+            ("headline", (60, 70, 700, 170)),
+            ("subtitle", (60, 202, 750, 266)),
+        ], width=1080, height=1920)
+        self.assertEqual(comfortable, [])
+        # Same spacing on a 360px preview scales the warning threshold.
+        preview = audit_typography_spacing([
+            ("headline", (20, 20, 205, 55)),
+            ("subtitle", (20, 59, 210, 80)),
+        ], width=360, height=640)
+        self.assertEqual(preview, [])
 
     def test_inverted_font_and_spacing_tokens_warn(self):
         tokens = resolve_tokens("editorial-premium", width=1080, height=1920)

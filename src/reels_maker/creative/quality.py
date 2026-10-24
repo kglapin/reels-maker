@@ -10,6 +10,7 @@ from PIL import Image
 from .spec import validate_creative_spec
 from .compiler import compile_creative_spec
 from .reference_library import audit_reference_quality
+from ..design.typography_policy import audit_creative_typography
 
 def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
     validated=validate_creative_spec(spec)
@@ -90,6 +91,7 @@ def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
     # Heuristic warnings remain distinguishable from validated render failures.
     reference_review = audit_reference_quality(spec, manifest)
     issues.extend(reference_review["issues"])
+    issues.extend(audit_creative_typography(spec))
     errors=sum(x["severity"]=="error" for x in issues)
     return {
         "ok":errors==0,

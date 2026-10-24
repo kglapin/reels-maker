@@ -9,6 +9,7 @@ from pathlib import Path
 from PIL import Image
 from .spec import validate_creative_spec
 from .compiler import compile_creative_spec
+from .reference_library import audit_reference_quality
 
 def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
     validated=validate_creative_spec(spec)
@@ -85,6 +86,10 @@ def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
             if c["x"]<extent or c["y"]<extent:
                 issue("warning","world_edge_margin",f"$.shots[{i}].camera",
                       "Camera target near world edge may clip tilted material")
+    # Curated references are applied in addition to geometry/asset checks.
+    # Heuristic warnings remain distinguishable from validated render failures.
+    reference_review = audit_reference_quality(spec, manifest)
+    issues.extend(reference_review["issues"])
     errors=sum(x["severity"]=="error" for x in issues)
     return {
         "ok":errors==0,
@@ -92,8 +97,10 @@ def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
         "errors":errors,
         "warnings":sum(x["severity"]=="warning" for x in issues),
         "issues":issues,
+        "reference_review":reference_review,
         "limitations":[
             "Camera safe checks approximate geometry and do not replace full-frame inspection.",
             "Subject-aware cropping, perceptual scoring and audio alignment are not verified.",
+            "Automated reference review cannot establish professional creative quality; human MP4 approval is mandatory.",
         ]
     }

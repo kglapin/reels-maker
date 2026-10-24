@@ -24,3 +24,4 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "reels_maker.creative" = ["reference_data/*.json"]
+"reels_maker.design" = ["typography_profiles.json"]

@@ -15,6 +15,12 @@
 - Source examples are external study links only; never copy reference frames, music, brand assets or animations, and never commit downloads of third-party work without rights clearance. Never invent reference timecodes.
 - Review data motion against factual source provenance and immutable values. Review flashing in the encoded MP4, not only in JSON metadata.
 
+## Typography quality policy (required)
+- Use `docs/PRO_TYPOGRAPHY_SYSTEM.md` and `src/reels_maker/design/typography_profiles.json` for semantic font sizing, leading, tracking, layout spacing and relative hierarchy. `suggested_typography(style, width, height)` provides recommendations scaled to the short side; source design system values are NOT universal social-video requirements.
+- Validate intended on-screen copy with `audit_creative_spec()`; Studio `studio-qa` and storyboard QA additionally inspect actual typeset blocks using FreeType font sizes, line counts, line-height, letter spacing and heading/subtitle contrast. Resolve critical-size errors before export; review typography warnings on an actual smartphone.
+- Never downscale text into unreadability to fit a crowded layout. Prefer shorter copy, deliberate line breaking and additional shots. Keep intentional Polish diacritics intact, preserve platform UI-safe polygons, and inspect audio/speech holds.
+- Accessibility distinction: WCAG 1.4.12 is an adjustable-markup text-spacing override test, not a fixed 1.5 line-height requirement for titles burned into MP4 video.
+
 ## Media, paths and renders
 - Keep reusable engine code in `src/reels_maker/`; brand identity, media, and project manifests belong under `brands/<slug>/`.
 - Rendering and asset operations must go through the documented CLI/API contracts; do not inject a parallel rendering implementation or silently bypass validation.

@@ -20,6 +20,24 @@ prototype or media while this blocker is open. PR #1 is already merged; that
 does not approve the prototype or release.
 
 
+## Professional typography and readable social video
+
+Typographic roles, evidence-based line-height/tracking/spacing guidance,
+format-responsive type scales and measured quality checks:
+[docs/PRO_TYPOGRAPHY_SYSTEM.md](docs/PRO_TYPOGRAPHY_SYSTEM.md).
+The [machine-readable profiles](src/reels_maker/design/typography_profiles.json)
+specify editorial, dynamic-ad and data-storytelling hierarchies.
+Existing `creative-qa`, Studio `studio-qa` and scene storyboard QA now
+include corresponding typographic preflight checks (long headlines, actual
+font size, leading, letter spacing, line counts and weak text hierarchy).
+Layout-safe-zone and contrast checks remain active; consult the document for
+video-specific adaptations vs published UI/web source sizes.
+
+```python
+from reels_maker.design.typography_policy import suggested_typography
+print(suggested_typography("editorial-premium", 1080, 1920))
+```
+
 ## Curated motion reference and anti-slop preflight
 
 Professional craft references and production recipes are documented in

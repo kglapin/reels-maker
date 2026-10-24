@@ -1,5 +1,8 @@
 # Reels Maker — Professional Reference Library v1
 
+**Typography-specific reference library, source scales and active readability QA:** [PRO_TYPOGRAPHY_SYSTEM.md](PRO_TYPOGRAPHY_SYSTEM.md).
+
+
 **Date:** 2026-10-24. **Purpose:** reduce template-like, incoherent and low-quality AI-generated motion by making authored references and rejection rules part of actual creative QA.
 
 This complements, rather than replaces, `docs/REFERENCE_BOARD.md` (18 external studio case studies), `docs/MOTION_DESIGN_SYSTEM.md`, `docs/DATA_MOTION_DESIGN.md`, `docs/ICON_LIBRARIES.md`, `docs/REVIEW_RUBRIC.md`, `docs/VISUAL_QA.md`, and the current `docs/MASTER_PLAN.md`. Those pre-existing docs are the full craft/backlog context; this file describes the *operational, machine-readable* layer.

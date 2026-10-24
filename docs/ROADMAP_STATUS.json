@@ -7,7 +7,7 @@
   "branch_up_to_date": true,
   "worktree_clean": true,
   "draft_pr_state": "PR #1 is MERGED; Plan 2.0 work is local on master-plan-2 and has not been pushed or opened as a PR",
-  "ci_status": "Latest listed GitHub run is Advanced transitions demo on main eb44810, success; no run found for reels-maker Python tests on main. No CI run for local branch master-plan-2.",
+  "ci_status": "The reels-maker Python tests workflow previously triggered only on refactor/modular-render-engine; trigger updated locally to push/pull_request main and workflow_dispatch. Awaiting a fresh GitHub run after this change is pushed.",
   "local_tests": "362 tests run in 57.838s: 361 passed, 1 skipped (Cairo unavailable on loader path). Existing golden-frame ResourceWarnings are non-fatal.",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",

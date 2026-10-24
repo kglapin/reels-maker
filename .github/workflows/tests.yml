@@ -1,10 +1,12 @@
 name: reels-maker Python tests
 on:
   push:
-    branches:
-      - refactor/modular-render-engine
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
-# Only the latest feature-branch commit needs to spend runner minutes.
+# Only the latest commit for a given branch or pull request needs runner minutes.
 concurrency:
   group: reels-maker-${{ github.ref }}
   cancel-in-progress: true

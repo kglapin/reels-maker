@@ -877,15 +877,21 @@ def repair_scene_layout(
         )
         errors = [i for i in found if i.severity == "error"]
         warnings = [i for i in found if i.severity == "warning"]
+        # Typography aesthetic/semantic warnings require editorial review.
+        # They must not make the automatic repair loop shrink readable text or
+        # reject a successfully repaired geometry/hold purely on aesthetics.
+        repairable_warnings = [i for i in warnings
+                               if not i.code.startswith("typography_")]
         attempts.append({
             "attempt": attempt_no,
             "action": action,
             "composition": candidate_scene.get("composition"),
             "errors": len(errors),
             "warnings": len(warnings),
+            "repairable_warnings": len(repairable_warnings),
             "issues": [i.to_dict() for i in found],
         })
-        return built, errors, warnings
+        return built, errors, repairable_warnings
 
     built0, errors0, warnings0 = try_build_and_check(0, "initial", current_ctx, current_scene)
     if not errors0 and not warnings0:

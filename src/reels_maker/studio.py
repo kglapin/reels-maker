@@ -312,6 +312,11 @@ def _load_studio_data(path: Path, data: dict, *,
             if not source.is_file():
                 raise StudioError(f"Missing editorial_media asset: {source}")
             media["asset"] = str(source)
+        vlayer = scene.get("video_layer")
+        if isinstance(vlayer, dict) and vlayer.get("path"):
+            vlayer = dict(vlayer)
+            vlayer["path"] = str(_resolve_asset(str(vlayer["path"]), brand_root, root))
+            scene["video_layer"] = vlayer
         photo = scene.get("photo")
         background = scene.get("background")
         asset_value = photo or (background.get("asset")

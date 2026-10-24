@@ -1,0 +1,84 @@
+{
+  "id": "kia-nowicki",
+  "name": "KIA Nowicki",
+  "version": 1,
+  "branding": {
+    "accent": "#EA0029",
+    "logo": "assets/logo.png",
+    "font_regular": "brands/kia-nowicki/fonts/KiaSignature-Regular.ttf",
+    "font_bold": "brands/kia-nowicki/fonts/KiaSignature-Bold.ttf",
+    "font_light": "brands/kia-nowicki/fonts/KiaSignature-Light.ttf",
+    "editorial_profiles": {
+      "opposites-united-dark": {
+        "theme": "dark",
+        "position": "middle",
+        "headline_style": "hero",
+        "backdrop": "strong",
+        "logo": false,
+        "accent_rule": true
+      },
+      "opposites-united-light": {
+        "theme": "light",
+        "position": "middle",
+        "headline_style": "hero",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": true
+      },
+      "dark-cta": {
+        "theme": "dark",
+        "position": "upper",
+        "headline_style": "standard",
+        "backdrop": "strong",
+        "logo": true,
+        "accent_rule": false
+      }
+    }
+  },
+  "identity": {
+    "typography": {
+      "primary": "Kia Signature",
+      "regular": "brands/kia-nowicki/fonts/KiaSignature-Regular.ttf",
+      "bold": "brands/kia-nowicki/fonts/KiaSignature-Bold.ttf",
+      "light": "brands/kia-nowicki/fonts/KiaSignature-Light.ttf",
+      "legacy_eu_web": {
+        "light": "brands/kia-nowicki/fonts/KiaDesignK-Light.ttf",
+        "medium": "brands/kia-nowicki/fonts/KiaDesignK-Medium.ttf",
+        "bold": "brands/kia-nowicki/fonts/KiaDesignK-Bold.ttf"
+      },
+      "fallback": "Montserrat",
+      "metadata": {
+        "copyright": "Copyright © 2020 KIA MOTORS CORP. All rights reserved. Font Designed by Sandoll Inc.",
+        "designers": "Sungwoo-Choi; Hyeeun-Lim",
+        "version": "1.000;SAND;KiaSignature;210112_01"
+      }
+    },
+    "palette": {
+      "primary": "#05141F",
+      "secondary": "#FFFFFF",
+      "point_color": "#EA0029",
+      "city_gray": "#CED4DA",
+      "afternoon_yellow": "#F3C300",
+      "forest_green": "#2B5B4E",
+      "background": "#05141F",
+      "text": "#FFFFFF",
+      "neutral": "#05141F"
+    },
+    "logo": {
+      "source": "assets/logo_original.jpg",
+      "render_png": "assets/logo.png",
+      "preview_background": "#05141F"
+    },
+    "motion": {
+      "style": "Opposites United — 18° diagonal chamfered blades, laser-slash wipe (#EA0029), word-curtain lock, kinetic character cascade",
+      "final_scene_policy": "No captions on final outro card; official KIA NOWICKI logo placed in top black header"
+    }
+  },
+  "catalog": {
+    "footage": "media/footage",
+    "stock": "media/stock",
+    "audio": "media/audio",
+    "effects": "media/fx",
+    "references": "references"
+  }
+}

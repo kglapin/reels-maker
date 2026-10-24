@@ -136,6 +136,30 @@ FAMILY_CANDIDATES = {
                  "/usr/share/fonts/truetype/inter/Inter-Bold.ttf",
                  str(Path.home() / "Library/Fonts/Inter-Bold.ttf")],
     },
+    "kiasignature": {
+        "regular": ["KiaSignature-Regular.ttf",
+                    "brands/kia-nowicki/fonts/KiaSignature-Regular.ttf",
+                    "/Library/Fonts/KiaSignature-Regular.ttf",
+                    str(Path.home() / "Library/Fonts/KiaSignature-Regular.ttf")],
+        "bold": ["KiaSignature-Bold.ttf",
+                 "brands/kia-nowicki/fonts/KiaSignature-Bold.ttf",
+                 "/Library/Fonts/KiaSignature-Bold.ttf",
+                 str(Path.home() / "Library/Fonts/KiaSignature-Bold.ttf")],
+    },
+    "baloo2": {
+        "regular": ["Baloo2-Medium.ttf",
+                    "Baloo2-Regular.ttf",
+                    "brands/pure-energy/fonts/Baloo2-Medium.ttf",
+                    "brands/pure-energy/fonts/Baloo2-Regular.ttf",
+                    "/Library/Fonts/Baloo2-Regular.ttf",
+                    str(Path.home() / "Library/Fonts/Baloo2-Regular.ttf")],
+        "bold": ["Baloo2-Bold.ttf",
+                 "Baloo2-ExtraBold.ttf",
+                 "brands/pure-energy/fonts/Baloo2-Bold.ttf",
+                 "brands/pure-energy/fonts/Baloo2-ExtraBold.ttf",
+                 "/Library/Fonts/Baloo2-Bold.ttf",
+                 str(Path.home() / "Library/Fonts/Baloo2-Bold.ttf")],
+    },
 }
 
 

@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "name": "pure-energy-pv-dla-firm",
+  "brand": "pure-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 19,
+    "preset": "medium"
+  },
+  "audio": {
+    "music": {
+      "file": "media/audio/audioera-stylish-trailer-percussion-622881.mp3",
+      "volume": 0.9,
+      "fade_out": 1.2
+    }
+  },
+  "scenes": [
+    {
+      "id": "01-hook",
+      "composition": "spotlight",
+      "duration": 3.2,
+      "background": {
+        "scrim": 0.65,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.04
+        }
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "ENERGIA TO",
+            "scale": 0.85,
+            "color": "white"
+          },
+          {
+            "text": "KOSZT TWOJEJ FIRMY",
+            "scale": 1.15,
+            "color": "accent",
+            "break_before": true
+          }
+        ]
+      },
+      "typography_motion": "mask-rise",
+      "cues": {
+        "headline": 0.3
+      },
+      "file": "media/bess/duzy-zaklad-przemyslowy.webp"
+    },
+    {
+      "id": "02-wlasna-energia",
+      "composition": "spotlight",
+      "duration": 3.8,
+      "background": {
+        "scrim": 0.6,
+        "camera": {
+          "direction": "pan-left",
+          "intensity": 0.035
+        }
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "PRODUKUJ",
+            "scale": 0.85
+          },
+          {
+            "text": "WŁASNY PRĄD",
+            "scale": 1.18,
+            "color": "accent",
+            "break_before": true
+          }
+        ]
+      },
+      "body": "KUPUJ MNIEJ Z SIECI",
+      "typography_motion": "tracking-in",
+      "cues": {
+        "headline": 0.35,
+        "body": 1.15
+      },
+      "file": "media/bess/bess-kontener-pv.webp"
+    },
+    {
+      "id": "03-profil-zuzycia",
+      "composition": "spotlight",
+      "duration": 4.2,
+      "background": {
+        "scrim": 0.68,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.025
+        }
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "NIE DOBIERAMY PV",
+            "scale": 0.85
+          },
+          {
+            "text": "NA OKO",
+            "scale": 1.28,
+            "color": "accent",
+            "break_before": true
+          }
+        ]
+      },
+      "body": "ANALIZA GODZINOWEGO ZUŻYCIA",
+      "typography_motion": "mask-rise",
+      "cues": {
+        "headline": 0.3,
+        "body": 1.3
+      },
+      "file": "media/bess/bess-system-techniczny.webp"
+    },
+    {
+      "id": "04-dopasowanie",
+      "composition": "statement",
+      "duration": 4.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F5FB"
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "DOPASOWANA",
+            "scale": 1.1,
+            "color": "accent"
+          },
+          {
+            "text": "DO RYTMU FIRMY",
+            "scale": 0.95,
+            "break_before": true
+          }
+        ]
+      },
+      "subtitle": "MOC · ORIENTACJA · FALOWNIKI",
+      "typography_motion": "slide-left",
+      "cues": {
+        "headline": 0.3,
+        "body": 1.15
+      }
+    },
+    {
+      "id": "05-kompleksowa-realizacja",
+      "composition": "checklist",
+      "duration": 4.4,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#FFFFFF"
+      },
+      "headline": "JEDEN PARTNER. CAŁY PROCES.",
+      "items": [
+        "Analiza i projekt",
+        "Formalności z OSD",
+        "Produkcja i montaż",
+        "Odbiór i uruchomienie"
+      ],
+      "cues": {
+        "headline": 0.1,
+        "item-0": 0.65,
+        "item-1": 1.25,
+        "item-2": 1.85,
+        "item-3": 2.45
+      }
+    },
+    {
+      "id": "06-wlasna-produkcja",
+      "composition": "spotlight",
+      "duration": 4.1,
+      "background": {
+        "scrim": 0.65,
+        "camera": {
+          "direction": "pan-right",
+          "intensity": 0.035
+        }
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "WŁASNE KONSTRUKCJE",
+            "scale": 0.92
+          },
+          {
+            "text": "WŁASNE EKIPY",
+            "scale": 1.12,
+            "color": "accent",
+            "break_before": true
+          }
+        ]
+      },
+      "body": "PRODUKCJA W RYCHWALE",
+      "typography_motion": "tracking-in",
+      "cues": {
+        "headline": 0.35,
+        "body": 1.35
+      },
+      "file": "media/bess/bess-standalone-card.webp"
+    },
+    {
+      "id": "07-doswiadczenie",
+      "composition": "amount",
+      "duration": 3.4,
+      "background": {
+        "kind": "solid",
+        "color": "#181525"
+      },
+      "kicker": "LAT DOŚWIADCZENIA",
+      "value": 25,
+      "format": {
+        "suffix": "+",
+        "decimals": 0,
+        "thousands": " "
+      },
+      "subtitle": "REALIZACJE OD 50 kWp DO 10 MWp",
+      "visual": "none",
+      "cues": {
+        "kicker": 0.15,
+        "amount": 0.55,
+        "body": 1.45
+      }
+    },
+    {
+      "id": "08-scada-serwis",
+      "composition": "spotlight",
+      "duration": 4.2,
+      "background": {
+        "scrim": 0.64,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.025
+        }
+      },
+      "headline": {
+        "runs": [
+          {
+            "text": "WYNIKI",
+            "scale": 1.1,
+            "color": "accent"
+          },
+          {
+            "text": "POD KONTROLĄ",
+            "scale": 0.95,
+            "break_before": true
+          }
+        ]
+      },
+      "body": "MONITORING SCADA · SERWIS O&M",
+      "typography_motion": "mask-rise",
+      "cues": {
+        "headline": 0.4,
+        "body": 1.25
+      },
+      "file": "media/bess/magazyn-logistyczny.webp"
+    },
+    {
+      "id": "09-cta",
+      "composition": "cta",
+      "duration": 4.5,
+      "background": {
+        "kind": "solid",
+        "color": "#181525"
+      },
+      "headline": "SPRAWDŹ POTENCJAŁ PV W TWOJEJ FIRMIE",
+      "phone": "+48 63 220 78 15",
+      "line_one": "BEZPŁATNA ANALIZA",
+      "line_two": "pure-energy.com.pl",
+      "cues": {
+        "headline": 0.2,
+        "cta": 1.2,
+        "body": 1.85
+      }
+    }
+  ]
+}

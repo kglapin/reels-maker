@@ -170,7 +170,7 @@ def audit_reference_quality(spec, manifest=None):
             "Multiple generic advertising superlatives; verify that claims have concrete proof.",
             ["P01", "P12", "A02"], "Replace empty adjectives with facts, comparisons or a demonstration.")
 
-    libraries = {shot.get("icon_library") for shot in shots if shot.get("icon_library")}
+    libraries = {_normalise(shot.get("icon_library")) for shot in shots if shot.get("icon_library")}
     if len(libraries) > 1:
         add("warning", "reference_icon_family_mix", "$.shots",
             "Different icon packs used within one video sequence.",

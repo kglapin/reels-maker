@@ -21,3 +21,6 @@ reels-maker = "reels_maker.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"reels_maker.creative" = ["reference_data/*.json"]

@@ -59,6 +59,7 @@ TYPE_COMPOSITION = {
     "energy": "energy-flow",
     "quote": "quote",
     "product": "spotlight",
+    "photo_carousel": "photo-carousel",
 }
 
 SIZE_FOR_COMPOSITION = {

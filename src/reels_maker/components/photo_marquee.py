@@ -17,7 +17,7 @@ from .base import SceneContext, image_node
 
 
 _ROW_DIRECTIONS = (-1.0, 1.0, -1.0)
-_ROW_PHASES = (0.0, 1.0 / 3.0, 2.0 / 3.0)
+_ROW_PHASES = (0.36, 0.15, 0.66)
 _SPEED_VARIATION = 0.12
 _TRACK_SAMPLES = 49
 _SHADOW_BLUR = 34.0

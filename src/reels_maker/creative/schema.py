@@ -23,6 +23,7 @@ def creative_json_schema():
                       "items":{"type":"string","minLength":1,"maxLength":500}},
             "carousel":{"type":"object","additionalProperties":False,
                 "properties":{
+                    "direction":{"type":"string","enum":["horizontal","vertical"]},
                     "advance_seconds":{"type":"number","minimum":0.8,"maximum":4},
                     "labels":{"type":"array","minItems":3,"maxItems":12,
                               "items":{"type":"string","maxLength":80}},

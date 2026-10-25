@@ -142,7 +142,11 @@ def validate_creative_spec(spec):
                         f"{p}.assets[{asset_index}]",
                         "use local image paths, not URLs")
             carousel = _object(shot.get("carousel", {}), p+".carousel")
-            _keys(carousel, {"advance_seconds", "labels"}, p+".carousel")
+            _keys(carousel, {"advance_seconds", "labels", "direction"}, p+".carousel")
+            if "direction" in carousel and carousel["direction"] not in ("horizontal", "vertical"):
+                raise CreativeSpecError(
+                    p+".carousel.direction",
+                    "choose horizontal or vertical")
             if "advance_seconds" in carousel:
                 _number(carousel["advance_seconds"],
                         p+".carousel.advance_seconds", .8, 4)

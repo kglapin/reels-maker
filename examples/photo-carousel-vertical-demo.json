@@ -1,0 +1,39 @@
+{
+  "creative_schema_version": 1,
+  "name": "photo-carousel-vertical-test-preview",
+  "mode": "studio",
+  "style": "editorial-premium",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 24
+  },
+  "creative_direction": "Pełnoekranowa pionowa karuzela zdjęć bez nagłówków i podpisów. Karty płyną od dołu ku górze; środkowa jest największa i najostrzejsza, a karty powyżej i poniżej są mniejsze, lekko rozmyte.",
+  "palette": {
+    "background": "#F2F5F1",
+    "surface": "#FFFFFF",
+    "ink": "#16231A",
+    "muted": "#5A685D",
+    "accent": "#5D8F66"
+  },
+  "shots": [
+    {
+      "id": "photo-carousel",
+      "intent": "portfolio",
+      "headline": "Pionowa karuzela zdjęć",
+      "duration": 8.5,
+      "layout": "photo-carousel",
+      "assets": [
+        "photo-carousel-preview-assets/farm-01-1.jpg",
+        "photo-carousel-preview-assets/farm-01-3.jpg",
+        "photo-carousel-preview-assets/farm-05-1.jpg",
+        "photo-carousel-preview-assets/farm-05-2.jpg",
+        "photo-carousel-preview-assets/farm-05-4.jpg"
+      ],
+      "carousel": {
+        "advance_seconds": 1.6,
+        "direction": "vertical"
+      }
+    }
+  ]
+}

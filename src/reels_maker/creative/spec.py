@@ -116,25 +116,25 @@ def validate_creative_spec(spec):
         if layout not in allowed:
             raise CreativeSpecError(p+".layout",f"unsupported {mode} layout {layout!r}")
         selected_composition = shot.get("composition", layout)
-        if selected_composition == "photo-carousel":
+        if selected_composition in ("photo-carousel", "photo-marquee"):
             if mode != "studio":
                 raise CreativeSpecError(p+".layout",
-                                        "photo-carousel is Studio-only")
+                                        f"{selected_composition} is Studio-only")
             if ("composition" in shot and
-                    shot.get("layout", "auto") not in ("auto", "photo-carousel")):
+                    shot.get("layout", "auto") not in ("auto", selected_composition)):
                 raise CreativeSpecError(p+".layout",
-                                        "photo-carousel cannot be combined with another layout")
+                                        f"{selected_composition} cannot be combined with another layout")
             if ("layout" in shot and shot.get("composition") not in
-                    (None, "photo-carousel")):
+                    (None, selected_composition)):
                 raise CreativeSpecError(p+".composition",
-                                        "photo-carousel cannot be combined with another composition")
+                                        f"{selected_composition} cannot be combined with another composition")
             if "asset" in shot:
                 raise CreativeSpecError(p+".asset",
-                                        "photo-carousel uses assets, not a single asset")
+                                        f"{selected_composition} uses assets, not a single asset")
             assets = shot.get("assets")
             if not isinstance(assets, list) or not 3 <= len(assets) <= 12:
                 raise CreativeSpecError(p+".assets",
-                                        "photo-carousel requires 3..12 image paths")
+                                        f"{selected_composition} requires 3..12 image paths")
             for asset_index, asset in enumerate(assets):
                 _text(asset, f"{p}.assets[{asset_index}]", 500)
                 if "://" in asset:

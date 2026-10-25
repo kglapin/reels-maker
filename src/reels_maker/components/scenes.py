@@ -60,6 +60,7 @@ TYPE_COMPOSITION = {
     "quote": "quote",
     "product": "spotlight",
     "photo_carousel": "photo-carousel",
+    "photo_marquee": "photo-marquee",
 }
 
 SIZE_FOR_COMPOSITION = {
@@ -2905,6 +2906,11 @@ def build_scene(ctx: SceneContext, scene: dict) -> BuiltScene:
     if kind == "photo_carousel":
         from .photo_carousel import build_photo_carousel
         built = build_photo_carousel(ctx, scene)
+        built.meta.setdefault("type", kind)
+        return built
+    if kind == "photo_marquee":
+        from .photo_marquee import build_photo_marquee
+        built = build_photo_marquee(ctx, scene)
         built.meta.setdefault("type", kind)
         return built
     if kind in BUILDERS:

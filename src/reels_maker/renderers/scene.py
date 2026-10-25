@@ -270,14 +270,31 @@ class SceneRenderer:
                 return
             radius = float(props.get("r", 0)) * s
             if props.get("shadow"):
-                pad = int(max(8, radius * .8))
-                layer = Image.new("RGBA", (int(w) + pad * 2,
-                                           int(h) + pad * 2), (0, 0, 0, 0))
-                cv.rounded(layer, (pad, pad, pad + w, pad + h), radius,
-                           props.get("fill"), None, 1, opacity=1.0)
-                shadow = cv.shadow(layer, radius=max(6, radius * .45),
-                                   opacity=.42)
-                target.alpha_composite(shadow, (int(x) - pad, int(y) - pad))
+                shadow_blur = float(props.get(
+                    "shadow_blur", max(6, radius * .45) / s)) * s
+                shadow_opacity = float(props.get("shadow_opacity", .42))
+                shadow_dx = float(props.get("shadow_dx", 0.0)) * s
+                shadow_dy = float(props.get("shadow_dy", 0.0)) * s
+                if (not all(math.isfinite(value) for value in
+                            (shadow_blur, shadow_opacity, shadow_dx, shadow_dy))
+                        or shadow_blur < 0):
+                    raise ValueError("Shadow parameters must be finite; blur must be non-negative")
+                shadow_opacity = max(0.0, min(1.0, shadow_opacity))
+                pad = int(math.ceil(max(
+                    8, radius * .8,
+                    shadow_blur * 1.5 + max(abs(shadow_dx), abs(shadow_dy)))))
+                shadow_x = int(round(x + shadow_dx)) - pad
+                shadow_y = int(round(y + shadow_dy)) - pad
+                shadow_w, shadow_h = int(w) + pad * 2, int(h) + pad * 2
+                if (shadow_x + shadow_w > 0 and shadow_y + shadow_h > 0
+                        and shadow_x < self.W and shadow_y < self.H):
+                    layer = Image.new("RGBA", (shadow_w, shadow_h),
+                                      (0, 0, 0, 0))
+                    cv.rounded(layer, (pad, pad, pad + w, pad + h), radius,
+                               props.get("fill"), None, 1, opacity=1.0)
+                    shadow = cv.shadow(layer, radius=max(1, shadow_blur),
+                                       opacity=shadow_opacity)
+                    target.alpha_composite(shadow, (shadow_x, shadow_y))
             cv.rounded(target, (x, y, x + w, y + h), radius,
                        props.get("fill"), props.get("border"),
                        int(props.get("border_width", 1) * s), opacity)
@@ -388,6 +405,8 @@ class SceneRenderer:
         source = self._sources[cache_key]
         x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
         w, h = props["w"] * s, props["h"] * s
+        if x + w <= 0 or y + h <= 0 or x >= self.W or y >= self.H:
+            return
         zoom = float(props.get("zoom", 1.0))
         image = cv.cover(source, int(max(1, w)), int(max(1, h)),
                          cv.Camera(zoom=zoom,

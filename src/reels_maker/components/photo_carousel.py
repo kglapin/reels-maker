@@ -217,9 +217,9 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     dot_r = max(3.5, ctx.tokens.px(6))
     if direction == "vertical":
         side_scale = .42
-        card_h = min(safe.h * .39, safe.w * .52 * 1.38)
+        card_h = min(safe.h * .55, safe.w * .68 * 1.38)
         card_w = card_h / 1.38
-        cards_y = safe.y + safe.h * .725
+        cards_y = ctx.height / 2
         center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                       card_w, card_h)
         clear_gap = max(ctx.tokens.px(24), card_h * .08)
@@ -243,13 +243,18 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
         visual_region = Rect(safe.x, center.y, safe.w, card_h)
 
+    layout_regions = {"visual": visual_region}
+    if direction == "horizontal":
+        layout_regions.update({
+            "kicker": kicker_rect, "headline": headline_rect,
+            "body": body_rect,
+        })
     layout = LayoutPlan(
         "photo-carousel", Rect(0, 0, ctx.width, ctx.height), safe,
-        {"kicker": kicker_rect, "headline": headline_rect,
-         "body": body_rect, "visual": visual_region})
+        layout_regions)
     theme = _theme(ctx, scene)
     elements = {}
-    if scene.get("kicker"):
+    if direction == "horizontal" and scene.get("kicker"):
         style = resolve_text_style(ctx.tokens, "kicker", theme["kicker"],
                                    align="center")
         node = text_node("kicker", str(scene["kicker"]), style,
@@ -257,7 +262,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                          valign="center")
         if node is not None:
             elements["kicker"] = node
-    if scene.get("headline"):
+    if direction == "horizontal" and scene.get("headline"):
         style = resolve_text_style(ctx.tokens, "title", theme["ink"],
                                    align="center", balance=True,
                                    line_height=1.08, max_lines=2)
@@ -266,7 +271,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                          valign="center")
         if node is not None:
             elements["headline"] = node
-    if scene.get("subtitle") or scene.get("body"):
+    if direction == "horizontal" and (scene.get("subtitle") or scene.get("body")):
         copy = str(scene.get("subtitle") or scene.get("body") or "")
         style = resolve_text_style(ctx.tokens, "subtitle", theme["muted"],
                                    align="center", line_height=1.24,
@@ -362,10 +367,20 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
             index, count, ctx.duration, advance, "scale"))
         nodes.append(dot)
 
-    return _finish(
-        ctx, scene, layout, _background(ctx, scene, theme), elements,
+    finish_scene = scene
+    if direction == "vertical":
+        finish_scene = {
+            **scene, "kicker": None, "headline": None,
+            "subtitle": None, "body": None,
+        }
+    text_specs = (
         [_spec("kicker", 3), _spec("headline", 10, "display"),
-         _spec("body", 4)],
+         _spec("body", 4)]
+        if direction == "horizontal" else []
+    )
+    return _finish(
+        ctx, finish_scene, layout, _background(ctx, scene, theme), elements,
+        text_specs,
         decor=nodes, meta={"component": "photo-carousel",
                            "carousel_items": count,
                            "carousel_direction": direction,

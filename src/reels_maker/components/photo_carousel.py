@@ -7,6 +7,8 @@ scene-graph keyframes, so rendering and geometry QA sample the same animation.
 from __future__ import annotations
 
 import math
+import random
+from functools import lru_cache
 
 from ..core.scene_graph import Node
 from ..layout.engine import LayoutPlan, Rect
@@ -18,20 +20,31 @@ def _slot(index: int, page: int, count: int) -> int:
     return (index - page + count // 2) % count - count // 2
 
 
+@lru_cache(maxsize=128)
+def _card_jitter(index: int, count: int) -> tuple[float, float, float, float]:
+    """Return stable, subtle per-card offsets for a natural layout."""
+    rng = random.Random(f"photo-carousel:{count}:{index}")
+    return (rng.uniform(-4.0, 4.0), rng.uniform(-5.0, 5.0),
+            rng.uniform(-1.4, 1.4), rng.uniform(-.012, .012))
+
+
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
     slot = _slot(index, page, count)
     distance = abs(slot)
-    scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
+    base_scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
+    jitter_x, jitter_y, jitter_rotation, jitter_scale = _card_jitter(
+        index, count)
+    spread = 1.0 if distance else 0.0
     return {
         "slot": float(slot),
-        "dx": float(slot) * spacing,
-        "dy": float(distance * 7),
-        "scale": scale,
+        "dx": float(slot) * spacing + jitter_x * spread,
+        "dy": float(distance * 7) + jitter_y * spread,
+        "scale": base_scale * (1.0 + jitter_scale * spread),
         "opacity": opacity,
         "blur": blur,
-        "rotation": float(slot) * 2.2,
+        "rotation": float(slot) * 2.2 + jitter_rotation * spread,
         "z_index": float(20 - distance),
     }
 
@@ -114,6 +127,31 @@ def _indicator_track(index: int, count: int, duration: float,
     return Track(keys)
 
 
+def _photo_box_track(source: Track, prop: str, card: Rect,
+                     pad: float) -> Track:
+    """Keep a uniform inset that becomes slimmer as a card recedes."""
+    anchor_x = card.x + card.w / 2
+    anchor_y = card.y + card.h / 2
+
+    def resized(scale: float) -> float:
+        frame_w, frame_h = card.w * scale, card.h * scale
+        inset = pad * max(0.0, scale) ** 1.5
+        if prop == "x":
+            return anchor_x - frame_w / 2 + inset
+        if prop == "y":
+            return anchor_y - frame_h / 2 + inset
+        if prop == "w":
+            return frame_w - 2 * inset
+        if prop == "h":
+            return frame_h - 2 * inset
+        raise ValueError(f"Unsupported photo geometry property {prop!r}")
+
+    return Track([
+        Keyframe(key.time, resized(float(key.value)), key.easing, key.params)
+        for key in source.keys
+    ])
+
+
 def _scaled_box_track(source: Track, prop: str, base: float,
                        anchor: float | None = None) -> Track:
     """Resize a card primitive around the shared card center."""
@@ -169,7 +207,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                   card_w, card_h)
     side_scale = .42
     clear_gap = max(ctx.tokens.px(24), card_w * .14)
-    rotation_buffer = card_h * math.sin(math.radians(2.2)) * .5
+    rotation_buffer = card_h * math.sin(math.radians(3.8)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))
@@ -223,6 +261,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
             index, count, spacing, ctx.duration, advance, "scale")
         anchor_x = center.x + center.w / 2
         anchor_y = center.y + center.h / 2
+        card_pad = ctx.tokens.space("sm")
         for part in card.children:
             if part.kind == "text":
                 part.track("scale", scale_track)
@@ -230,13 +269,16 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
             for prop in ("x", "y", "w", "h"):
                 if prop not in part.props:
                     continue
-                anchor = anchor_x if prop == "x" else (
-                    anchor_y if prop == "y" else None)
-                part.track(
-                    f"prop.{prop}",
-                    _scaled_box_track(scale_track, prop,
-                                      float(part.props[prop]), anchor))
-            for prop in ("r", "radius"):
+                if part.kind == "image":
+                    track = _photo_box_track(
+                        scale_track, prop, center, card_pad)
+                else:
+                    anchor = anchor_x if prop == "x" else (
+                        anchor_y if prop == "y" else None)
+                    track = _scaled_box_track(
+                        scale_track, prop, float(part.props[prop]), anchor)
+                part.track(f"prop.{prop}", track)
+            for prop in ("r", "radius", "border_width"):
                 if prop in part.props:
                     part.track(
                         f"prop.{prop}",

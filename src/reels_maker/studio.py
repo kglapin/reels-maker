@@ -17,7 +17,7 @@ from .audiokit.cues import CuePlan, apply_cue_plan, load_transcript, plan_cues
 from .components.base import BuiltScene, SceneContext
 from .components.scenes import build_scene
 from .core.timeline import Timeline, build_timeline
-from .design.styles import STYLE_SYSTEMS, canonical_style
+from .design.styles import canonical_style
 from .design.tokens import DesignTokens, resolve_tokens
 from .textkit.typesetter import FontBook
 
@@ -75,18 +75,31 @@ class StudioProject:
                 fonts=self.fonts, scene_index=index, seed=index * 17 + 3,
                 assets=self.asset_manager, scene=scene)
             item = build_scene(context, scene)
+            search_config = scene.get("search_field")
+            if search_config is not None:
+                from .components.search_field import build_search_field
+                search_nodes = build_search_field(context, search_config)
+                search_roles = {node.role for node in search_nodes}
+                duplicates = search_roles & set(item.elements)
+                if duplicates:
+                    raise ValueError("search_field role conflicts with scene elements: "
+                                     + ", ".join(sorted(duplicates)))
+                item.nodes.extend(search_nodes)
+                item.elements.update({node.role: node for node in search_nodes})
+                item.meta["search_field"] = {
+                    "query": str(search_config.get("query", "")),
+                    "typed": bool(search_config.get("query", "")),
+                }
             transition = scene.get("transition_in")
-            if isinstance(transition, dict):
-                transition = transition.get("type", "cut")
-            if not transition:
-                cycle = STYLE_SYSTEMS[self.style].transitions
-                transition = cycle[(index + 1) % len(cycle)] if index else "dip"
-                previous = built[-1].meta.get("transition_in") if built else None
-                if transition == previous:
-                    transition = cycle[(index + 2) % len(cycle)]
-            item.meta["transition_in"] = transition
-            item.meta["transition_duration"] = float(
-                scene.get("transition_seconds", .30))
+            transition_type = (transition.get("type", "cut")
+                               if isinstance(transition, dict) else transition)
+            # The reference clip uses crisp scene cuts and smooth, staged
+            # entrances within each shot. Effects are opt-in per scene.
+            item.meta["transition_in"] = (
+                transition if transition_type not in (None, "cut") else None)
+            item.meta["transition_duration"] = (
+                float(scene.get("transition_seconds", .30))
+                if transition_type not in (None, "cut") else 0.0)
             built.append(item)
         return built
 

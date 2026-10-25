@@ -326,53 +326,89 @@ def line(image: Image.Image, points, color, width: float = 2,
 def text_block(image: Image.Image, block: TextBlock, origin: tuple[float, float],
                fonts: FontBook, *, tracking_offset: float = 0.0,
                color=None, opacity: float = 1.0, scale: float = 1.0,
-               skip_effects: bool = False) -> None:
+               skip_effects: bool = False,
+               character_progress: float | None = None) -> None:
     draw = ImageDraw.Draw(image, "RGBA")
     ox, oy = origin[0] * scale, origin[1] * scale
-    progress = 0
-    for line in block.lines:
-        for word in line.words:
+    tracking_progress = 0
+    character_index = 0
+    limit = (None if character_progress is None else
+             max(0, int(character_progress + 1e-6)))
+    for line_index, line in enumerate(block.lines):
+        for word_index, word in enumerate(line.words):
+            word_start = character_index
+            word_end = word_start + len(word.text)
             if skip_effects and word.effect:
-                progress += max(1, len(word.text))
+                tracking_progress += max(1, len(word.text))
+                character_index = word_end
+                if word_index + 1 < len(line.words):
+                    character_index += 1
                 continue
             ink = color or word.color
             alpha = int(round(255 * opacity * block.style.opacity))
-            if alpha <= 0:
-                continue
-            size = max(6, round((word.size or block.style.size) * scale))
-            weight = word.weight or block.style.weight
-            font = fonts.get(size, weight)
-            offset = tracking_offset * progress * scale
-            draw.text((ox + word.x * scale + offset,
-                       oy + line.baseline * scale), word.text,
-                      font=font, fill=(*ink, alpha), anchor="ls")
-            progress += max(1, len(word.text))
+            visible_chars = len(word.text)
+            if limit is not None:
+                visible_chars = max(0, min(visible_chars, limit - word_start))
+            if visible_chars and alpha > 0:
+                size = max(6, round((word.size or block.style.size) * scale))
+                weight = word.weight or block.style.weight
+                font = fonts.get(size, weight)
+                offset = tracking_offset * tracking_progress * scale
+                draw.text((ox + word.x * scale + offset,
+                           oy + line.baseline * scale),
+                          word.text[:visible_chars], font=font,
+                          fill=(*ink, alpha), anchor="ls")
+            tracking_progress += max(1, len(word.text))
+            character_index = word_end
+            if word_index + 1 < len(line.words):
+                character_index += 1
+        if line_index + 1 < len(block.lines):
+            character_index += 1
     return
 
 
 def text_block_mask(image: Image.Image, block: TextBlock,
                     origin: tuple[float, float], fonts: FontBook, *,
                     effect: str = "negative", tracking_offset: float = 0.0,
-                    opacity: float = 1.0, scale: float = 1.0) -> None:
+                    opacity: float = 1.0, scale: float = 1.0,
+                    character_progress: float | None = None) -> None:
     """Draw only words carrying ``effect`` into a transparent alpha mask."""
     if effect != "negative":
         raise ValueError(f"Unsupported text mask effect {effect!r}")
     draw = ImageDraw.Draw(image, "RGBA")
     ox, oy = origin[0] * scale, origin[1] * scale
-    progress = 0
-    for line in block.lines:
-        for word in line.words:
+    tracking_progress = 0
+    character_index = 0
+    limit = (None if character_progress is None else
+             max(0, int(character_progress + 1e-6)))
+    for line_index, line in enumerate(block.lines):
+        for word_index, word in enumerate(line.words):
+            word_start = character_index
+            word_end = word_start + len(word.text)
             if word.effect != effect:
-                progress += max(1, len(word.text))
+                tracking_progress += max(1, len(word.text))
+                character_index = word_end
+                if word_index + 1 < len(line.words):
+                    character_index += 1
                 continue
-            alpha = int(round(255 * opacity * block.style.opacity))
-            size = max(6, round((word.size or block.style.size) * scale))
-            font = fonts.get(size, word.weight or block.style.weight)
-            offset = tracking_offset * progress * scale
-            draw.text((ox + word.x * scale + offset,
-                       oy + line.baseline * scale), word.text,
-                      font=font, fill=(255, 255, 255, alpha), anchor="ls")
-            progress += max(1, len(word.text))
+            visible_chars = len(word.text)
+            if limit is not None:
+                visible_chars = max(0, min(visible_chars, limit - word_start))
+            if visible_chars:
+                alpha = int(round(255 * opacity * block.style.opacity))
+                size = max(6, round((word.size or block.style.size) * scale))
+                font = fonts.get(size, word.weight or block.style.weight)
+                offset = tracking_offset * tracking_progress * scale
+                draw.text((ox + word.x * scale + offset,
+                           oy + line.baseline * scale),
+                          word.text[:visible_chars], font=font,
+                          fill=(255, 255, 255, alpha), anchor="ls")
+            tracking_progress += max(1, len(word.text))
+            character_index = word_end
+            if word_index + 1 < len(line.words):
+                character_index += 1
+        if line_index + 1 < len(block.lines):
+            character_index += 1
 
 
 def number(image: Image.Image, value: float, rect: tuple[float, float, float, float],

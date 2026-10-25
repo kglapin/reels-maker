@@ -117,6 +117,38 @@ mixed to stereo AAC and peak-limited. The studio integration test uses
 generated tones only; it does not verify a brand music licence or creative
 mix quality.
 
+## Search and prompt field
+
+Any Studio scene may add a measured search or prompt capsule with
+`search_field`. The capsule settles first, its magnifier enters next, then the
+query types in at a steady character rhythm. The caret follows measured glyph
+widths and blinks during the remaining hold. Leave scene boundaries as hard
+cuts by default; smoothness comes from the staged motion inside each scene.
+Use an explicit `transition_in` only when the story needs an overlay wipe or
+dip, and set its easing to `smooth`, `out-cubic`, `in-out-cubic` or `linear`.
+Studio transition-out effects use a smoothstep travel curve.
+
+```json
+{
+  "type": "statement",
+  "headline": "Znajdź właściwe rozwiązanie",
+  "search_field": {
+    "query": "magazyny energii dla firm",
+    "placeholder": "Szukaj",
+    "typing_start": 0.38,
+    "typing_duration": 0.9,
+    "width_ratio": 0.84,
+    "center_y": 0.78
+  }
+}
+```
+
+`width_ratio` is relative to the scene's safe width; `center_x` and `center_y`
+are normalized canvas positions. `height_units` uses the shared design scale.
+The field rejects placements that leave the safe area and queries that do not
+fit on one line. Colors can be set with `fill`, `text_color`, `muted_color`,
+`border_color` and `cursor_color`.
+
 ## Profiles and commands
 
 | Profile | Dimensions | FPS | Intended use |

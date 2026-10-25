@@ -62,7 +62,7 @@
     "MD-205": "Partial: solve_scene_layout builds real candidate compositions, hard-rejects any candidate with timeline-sampled geometry/collision/ink violations and ranks valid layouts deterministically.",
     "MD-206": "Partial: Studio QA sample_geometry_frames combines evenly-spaced frames with all authored track keyframe times, analytical easing extrema (easing_extrema_progress for back/spring) and quarter/mid/three-quarter interval probes, plus audit_camera_canvas.",
     "MD-301": "Partial: 8 distinct renderer-backed text mechanism families (TEXT_MECHANISM_FAMILIES + select_text_mechanism) with distinct axes and semantic purposes.",
-    "MD-302": "Partial: Grouped timing/easing curves and semantic text hierarchy with quiet-hold enforcement in plan_choreography.",
+    "MD-302": "Partial: Grouped timing/easing curves and semantic text hierarchy with quiet-hold enforcement in plan_choreography. Reusable Studio search_field adds measured typewriter reveal, staged magnifier entrance and live caret; unspecified scene transitions cut by default, while explicit transition_in overlays support smooth monotonic easing. Visual review of the new interaction remains pending.",
     "MD-303": "Partial: Native arc-length polyline/line trim (trim_polyline via progress/trim_start) and icon state transitions (animate_icon_state).",
     "MD-304": "Partial: Native video_node, load_video_frame, crop_region, apply_shape_mask and dynamic per-frame Camera Canvas video decoding verified with time-varying MP4.",
     "MD-305": "Partial: verify_shared_element_continuity checks cross-scene object identity and anchor displacement.",

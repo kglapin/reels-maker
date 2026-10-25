@@ -16,6 +16,7 @@ from ..components.base import BuiltScene
 from ..core.scene_graph import Node
 from ..design.color import mix, parse_hex
 from ..design.tokens import DesignTokens
+from ..motionkit.easing import ease
 from ..textkit.typesetter import FontBook
 from . import canvas as cv
 
@@ -223,12 +224,14 @@ class SceneRenderer:
         cv.text_block(
             normal, block, origin, self.fonts,
             tracking_offset=float(node.props.get("tracking_offset", 0)),
-            color=node.props.get("color"), scale=self.ss, skip_effects=True)
+            color=node.props.get("color"), scale=self.ss, skip_effects=True,
+            character_progress=node.props.get("character_progress"))
         mask_layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
         cv.text_block_mask(
             mask_layer, block, origin, self.fonts,
             tracking_offset=float(node.props.get("tracking_offset", 0)),
-            scale=self.ss)
+            scale=self.ss,
+            character_progress=node.props.get("character_progress"))
         progress = float((node.reveal or {}).get("progress", 1.0))
         normal = self._apply_node_state(normal, node, ox, oy, progress)
         mask_layer = self._apply_node_state(mask_layer, node, ox, oy, progress)
@@ -356,7 +359,8 @@ class SceneRenderer:
                           self.fonts,
                           tracking_offset=float(props.get("tracking_offset", 0)),
                           color=props.get("color"), opacity=opacity, scale=s,
-                          skip_effects=True)
+                          skip_effects=True,
+                          character_progress=props.get("character_progress"))
             return
         if kind == "number":
             cv.number(target, float(props.get("value", 0)),
@@ -479,13 +483,20 @@ class SceneRenderer:
                     duration: float) -> None:
         if duration <= 0:
             return
-        progress = min(1.0, max(0.0, time / duration))
+        raw_progress = min(1.0, max(0.0, time / duration))
+        easing = "smooth"
+        if isinstance(name, dict):
+            easing = str(name.get("easing", "smooth"))
+            name = name.get("type", "cut")
+        if easing not in ("linear", "smooth", "out-cubic", "in-out-cubic"):
+            raise ValueError(
+                "Transition easing must be linear, smooth, out-cubic or "
+                "in-out-cubic")
+        progress = ease(easing, raw_progress)
         if progress >= 1:
             return
         accent = self.tokens.palette.accent
         blend = .94
-        if isinstance(name, dict):
-            name = name.get("type", "cut")
         if name == "cut" or not name:
             return
         if name == "dip":

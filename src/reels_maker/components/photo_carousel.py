@@ -36,6 +36,10 @@ def _state(index: int, page: int, count: int, spacing: float,
     base_scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
+    if direction == "vertical":
+        # Keep distant cards out of the copy area; they fade in naturally as
+        # they approach the upper/lower preview positions.
+        opacity = {0: 1.0, 1: .84}.get(distance, 0.0)
     jitter_rotation = _card_jitter(index, count)
     rotation = (
         math.copysign(min(13.0, max(8.0, abs(jitter_rotation))),

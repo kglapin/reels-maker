@@ -21,7 +21,7 @@ CAMERA_TEXT_MOTIONS = ("fade", "slide-up", "mask-rise", "scale-focus")
 STUDIO_COMPOSITIONS = (
     "statement", "stack-center", "split-editorial", "full-bleed-type",
     "spotlight", "quote", "amount", "stats", "bars", "line-chart",
-    "checklist", "cta", "photo-carousel",
+    "checklist", "cta", "photo-carousel", "photo-marquee",
 )
 PHOTO_CAROUSEL_DIRECTIONS = ("horizontal", "vertical")
 CAMERA_SHOT_LIMIT = 6

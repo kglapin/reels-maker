@@ -200,3 +200,19 @@ Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (
 ```
 
 Cards use a controlled depth hierarchy, rounded photo crops, clear separation, and a light blur on off-center photos that resolves smoothly as a card approaches center. Each advance follows a finely sampled cosine easing curve, while the interval between advances varies smoothly by up to 22% over the orbit. Wraparound cards fade while they pass behind the stack so the loop remains legible. The carousel is a photographic montage, not a claim that adjacent images share a literal location or time; source licensing and attribution still need review.
+
+
+## Three-row photo marquee
+
+Use the Studio `photo-marquee` composition for a full-frame, image-led loop. It repeats 3–12 local stills across three equal-size rows; the top and bottom rows deliberately crop at the canvas edges. The rows travel left, right, and left, with a small sinusoidal speed variation that returns to the same phase and velocity at the loop seam. Cards have rounded photo crops, no visible frame, and a broad, soft shadow. Shadow offsets are recomputed from the card position relative to a point light at the center of the canvas, so the cast direction changes smoothly as each image crosses the frame. This composition omits copy so the three moving bands remain the focus.
+
+```json
+{
+  "id": "photo-marquee",
+  "headline": "Photo marquee",
+  "layout": "photo-marquee",
+  "assets": ["images/one.jpg", "images/two.jpg", "images/three.jpg"]
+}
+```
+
+Assets stay inside the project or brand asset scope. Review the rendered MP4 for the crop, shadow direction, and loop seam before publication.

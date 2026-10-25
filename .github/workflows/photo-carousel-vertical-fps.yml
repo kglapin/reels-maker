@@ -85,7 +85,7 @@ jobs:
           source["name"] = f"photo-carousel-vertical-{fps}fps"
           source["video"]["fps"] = fps
           Path(os.environ["SPEC_PATH"]).write_text(
-              json.dumps(source, ensure_ascii=False, indent=2) + "\\n",
+              json.dumps(source, ensure_ascii=False, indent=2) + "\n",
               encoding="utf-8")
           PY
             reels-maker creative-validate "${spec}" --json > "${name}-validation.json"

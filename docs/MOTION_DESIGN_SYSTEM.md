@@ -183,7 +183,7 @@ human gates.
 
 ## Animated photo-card carousel
 
-Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo fills a larger center card; neighboring cards sit with wide gaps at roughly 42% scale, with a light image blur and lower opacity. Card frames keep an even photo inset on all four sides; that inset and the border stroke become thinner as a card recedes. Captions are omitted. Each photo also gets a small, reproducible offset and tilt that eases away as it reaches center.
+Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo fills a larger center card; neighboring cards sit with wide gaps at roughly 42% scale, with a light image blur and lower opacity. Card frames keep an even photo inset on all four sides; that inset and the border stroke become thinner as a card recedes. Captions are omitted. Each off-center photo gets a visible but restrained, reproducible offset and tilt that eases away as it reaches center.
 
 Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (or `composition`) to `photo-carousel`; `carousel.advance_seconds` controls how often the next photo takes the center, from 0.8 to 4 seconds. Assets stay inside the project or brand asset scope.
 

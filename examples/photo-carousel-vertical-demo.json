@@ -8,7 +8,7 @@
     "height": 960,
     "fps": 24
   },
-  "creative_direction": "Pokaz pionowej karuzeli zdjęć. Karty przesuwają się płynnie od dołu ku górze; środkowa jest największa i najostrzejsza, a karty nad i pod nią są mniejsze, lekko rozmyte i przechylone.",
+  "creative_direction": "Pełnoekranowa pionowa karuzela zdjęć bez nagłówków i podpisów. Karty płyną od dołu ku górze; środkowa jest największa i najostrzejsza, a karty powyżej i poniżej są mniejsze, lekko rozmyte.",
   "palette": {
     "background": "#F2F5F1",
     "surface": "#FFFFFF",
@@ -20,9 +20,7 @@
     {
       "id": "photo-carousel",
       "intent": "portfolio",
-      "kicker": "PIONOWA KARUZELA",
-      "headline": "Zdjęcia w ruchu",
-      "subtitle": "Kolejne kadry płyną od dołu do środka i dalej w górę.",
+      "headline": "Pionowa karuzela zdjęć",
       "duration": 8.5,
       "layout": "photo-carousel",
       "assets": [

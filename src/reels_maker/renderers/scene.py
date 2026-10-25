@@ -191,10 +191,7 @@ class SceneRenderer:
                 if base is None:
                     return layer
                 anchor = ((base[0] + base[2]) / 2, (base[1] + base[3]) / 2)
-            # Keep translation outside the scale/rotation transform so
-            # sampled bounds and rendered pixels use the same affine order.
-            ax = (anchor[0] + node.dx + ox) * self.ss
-            ay = (anchor[1] + node.dy + oy) * self.ss
+            ax, ay = anchor[0] * self.ss + ox * self.ss, anchor[1] * self.ss + oy * self.ss
             angle = math.radians(node.rotation)
             cosine, sine = math.cos(angle), math.sin(angle)
             scale = node.scale if node.scale > 0 else 1e-6

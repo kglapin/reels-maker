@@ -214,10 +214,6 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         image = str(item["image"])
         label = str(item.get("label") or "")
         card = _card(ctx, image, label, index, center, theme)
-        card.track("dx", _motion_track(index, count, spacing, ctx.duration,
-                                       advance, "dx"))
-        card.track("dy", _motion_track(index, count, spacing, ctx.duration,
-                                       advance, "dy"))
         card.track("scale", _motion_track(index, count, spacing, ctx.duration,
                                           advance, "scale"))
         card.track("opacity", _motion_track(index, count, spacing, ctx.duration,
@@ -227,9 +223,19 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                                        advance, "blur"))
         card.track("rotation", _motion_track(index, count, spacing, ctx.duration,
                                               advance, "rotation"))
-        card.track("prop.z_index", _motion_track(
+
+        # Keep the slot translation outside the card's scale/rotation layer.
+        # Shrinking a card then cannot pull its center back toward the middle.
+        slot = Node(kind="group", role=f"carousel-slot-{index}",
+                    children=[card], qa_class="decor",
+                    meta={"carousel_item": index})
+        slot.track("dx", _motion_track(index, count, spacing, ctx.duration,
+                                       advance, "dx"))
+        slot.track("dy", _motion_track(index, count, spacing, ctx.duration,
+                                       advance, "dy"))
+        slot.track("prop.z_index", _motion_track(
             index, count, spacing, ctx.duration, advance, "z_index"))
-        nodes.append(card)
+        nodes.append(slot)
 
     indicator_gap = dot_r * 3.2
     start_x = ctx.width / 2 - indicator_gap * (count - 1) / 2

@@ -2901,6 +2901,11 @@ BUILDERS = {
 
 def build_scene(ctx: SceneContext, scene: dict) -> BuiltScene:
     kind = _scene_type(scene)
+    if kind == "photo_carousel":
+        from .photo_carousel import build_photo_carousel
+        built = build_photo_carousel(ctx, scene)
+        built.meta.setdefault("type", kind)
+        return built
     if kind in BUILDERS:
         built = BUILDERS[kind](ctx, scene)
         built.meta.setdefault("type", kind)

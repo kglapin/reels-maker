@@ -1,0 +1,135 @@
+name: Photo carousel preview
+on:
+  push:
+    branches: [feat/photo-carousel-cards-20261025]
+    paths:
+      - 'src/reels_maker/components/**'
+      - 'src/reels_maker/creative/**'
+      - 'src/reels_maker/studio.py'
+      - 'src/reels_maker/renderers/scene.py'
+      - 'examples/photo-carousel-demo.json'
+      - 'examples/generate_photo_carousel_demo_assets.py'
+      - '.github/workflows/photo-carousel-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: photo-carousel-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /examples/photo-carousel-demo.json
+            /examples/generate_photo_carousel_demo_assets.py
+            /brands/asta-energy/media/stock/agrivoltaics_heggelbach_01.webm
+            /brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm
+            /brands/asta-energy/media/asset-reviews.json
+            /brands/asta-energy/licensing/stock_credits.txt
+            /pyproject.toml
+            /.gitattributes
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install renderer
+        timeout-minutes: 5
+        run: python -m pip install --disable-pip-version-check --retries 2 --timeout 15 -e '.[icons]' static-ffmpeg==3.0
+      - name: Prepare portable FFmpeg
+        timeout-minutes: 4
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as f:
+              print(str(Path(ffmpeg).parent), file=f)
+          PY
+      - name: Verify catalog review state for demo footage
+        run: |
+          reels-maker catalog --brand asta-energy --json > photo-carousel-catalog.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          items = json.loads(Path("photo-carousel-catalog.json").read_text())["items"]
+          by_file = {item["file"]: item for item in items}
+          expected = (
+              "media/stock/agrivoltaics_heggelbach_01.webm",
+              "media/stock/agrivoltaics_heggelbach_05.webm",
+          )
+          for path in expected:
+              item = by_file[path]
+              assert item["available"], item
+              assert item["editorial_state"] == "clean_source", item
+              assert item["overlay_ready"] is True, item
+          print("Verified both demo clips are available, reviewed clean_source, and overlay_ready.")
+          PY
+      - name: Verify catalog review state for demo footage
+        run: |
+          reels-maker catalog --brand asta-energy --json > photo-carousel-catalog.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          items = json.loads(Path("photo-carousel-catalog.json").read_text())["items"]
+          by_file = {item["file"]: item for item in items}
+          expected = (
+              "media/stock/agrivoltaics_heggelbach_01.webm",
+              "media/stock/agrivoltaics_heggelbach_05.webm",
+          )
+          for path in expected:
+              item = by_file[path]
+              assert item["available"], item
+              assert item["editorial_state"] == "clean_source", item
+              assert item["overlay_ready"] is True, item
+          print("Verified both demo clips are available, reviewed clean_source, and overlay_ready.")
+          PY
+      - name: Extract temporary CC0 photo stills
+        run: python examples/generate_photo_carousel_demo_assets.py
+      - name: Audit Creative Spec against the reference library
+        run: python -m reels_maker.creative.reference_library --spec examples/photo-carousel-demo.json --audit
+      - name: Validate and compile Creative Spec
+        run: |
+          reels-maker creative-validate examples/photo-carousel-demo.json --json > photo-carousel-validation.json
+          reels-maker creative-compile examples/photo-carousel-demo.json --output examples/photo-carousel-demo.generated.studio.json --json > photo-carousel-compilation.json
+      - name: Render MP4 and storyboard
+        run: |
+          reels-maker creative-render examples/photo-carousel-demo.json --output photo-carousel-preview.mp4 --storyboard photo-carousel-storyboard.png --json > photo-carousel-render.json
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate,nb_frames -of json photo-carousel-preview.mp4 > photo-carousel-ffprobe.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("photo-carousel-render.json").read_text())
+          assert report["ok"] and report["render"]["ok"], report
+          assert report["qa"]["ok"] and report["qa"]["errors"] == 0, report
+          stream = json.loads(Path("photo-carousel-ffprobe.json").read_text())["streams"][0]
+          assert (stream["codec_name"], stream["width"], stream["height"]) == ("h264", 540, 960), stream
+          assert stream["r_frame_rate"] == "24/1", stream
+          assert int(stream["nb_frames"]) == int(report["render"]["frames"]) == 204, stream
+          credits = Path("examples/photo-carousel-preview-assets/CREDITS.txt")
+          assert credits.is_file(), "missing source/license credits"
+          print("PASS: photo carousel Creative Spec -> audited MP4:",
+                stream["nb_frames"], "frames")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: photo-carousel-test-preview
+          path: |
+            photo-carousel-preview.mp4
+            photo-carousel-storyboard.png
+            photo-carousel-render.json
+            photo-carousel-ffprobe.json
+            photo-carousel-validation.json
+            photo-carousel-compilation.json
+            photo-carousel-catalog.json
+            examples/photo-carousel-demo.generated.studio.json
+            examples/photo-carousel-preview-assets/CREDITS.txt
+          retention-days: 14

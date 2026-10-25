@@ -115,6 +115,48 @@ def validate_creative_spec(spec):
         allowed={"auto"}|set(CAMERA_LAYOUTS if mode=="camera_canvas" else STUDIO_COMPOSITIONS)
         if layout not in allowed:
             raise CreativeSpecError(p+".layout",f"unsupported {mode} layout {layout!r}")
+        selected_composition = shot.get("composition", layout)
+        if selected_composition == "photo-carousel":
+            if mode != "studio":
+                raise CreativeSpecError(p+".layout",
+                                        "photo-carousel is Studio-only")
+            if ("composition" in shot and
+                    shot.get("layout", "auto") not in ("auto", "photo-carousel")):
+                raise CreativeSpecError(p+".layout",
+                                        "photo-carousel cannot be combined with another layout")
+            if ("layout" in shot and shot.get("composition") not in
+                    (None, "photo-carousel")):
+                raise CreativeSpecError(p+".composition",
+                                        "photo-carousel cannot be combined with another composition")
+            if "asset" in shot:
+                raise CreativeSpecError(p+".asset",
+                                        "photo-carousel uses assets, not a single asset")
+            assets = shot.get("assets")
+            if not isinstance(assets, list) or not 3 <= len(assets) <= 12:
+                raise CreativeSpecError(p+".assets",
+                                        "photo-carousel requires 3..12 image paths")
+            for asset_index, asset in enumerate(assets):
+                _text(asset, f"{p}.assets[{asset_index}]", 500)
+                if "://" in asset:
+                    raise CreativeSpecError(
+                        f"{p}.assets[{asset_index}]",
+                        "use local image paths, not URLs")
+            carousel = _object(shot.get("carousel", {}), p+".carousel")
+            _keys(carousel, {"advance_seconds", "labels"}, p+".carousel")
+            if "advance_seconds" in carousel:
+                _number(carousel["advance_seconds"],
+                        p+".carousel.advance_seconds", .8, 4)
+            if "labels" in carousel:
+                labels = carousel["labels"]
+                if not isinstance(labels, list) or len(labels) != len(assets):
+                    raise CreativeSpecError(
+                        p+".carousel.labels",
+                        "provide one label per photo asset")
+                for label_index, label in enumerate(labels):
+                    _text(label, f"{p}.carousel.labels[{label_index}]", 80)
+        elif "assets" in shot or "carousel" in shot:
+            raise CreativeSpecError(p+".assets",
+                                    "assets and carousel require photo-carousel")
         if "composition" in shot:
             if mode=="camera_canvas":
                 raise CreativeSpecError(p+".composition","use layout for camera_canvas")

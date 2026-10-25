@@ -303,6 +303,26 @@ def _load_studio_data(path: Path, data: dict, *,
     # Resolve scene media; videos become a deterministic still + camera move.
     still_cache: dict[tuple, Path] = {}
     for index, scene in enumerate(scenes):
+        carousel = scene.get("carousel")
+        if carousel is not None:
+            if not isinstance(carousel, dict):
+                raise StudioError(f"scenes[{index}].carousel must be an object")
+            items = carousel.get("items")
+            if not isinstance(items, list):
+                raise StudioError(f"scenes[{index}].carousel.items must be an array")
+            resolved_items = []
+            for item_index, item in enumerate(items):
+                if not isinstance(item, dict) or not item.get("image"):
+                    raise StudioError(
+                        f"scenes[{index}].carousel.items[{item_index}] requires an image")
+                item = dict(item)
+                source = _resolve_asset(str(item["image"]), brand_root, root)
+                if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+                    raise StudioError(
+                        "photo-carousel currently supports PNG, JPEG or WebP stills only")
+                item["image"] = str(source)
+                resolved_items.append(item)
+            scene["carousel"] = {**carousel, "items": resolved_items}
         for media in scene.get("editorial_media") or []:
             if not isinstance(media, dict) or not media.get("asset"):
                 raise StudioError("editorial_media items require asset paths")

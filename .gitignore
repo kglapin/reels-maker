@@ -29,3 +29,7 @@ brands/*/imports/
 # QA probes written next to brand media belong in renders/, not here
 brands/*/qa-*.mp4
 brands/*/qa-*.png
+
+# Temporary assets generated only for the photo-carousel preview
+examples/photo-carousel-preview-assets/
+examples/photo-carousel-demo.generated.studio.json

@@ -50,23 +50,29 @@ def audit_creative_spec(spec,manifest=None,*,source_dir=".",root=None):
         if len(text)>55:
             issue("warning","long_headline",path+".headline",
                   "Headline may require uncomfortable font scaling or wrapping")
-        asset=scene.get("photo")
-        if asset:
+        assets=[]
+        if scene.get("photo"):
+            assets.append((path+".asset",scene["photo"]))
+        for asset_index,item in enumerate(
+                (scene.get("carousel") or {}).get("items") or []):
+            if isinstance(item,dict) and item.get("image"):
+                assets.append((f"{path}.assets[{asset_index}]",item["image"]))
+        for asset_path,asset in assets:
             file=Path(asset)
             if not file.is_file():
-                issue("error","missing_asset",path+".asset",f"File missing: {file}")
-            else:
-                try:
-                    with Image.open(file) as pic:
-                        pw,ph=pic.size
-                        if min(pw,ph)<min(w,h)*.45:
-                            issue("warning","low_resolution_asset",path+".asset",
-                                  "Source photo resolution may be insufficient for crop")
-                        if pw*ph>60_000_000:
-                            issue("warning","huge_asset",path+".asset",
-                                  "Large source should be preprocessed for efficient rendering")
-                except (OSError,ValueError) as exc:
-                    issue("error","invalid_asset",path+".asset",str(exc))
+                issue("error","missing_asset",asset_path,f"File missing: {file}")
+                continue
+            try:
+                with Image.open(file) as pic:
+                    pw,ph=pic.size
+                    if min(pw,ph)<min(w,h)*.45:
+                        issue("warning","low_resolution_asset",asset_path,
+                              "Source photo resolution may be insufficient for crop")
+                    if pw*ph>60_000_000:
+                        issue("warning","huge_asset",asset_path,
+                              "Large source should be preprocessed for efficient rendering")
+            except (OSError,ValueError) as exc:
+                issue("error","invalid_asset",asset_path,str(exc))
         used.append(motion.get("typography_motion",scene.get("typography_motion")))
         if len(used)>=3 and used[-1]==used[-2]==used[-3]:
             reason=shot.get("allow_repeat_reason")

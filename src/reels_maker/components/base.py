@@ -61,7 +61,12 @@ class BuiltScene:
         return self.context.fps
 
     def at(self, time: float) -> list[Node]:
-        return [node.sample(time) for node in self.nodes]
+        sampled = [node.sample(time) for node in self.nodes]
+        # Some compositions animate their stacking order (e.g. cards moving
+        # through a carousel). Python's stable sort preserves authored order
+        # for nodes without an explicit z_index.
+        return sorted(sampled,
+                      key=lambda node: float(node.props.get("z_index", 0.0)))
 
     def element(self, role: str) -> Node:
         if role not in self.elements:

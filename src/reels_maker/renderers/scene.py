@@ -376,7 +376,10 @@ class SceneRenderer:
         path = Path(props["path"])
         if not path.is_file():
             raise ValueError(f"Missing image asset: {path}")
-        source = cv.load_image(path)
+        cache_key = str(path.resolve())
+        if cache_key not in self._sources:
+            self._sources[cache_key] = cv.load_image(path)
+        source = self._sources[cache_key]
         x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
         w, h = props["w"] * s, props["h"] * s
         zoom = float(props.get("zoom", 1.0))

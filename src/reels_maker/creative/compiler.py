@@ -82,6 +82,22 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
                 scene["photo"]=_relative_asset(shot["asset"],source_dir,root,brand)
             else:
                 scene["photo"]=str(shot["asset"])
+        if "assets" in shot:
+            carousel_cfg = shot.get("carousel") or {}
+            labels = carousel_cfg.get("labels") or []
+            items = []
+            for asset_index, asset in enumerate(shot["assets"]):
+                image = (_relative_asset(asset,source_dir,root,brand)
+                         if check_assets else str(asset))
+                item = {"image": image}
+                if labels:
+                    item["label"] = labels[asset_index]
+                items.append(item)
+            scene["carousel"] = {
+                "items": items,
+                "advance_seconds": float(
+                    carousel_cfg.get("advance_seconds", 1.6)),
+            }
         if mode=="camera_canvas":
             camera=shot.get("camera",{})
             x,y,angle=camera_points[index]

@@ -22,7 +22,7 @@ def _slot(index: int, page: int, count: int) -> int:
 
 @lru_cache(maxsize=128)
 def _card_jitter(index: int, count: int) -> tuple[float, float, float, float]:
-    """Return stable, subtle per-card offsets for a natural layout."""
+    """Return stable, visible per-card offsets for a natural layout."""
     rng = random.Random(f"photo-carousel:{count}:{index}")
     horizontal = rng.uniform(-1.0, 1.0)
     vertical = rng.uniform(-1.0, 1.0)
@@ -32,10 +32,10 @@ def _card_jitter(index: int, count: int) -> tuple[float, float, float, float]:
         sign = -1.0 if value < 0 else 1.0
         return sign * (minimum + abs(value) * (maximum - minimum))
 
-    return (visible_offset(horizontal, 12.0, 20.0),
-            visible_offset(vertical, 12.0, 20.0),
-            visible_offset(angle, 5.0, 8.0),
-            rng.uniform(-.045, .045))
+    return (visible_offset(horizontal, 16.0, 26.0),
+            visible_offset(vertical, 14.0, 22.0),
+            visible_offset(angle, 6.0, 9.0),
+            rng.uniform(-.05, .05))
 
 
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
@@ -47,9 +47,9 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
     jitter_x, jitter_y, jitter_rotation, jitter_scale = _card_jitter(
         index, count)
     spread = 1.0 if distance else 0.0
-    angle = float(slot) * 1.4 + jitter_rotation
+    angle = float(slot) * 1.2 + jitter_rotation
     rotation = (
-        math.copysign(min(11.5, max(5.5, abs(angle))),
+        math.copysign(min(12.5, max(6.5, abs(angle))),
                       angle or jitter_rotation)
         if distance else 0.0)
     return {
@@ -222,7 +222,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                   card_w, card_h)
     side_scale = .44
     clear_gap = max(ctx.tokens.px(24), card_w * .12)
-    rotation_buffer = card_h * math.sin(math.radians(11.5)) * .5
+    rotation_buffer = card_h * math.sin(math.radians(12.5)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))
@@ -277,7 +277,13 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         anchor_x = center.x + center.w / 2
         anchor_y = center.y + center.h / 2
         card_pad = ctx.tokens.space("sm")
+        rotation_track = _motion_track(
+            index, count, spacing, ctx.duration, advance, "rotation")
         for part in card.children:
+            # Rotate the image and frame separately around one shared center
+            # so the visible tilt stays aligned through every renderer path.
+            part.anchor = (anchor_x, anchor_y)
+            part.track("rotation", rotation_track)
             if part.kind == "text":
                 part.track("scale", scale_track)
                 continue
@@ -305,8 +311,6 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         card.children[1].track(
             "prop.blur", _motion_track(index, count, spacing, ctx.duration,
                                        advance, "blur"))
-        card.track("rotation", _motion_track(index, count, spacing, ctx.duration,
-                                              advance, "rotation"))
 
         # Keep the slot translation outside the card's scale/rotation layer.
         # Shrinking a card then cannot pull its center back toward the middle.

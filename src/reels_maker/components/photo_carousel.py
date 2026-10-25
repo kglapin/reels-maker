@@ -32,10 +32,10 @@ def _card_jitter(index: int, count: int) -> tuple[float, float, float, float]:
         sign = -1.0 if value < 0 else 1.0
         return sign * (minimum + abs(value) * (maximum - minimum))
 
-    return (visible_offset(horizontal, 4.0, 8.0),
-            visible_offset(vertical, 6.0, 12.0),
-            visible_offset(angle, 1.6, 3.0),
-            rng.uniform(-.035, .035))
+    return (visible_offset(horizontal, 12.0, 20.0),
+            visible_offset(vertical, 12.0, 20.0),
+            visible_offset(angle, 5.0, 8.0),
+            rng.uniform(-.045, .045))
 
 
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
@@ -47,6 +47,11 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
     jitter_x, jitter_y, jitter_rotation, jitter_scale = _card_jitter(
         index, count)
     spread = 1.0 if distance else 0.0
+    angle = float(slot) * 1.4 + jitter_rotation
+    rotation = (
+        math.copysign(min(11.5, max(5.5, abs(angle))),
+                      angle or jitter_rotation)
+        if distance else 0.0)
     return {
         "slot": float(slot),
         "dx": float(slot) * spacing + jitter_x * spread,
@@ -54,12 +59,7 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
         "scale": base_scale * (1.0 + jitter_scale * spread),
         "opacity": opacity,
         "blur": blur,
-        "rotation": (
-            math.copysign(
-                max(2.5, abs(float(slot) * 2.2 + jitter_rotation)),
-                float(slot) * 2.2 + jitter_rotation
-                or jitter_rotation)
-            if distance else 0.0),
+        "rotation": rotation,
         "z_index": float(20 - distance),
     }
 
@@ -222,7 +222,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                   card_w, card_h)
     side_scale = .44
     clear_gap = max(ctx.tokens.px(24), card_w * .12)
-    rotation_buffer = card_h * math.sin(math.radians(5.8)) * .5
+    rotation_buffer = card_h * math.sin(math.radians(11.5)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))

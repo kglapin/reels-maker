@@ -20,7 +20,12 @@ _ROW_DIRECTIONS = (-1.0, 1.0, -1.0)
 _ROW_PHASES = (0.36, 0.15, 0.66)
 _SPEED_VARIATION = 0.12
 _TRACK_SAMPLES = 49
-_SHADOW_OPACITY = 0.82
+_DIFFUSE_BLUR = 0.17
+_DIFFUSE_OPACITY = 0.38
+_DIFFUSE_REACH = 0.095
+_CONTACT_BLUR = 0.028
+_CONTACT_OPACITY = 0.22
+_CONTACT_REACH = 0.024
 
 
 def _paced_phase(phase: float, phase_shift: float) -> float:
@@ -94,8 +99,10 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
     cycle_width = stride * count
     copies = 2
     radius = ctx.tokens.radius("md")
-    shadow_blur = card_w * 0.19
-    shadow_reach = card_w * 0.15
+    diffuse_blur = card_w * _DIFFUSE_BLUR
+    diffuse_reach = card_w * _DIFFUSE_REACH
+    contact_blur = card_w * _CONTACT_BLUR
+    contact_reach = card_w * _CONTACT_REACH
     row_centers = (ctx.height * 0.13, ctx.height * 0.50,
                    ctx.height * 0.87)
     rows = []
@@ -114,26 +121,35 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             image_path = str(items[item_index]["image"])
             card_x = start_x + card_index * stride
             rect = Rect(card_x, row_y, card_w, card_h)
-            shadow = Node(
-                kind="round",
-                role=f"marquee-shadow-r{row_index}-c{card_index}",
-                props={
-                    "x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
-                    "r": radius, "fill": (18, 24, 28), "border": None,
-                    "border_width": 0, "shadow": True,
-                    "shadow_blur": shadow_blur,
-                    "shadow_opacity": _SHADOW_OPACITY,
-                    "shadow_dx": 0.0, "shadow_dy": 0.0,
-                },
-                qa_class="decor",
-                meta={"marquee_row": row_index, "light_source": "canvas_center"},
-            )
-            shadow_dx, shadow_dy = _shadow_tracks(
-                card_x, row_y, card_w, card_h, ctx.width, ctx.height,
-                ctx.duration, cycle_width, direction, phase_shift,
-                shadow_reach)
-            shadow.track("prop.shadow_dx", shadow_dx)
-            shadow.track("prop.shadow_dy", shadow_dy)
+            shadow_layers = []
+            for layer_name, blur, opacity, reach in (
+                ("diffuse", diffuse_blur, _DIFFUSE_OPACITY, diffuse_reach),
+                ("contact", contact_blur, _CONTACT_OPACITY, contact_reach),
+            ):
+                shadow = Node(
+                    kind="round",
+                    role=f"marquee-shadow-{layer_name}-r{row_index}-c{card_index}",
+                    props={
+                        "x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
+                        "r": radius, "fill": (18, 24, 28), "border": None,
+                        "border_width": 0, "shadow": True,
+                        "shadow_blur": blur,
+                        "shadow_opacity": opacity,
+                        "shadow_dx": 0.0, "shadow_dy": 0.0,
+                    },
+                    qa_class="decor",
+                    meta={
+                        "marquee_row": row_index,
+                        "light_source": "canvas_center",
+                        "shadow_layer": layer_name,
+                    },
+                )
+                shadow_dx, shadow_dy = _shadow_tracks(
+                    card_x, row_y, card_w, card_h, ctx.width, ctx.height,
+                    ctx.duration, cycle_width, direction, phase_shift, reach)
+                shadow.track("prop.shadow_dx", shadow_dx)
+                shadow.track("prop.shadow_dy", shadow_dy)
+                shadow_layers.append(shadow)
 
             photo = image_node(
                 f"marquee-photo-r{row_index}-c{card_index}",
@@ -143,7 +159,7 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             cards.append(Node(
                 kind="group",
                 role=f"marquee-card-r{row_index}-c{card_index}",
-                children=[shadow, photo], qa_class="decor",
+                children=[*shadow_layers, photo], qa_class="decor",
                 meta={"marquee_row": row_index, "image_index": item_index},
             ))
 
@@ -192,8 +208,10 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             "card_size": [round(card_w, 2), round(card_h, 2)],
             "edge_rows_cropped": True,
             "shadow_light_source": "canvas_center",
-            "shadow_blur": round(shadow_blur, 2),
-            "shadow_reach": round(shadow_reach, 2),
+            "shadow_model": "diffuse-plus-contact",
+            "shadow_blur": round(diffuse_blur, 2),
+            "shadow_reach": round(diffuse_reach, 2),
+            "contact_shadow_blur": round(contact_blur, 2),
             "motion_system": "looping-three-row-photo-marquee",
             "motion_profile": "sinusoidal-speed-modulation",
         },

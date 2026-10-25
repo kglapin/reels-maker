@@ -114,6 +114,22 @@ def _indicator_track(index: int, count: int, duration: float,
     return Track(keys)
 
 
+def _scaled_box_track(source: Track, prop: str, base: float,
+                       anchor: float | None = None) -> Track:
+    """Resize a card primitive around the shared card center."""
+    def resized(scale: float) -> float:
+        if prop in ("x", "y"):
+            if anchor is None:
+                raise ValueError("Position tracks require a card anchor")
+            return anchor + (base - anchor) * scale
+        return base * scale
+
+    return Track([
+        Keyframe(key.time, resized(float(key.value)), key.easing, key.params)
+        for key in source.keys
+    ])
+
+
 def _card(ctx: SceneContext, image: str, label: str, index: int,
           rect: Rect, theme: dict) -> Node:
     frame = panel_node(
@@ -214,12 +230,33 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         image = str(item["image"])
         label = str(item.get("label") or "")
         card = _card(ctx, image, label, index, center, theme)
-        # Scale the frame, photo and caption around their own centers. The
-        # outer slot remains a pure translation, so shrinking cannot compress
-        # the carousel spacing.
+        # Resize photo and frame geometry directly around the shared card
+        # center. The outer slot remains a pure translation, so scaling cannot
+        # compress the carousel spacing.
+        scale_track = _motion_track(
+            index, count, spacing, ctx.duration, advance, "scale")
+        anchor_x = center.x + center.w / 2
+        anchor_y = center.y + center.h / 2
         for part in card.children:
-            part.track("scale", _motion_track(
-                index, count, spacing, ctx.duration, advance, "scale"))
+            if part.kind == "text":
+                part.track("scale", scale_track)
+                continue
+            for prop in ("x", "y", "w", "h"):
+                if prop not in part.props:
+                    continue
+                anchor = anchor_x if prop == "x" else (
+                    anchor_y if prop == "y" else None)
+                part.track(
+                    f"prop.{prop}",
+                    _scaled_box_track(scale_track, prop,
+                                      float(part.props[prop]), anchor))
+            for prop in ("r", "radius"):
+                if prop in part.props:
+                    part.track(
+                        f"prop.{prop}",
+                        _scaled_box_track(
+                            scale_track, "size",
+                            float(part.props[prop])))
         card.track("opacity", _motion_track(index, count, spacing, ctx.duration,
                                             advance, "opacity"))
         card.children[1].track(

@@ -20,7 +20,7 @@ _ROW_DIRECTIONS = (-1.0, 1.0, -1.0)
 _ROW_PHASES = (0.36, 0.15, 0.66)
 _SPEED_VARIATION = 0.12
 _TRACK_SAMPLES = 49
-_SHADOW_OPACITY = 0.70
+_SHADOW_OPACITY = 0.82
 
 
 def _paced_phase(phase: float, phase_shift: float) -> float:
@@ -94,8 +94,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
     cycle_width = stride * count
     copies = 2
     radius = ctx.tokens.radius("md")
-    shadow_blur = card_w * 0.16
-    shadow_reach = card_w * 0.105
+    shadow_blur = card_w * 0.19
+    shadow_reach = card_w * 0.15
     row_centers = (ctx.height * 0.13, ctx.height * 0.50,
                    ctx.height * 0.87)
     rows = []
@@ -193,6 +193,7 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             "edge_rows_cropped": True,
             "shadow_light_source": "canvas_center",
             "shadow_blur": round(shadow_blur, 2),
+            "shadow_reach": round(shadow_reach, 2),
             "motion_system": "looping-three-row-photo-marquee",
             "motion_profile": "sinusoidal-speed-modulation",
         },

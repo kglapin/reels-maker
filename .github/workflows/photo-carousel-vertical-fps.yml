@@ -1,0 +1,140 @@
+name: Vertical carousel FPS variants
+on:
+  push:
+    branches:
+      - feat/photo-carousel-vertical-20261025
+    paths:
+      - '.github/workflows/photo-carousel-vertical-fps.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: photo-carousel-fps-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render-variants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /examples/photo-carousel-vertical-demo.json
+            /examples/generate_photo_carousel_demo_assets.py
+            /brands/asta-energy/media/stock/agrivoltaics_heggelbach_01.webm
+            /brands/asta-energy/media/stock/agrivoltaics_heggelbach_05.webm
+            /brands/asta-energy/media/asset-reviews.json
+            /brands/asta-energy/licensing/stock_credits.txt
+            /pyproject.toml
+            /.gitattributes
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install renderer
+        timeout-minutes: 5
+        run: python -m pip install --disable-pip-version-check --retries 2 --timeout 15 -e '.[icons]' static-ffmpeg==3.0
+      - name: Prepare portable FFmpeg
+        timeout-minutes: 4
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+          ffmpeg, ffprobe = get_or_fetch_platform_executables_else_raise()
+          with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as f:
+              print(str(Path(ffmpeg).parent), file=f)
+          PY
+      - name: Verify catalog review state for demo footage
+        run: |
+          reels-maker catalog --brand asta-energy --json > photo-carousel-vertical-catalog.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          items = json.loads(Path("photo-carousel-vertical-catalog.json").read_text())["items"]
+          by_file = {item["file"]: item for item in items}
+          expected = (
+              "media/stock/agrivoltaics_heggelbach_01.webm",
+              "media/stock/agrivoltaics_heggelbach_05.webm",
+          )
+          for path in expected:
+              item = by_file[path]
+              assert item["available"] and item["editorial_state"] == "clean_source", item
+              assert item["overlay_ready"] is True, item
+          PY
+      - name: Prepare image assets
+        run: python examples/generate_photo_carousel_demo_assets.py
+      - name: Audit Creative Spec against the reference library
+        run: python -m reels_maker.creative.reference_library --spec examples/photo-carousel-vertical-demo.json --audit
+      - name: Render 30, 60 and 120 fps versions
+        run: |
+          set -euo pipefail
+          for fps in 30 60 120; do
+            name="photo-carousel-vertical-${fps}fps"
+            spec="examples/${name}.generated.json"
+            FPS_VALUE="${fps}" SPEC_PATH="${spec}" python - <<'PY'
+          import copy
+          import json
+          import os
+          from pathlib import Path
+          source = json.loads(Path("examples/photo-carousel-vertical-demo.json").read_text())
+          fps = int(os.environ["FPS_VALUE"])
+          source["name"] = f"photo-carousel-vertical-{fps}fps"
+          source["video"]["fps"] = fps
+          Path(os.environ["SPEC_PATH"]).write_text(
+              json.dumps(source, ensure_ascii=False, indent=2) + "\\n",
+              encoding="utf-8")
+          PY
+            reels-maker creative-validate "${spec}" --json > "${name}-validation.json"
+            reels-maker creative-compile "${spec}" --output "examples/${name}.generated.studio.json" --json > "${name}-compilation.json"
+            reels-maker creative-render "${spec}" --output "${name}.mp4" --storyboard "${name}-storyboard.png" --json > "${name}-render.json"
+            ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate,nb_frames -of json "${name}.mp4" > "${name}-ffprobe.json"
+            FPS_VALUE="${fps}" OUTPUT_NAME="${name}" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          fps = int(os.environ["FPS_VALUE"])
+          name = os.environ["OUTPUT_NAME"]
+          report = json.loads(Path(f"{name}-render.json").read_text())
+          assert report["ok"] and report["render"]["ok"], report
+          assert report["qa"]["ok"] and report["qa"]["errors"] == 0, report
+          probe = json.loads(Path(f"{name}-ffprobe.json").read_text())
+          stream = probe["streams"][0]
+          assert (stream["codec_name"], stream["width"], stream["height"]) == ("h264", 540, 960), stream
+          assert stream["r_frame_rate"] == f"{fps}/1", stream
+          expected_frames = round(float(report["render"]["duration"]) * fps)
+          assert int(stream["nb_frames"]) == int(report["render"]["frames"]) == expected_frames, stream
+          print(f"PASS: {fps} fps, {expected_frames} frames, {report['render']['duration']} seconds")
+          PY
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: photo-carousel-vertical-fps-variants
+          path: |
+            photo-carousel-vertical-30fps.mp4
+            photo-carousel-vertical-30fps-storyboard.png
+            photo-carousel-vertical-30fps-render.json
+            photo-carousel-vertical-30fps-ffprobe.json
+            photo-carousel-vertical-30fps-validation.json
+            photo-carousel-vertical-30fps-compilation.json
+            photo-carousel-vertical-60fps.mp4
+            photo-carousel-vertical-60fps-storyboard.png
+            photo-carousel-vertical-60fps-render.json
+            photo-carousel-vertical-60fps-ffprobe.json
+            photo-carousel-vertical-60fps-validation.json
+            photo-carousel-vertical-60fps-compilation.json
+            photo-carousel-vertical-120fps.mp4
+            photo-carousel-vertical-120fps-storyboard.png
+            photo-carousel-vertical-120fps-render.json
+            photo-carousel-vertical-120fps-ffprobe.json
+            photo-carousel-vertical-120fps-validation.json
+            photo-carousel-vertical-120fps-compilation.json
+            photo-carousel-vertical-catalog.json
+            examples/photo-carousel-vertical-*.generated.json
+            examples/photo-carousel-vertical-*.generated.studio.json
+            examples/photo-carousel-preview-assets/CREDITS.txt
+          retention-days: 14

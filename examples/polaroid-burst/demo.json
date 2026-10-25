@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "polaroid-burst-demo",
+  "style": "editorial-premium",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "export": {
+    "codec": "libx264",
+    "crf": 19,
+    "preset": "medium"
+  },
+  "scenes": [
+    {
+      "id": "polaroid-burst-demo",
+      "type": "polaroid_burst",
+      "duration": 2.8,
+      "background": {
+        "kind": "solid",
+        "color": "#181525"
+      },
+      "polaroid_burst": {
+        "photos": [
+          "media/zaklad-produkcyjny-instalacja-pv-na-dachu-9x16.jpg",
+          "media/bess-podtrzymuje-prace-linii-produkcyjnej-9x16.jpg",
+          "media/inspekcja-pv-kamera-termowizyjna-modernizacja-9x16.jpg",
+          "media/ekipa-montujaca-panele-fotowoltaiczne-na-gruncie-9x16.jpg",
+          "media/carport-fotowoltaiczny-parking-i-ladowanie-ev-9x16.jpg",
+          "media/farma-fotowoltaiczna-z-lotu-ptaka-9x16.jpg"
+        ],
+        "shutter_sound": "shared://audio/polaroid-shutter-click.mp3",
+        "shutter_gain_db": 2,
+        "interval": 0.18,
+        "first_at": 0.06,
+        "entry_duration": 0.13,
+        "flash_duration": 0.12,
+        "rotation_degrees": 7,
+        "card_width_fraction": 0.58,
+        "spread_x": 0.13,
+        "spread_y": 0.15,
+        "seed": 7,
+        "hold_after": 0.35
+      }
+    }
+  ]
+}

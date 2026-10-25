@@ -67,6 +67,17 @@ class CapabilityRegistry:
                     "transitions": sorted(EFFECTS),
                     "editorial_rotations": list(ROTATION_FAMILIES),
                     "photo_required": False,
+                    "scene_effects": {
+                        "polaroid_burst": {
+                            "status": "implemented",
+                            "manifest_type": "polaroid_burst",
+                            "availability": "Studio project manifest; not part of Creative Spec yet",
+                            "required_fields": ["polaroid_burst.photos"],
+                            "photo_count": {"minimum": 2, "maximum": 16},
+                            "audio_sync": "optional shutter SFX on each frame-quantized flash",
+                            "rights_status": "not inferred; existing asset review gates apply",
+                        },
+                    },
                 },
                 "camera_canvas": {
                     "status": "implemented",

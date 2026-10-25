@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Mapping
 
 from .assets.manager import AssetManager
@@ -168,20 +168,35 @@ def _font_book(root: Path, brand_data: Mapping) -> FontBook:
 
 def _resolve_asset(path_value: str, brand_root: Path, root: Path) -> Path:
     value = str(path_value)
-    relative = Path(value)
-    if relative.is_absolute():
-        candidate = relative
-    elif value.startswith("brands/"):
-        candidate = root / relative
+    if value.startswith("shared://"):
+        shared_path = value.removeprefix("shared://")
+        relative = PurePosixPath(shared_path)
+        if (not shared_path or relative.is_absolute() or "\\" in shared_path
+                or any(part in ("", ".", "..") for part in relative.parts)):
+            raise StudioError(f"Invalid shared asset path: {value!r}")
+        shared_root = (root / "shared_media").resolve()
+        candidate = shared_root.joinpath(*relative.parts)
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(shared_root)
+        except ValueError as exc:
+            raise StudioError(
+                f"Shared asset path escapes shared_media: {value!r}") from exc
     else:
-        candidate = brand_root / relative
-    resolved = candidate.resolve()
-    allowed_root = brand_root.resolve()
-    try:
-        resolved.relative_to(allowed_root)
-    except ValueError as exc:
-        raise StudioError(
-            f"Asset path escapes brand scope: {value!r}") from exc
+        relative = Path(value)
+        if relative.is_absolute():
+            candidate = relative
+        elif value.startswith("brands/"):
+            candidate = root / relative
+        else:
+            candidate = brand_root / relative
+        resolved = candidate.resolve()
+        allowed_root = brand_root.resolve()
+        try:
+            resolved.relative_to(allowed_root)
+        except ValueError as exc:
+            raise StudioError(
+                f"Asset path escapes brand scope: {value!r}") from exc
     if not resolved.is_file():
         raise StudioError(f"Asset does not exist: {value} (looked in {resolved})")
     return resolved
@@ -345,6 +360,27 @@ def _load_studio_data(path: Path, data: dict, *,
             if not source.is_file():
                 raise StudioError(f"Missing editorial_media asset: {source}")
             media["asset"] = str(source)
+        burst = scene.get("polaroid_burst")
+        if burst is not None:
+            if not isinstance(burst, dict):
+                raise StudioError("polaroid_burst must be an object")
+            burst = dict(burst)
+            photos = burst.get("photos")
+            if not isinstance(photos, list):
+                raise StudioError("polaroid_burst.photos must be an array")
+            resolved_photos = []
+            for photo in photos:
+                source = _resolve_asset(str(photo), brand_root, root)
+                if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+                    raise StudioError(
+                        "polaroid_burst.photos currently supports still images only")
+                resolved_photos.append(str(source))
+            burst["photos"] = resolved_photos
+            sound = burst.get("shutter_sound")
+            if sound:
+                burst["shutter_sound"] = str(
+                    _resolve_asset(str(sound), brand_root, root))
+            scene["polaroid_burst"] = burst
         photo = scene.get("photo")
         background = scene.get("background")
         asset_value = photo or (background.get("asset")
@@ -383,6 +419,32 @@ def _load_studio_data(path: Path, data: dict, *,
                 background = dict(background)
                 background["asset"] = str(source)
                 scene["background"] = background
+    # A Polaroid scene uses the same frame-quantized shot plan for its image
+    # flashes and shutter clicks. Store generated clicks as ordinary SFX tracks
+    # so the existing mixer, AAC export and output probe handle them unchanged.
+    shutter_events = []
+    polaroid_timeline = build_timeline(scenes, fps)
+    for index, scene in enumerate(scenes):
+        burst = scene.get("polaroid_burst")
+        if not isinstance(burst, dict) or not burst.get("shutter_sound"):
+            continue
+        from .motionkit.polaroid_burst import plan_polaroid_burst
+        timing = polaroid_timeline.scenes[index]
+        shots = plan_polaroid_burst(
+            burst, width, height, timing.duration, fps,
+            fallback_seed=index * 17 + 3)
+        gain_db = burst.get("shutter_gain_db", -10)
+        if isinstance(gain_db, bool) or not isinstance(gain_db, (int, float)):
+            raise StudioError("polaroid_burst.shutter_gain_db must be numeric")
+        for shot in shots:
+            shutter_events.append({
+                "file": burst["shutter_sound"],
+                "time": round((timing.start_frame + shot.flash_frame) / fps, 6),
+                "gain_db": float(gain_db),
+                "source": "polaroid_burst",
+            })
+    if shutter_events:
+        audio.setdefault("sfx", []).extend(shutter_events)
     project = StudioProject(
         path=path, root=root, name=str(data.get("name") or path.stem),
         width=width, height=height, fps=fps, style=style, scenes=scenes,

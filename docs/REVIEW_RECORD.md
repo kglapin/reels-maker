@@ -1,5 +1,11 @@
 # Final Review Record (REL-09)
 
+> **Historical snapshot: 2026-10-23.** This records two flagship candidates
+> and their review state at that time; it is not a live release or CI status.
+> The repository is public (confirmed 2026-10-25). Treat tracked content as
+> public. Check the live GitHub Actions page and current roadmap for today's
+> status.
+
 ## Deliverables
 
 ### Flagship 1: Editorial Benefit Explainer
@@ -83,13 +89,12 @@
 - [ ] Legal/media licensing verified for all used assets
 - [ ] [Signature]: _____________________
 
-## CI Status
-- 125 tests passing (was 100 baseline + 25 new QA/perf tests)
-- All 9 project manifests parse successfully
-- Private repository visibility confirmed
-- [ ] OPS-11: GitHub Actions private runner blocked (account billing quota)
+## CI status captured for this historical review
+- The archived report recorded 125 tests passing and all 9 project manifests parsing at that time.
+- The previous OPS-11 note about a blocked private runner is historical; it does not describe current GitHub Actions status.
+- Repository visibility was PUBLIC in the live check on 2026-10-23 and remains public as of 2026-10-25.
 
-## Outstanding Items Requiring Owner Action
+## Outstanding Items Noted at the Time of This Review
 1. **OPS-11**: GitHub Actions private runner provisioning (account billing check)
 2. **REL-13**: Final CI green on reviewed commit (blocked by OPS-11)
 3. **REL-14**: Approval to mark PR #1 ready for merge

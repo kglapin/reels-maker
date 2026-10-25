@@ -1,9 +1,9 @@
 # Repository agent notes
 
 ## Before feature work or delivery
-- Use `docs/MASTER_PLAN.md` and `docs/ROADMAP_STATUS.json` from the current branch as the backlog source of truth. Older v1 gate summaries are historical; verify them against current files before repeating a claim.
-- Keep `main` untouched. Work from a feature branch based on latest `origin/main`; PR #1 is already merged, so do not assume its old draft still exists.
-- Verify GitHub visibility before handling client/confidential assets. The last verified state is **PUBLIC**; do not add or push client media, secrets or new licensed assets until the owner’s privacy gate is resolved.
+- Use `docs/MASTER_PLAN.md` and `docs/ROADMAP_STATUS.json` as planning sources, but verify per-item status against the current source and live CI before repeating it. Older v1 gate summaries are historical.
+- Start from the latest `main`, work on a feature branch, and use a PR for integration; do not push directly to `main`.
+- The repository is **PUBLIC** (verified 2026-10-25). Treat every commit as public. Never commit secrets or client-confidential material. Add media only when its source and rights permit storage in a public repository; keep confidential assets in approved private storage.
 - Human rights, claims, reference-viewing and phone/rubric approvals cannot be substituted by test results or agent-generated metadata.
 - Read the selected brand's `BRAND.md` and `brand.json` before authoring a project. For ASTA Energy, use `brands/asta-energy/`.
 

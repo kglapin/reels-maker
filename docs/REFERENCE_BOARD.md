@@ -13,8 +13,9 @@ Backlog item **MD-01**, priority P0. Companion documents:
 2. **No invented timecodes.** Each entry's annotation is at craft level. The timestamp
    column stays `—` until a human has watched the specific clip and logged a verified
    moment in `docs/REFERENCE_ANNOTATIONS.md`. Never guess a timecode from memory.
-3. **Local-only repository.** Public links are quoted for team study only. Do not commit
-   downloaded video/audio bytes of licensed campaigns into this repository.
+3. **Public repository.** External links are quoted for study only. Do not commit
+   downloaded video/audio bytes, confidential material, or assets without rights to
+   store them in a public repository.
 4. **Technical acceptance ≠ creative acceptance.** Extracted grammar informs our motion
    presets; the owner still reviews every ASTA render on a phone against
    `docs/REVIEW_RUBRIC.md`.

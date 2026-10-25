@@ -1,8 +1,12 @@
 # Reels Maker — single-PR refactor tracker
 
+> **Historical tracker.** The refactor branch and PR #1 were merged on
+> 2026-10-23. Do not use this page as the active backlog; see
+> [MASTER_PLAN.md](MASTER_PLAN.md) and [ROADMAP_STATUS.json](ROADMAP_STATUS.json).
+
 > **NADRZĘDNY PLAN:** [MASTER_PLAN.md](MASTER_PLAN.md) — priorytety P0/P1/P2, pełna lista zadań, zależności, kryteria odbioru, gate'y i kolejność prac. Automatyczny wskaźnik bieżącego etapu: [ROADMAP_STATUS.json](ROADMAP_STATUS.json). Ten plik jest historycznym trackerem wdrożeń, nie aktualną kolejką zadań.
 
-All refactor work belongs to `refactor/modular-render-engine` and draft PR #1;
+All work described here belonged to `refactor/modular-render-engine` and PR #1;
 `main` must remain unchanged until final approval.
 
 ## Architecture milestones

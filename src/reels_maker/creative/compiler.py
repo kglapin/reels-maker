@@ -97,6 +97,7 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
                 "items": items,
                 "advance_seconds": float(
                     carousel_cfg.get("advance_seconds", 1.6)),
+                "direction": carousel_cfg.get("direction", "horizontal"),
             }
         if mode=="camera_canvas":
             camera=shot.get("camera",{})

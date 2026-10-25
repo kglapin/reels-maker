@@ -21,7 +21,7 @@ def _slot(index: int, page: int, count: int) -> int:
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
     slot = _slot(index, page, count)
     distance = abs(slot)
-    scale = {0: 1.0, 1: .55, 2: .39, 3: .30}.get(distance, .24)
+    scale = {0: 1.0, 1: .45, 2: .32, 3: .23}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
     return {
@@ -164,8 +164,8 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     card_h = min(safe.h * .50, card_w * 1.38)
     center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                   card_w, card_h)
-    side_scale = .55
-    clear_gap = max(ctx.tokens.px(18), card_w * .08)
+    side_scale = .45
+    clear_gap = max(ctx.tokens.px(24), card_w * .10)
     rotation_buffer = card_h * math.sin(math.radians(2.2)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),

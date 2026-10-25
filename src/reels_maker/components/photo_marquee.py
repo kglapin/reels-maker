@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 
 from ..core.scene_graph import Node
+from ..design.color import mix
 from ..layout.engine import LayoutPlan, Rect
 from ..motionkit.keyframes import Keyframe, Track
 from .base import SceneContext, image_node
@@ -79,8 +80,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
 
     # A landscape card reads clearly across all three bands while the equal
     # geometry keeps the composition calm and lets the motion carry the scene.
-    card_w = min(ctx.width * 0.58, ctx.height * 0.40)
-    card_h = min(ctx.height * 0.29, card_w * 0.78)
+    card_w = min(ctx.width * 0.60, ctx.height * 0.43)
+    card_h = min(ctx.height * 0.34, card_w * 0.94)
     if card_w <= 0 or card_h <= 0:
         raise ValueError("photo-marquee requires a positive canvas")
     gap = max(12.0, card_w * 0.07)
@@ -89,8 +90,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
     cycle_width = stride * count
     copies = 2
     radius = ctx.tokens.radius("md")
-    row_centers = (ctx.height * 0.10, ctx.height * 0.50,
-                   ctx.height * 0.90)
+    row_centers = (ctx.height * 0.13, ctx.height * 0.50,
+                   ctx.height * 0.87)
     rows = []
 
     for row_index, (direction, phase_shift, center_y) in enumerate(
@@ -163,8 +164,18 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
         **scene, "kicker": None, "headline": None,
         "subtitle": None, "body": None,
     }
+    background = _background(ctx, scene, theme)
+    if background.get("kind") != "photo":
+        # A light surface keeps the borderless cards and their broad shadows
+        # legible even when the selected type system uses a dark canvas.
+        background = {
+            "kind": "gradient",
+            "from": theme["surface"],
+            "to": mix(theme["surface"], theme["muted"], .12),
+            "angle": 90,
+        }
     return _finish(
-        ctx, finish_scene, layout, _background(ctx, scene, theme), {},
+        ctx, finish_scene, layout, background, {},
         [], decor=rows,
         meta={
             "component": "photo-marquee",

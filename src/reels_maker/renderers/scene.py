@@ -387,6 +387,12 @@ class SceneRenderer:
                          cv.Camera(zoom=zoom,
                                    x=float(props.get("pan_x", 0)),
                                    y=float(props.get("pan_y", 0))))
+        blur = float(props.get("blur", 0.0))
+        if not math.isfinite(blur) or blur < 0:
+            raise ValueError("Image blur radius must be finite and non-negative")
+        if blur > 0:
+            image = image.filter(ImageFilter.GaussianBlur(
+                radius=min(blur, 24.0) * s))
         if props.get("radius"):
             mask = Image.new("L", image.size, 0)
             ImageDraw.Draw(mask).rounded_rectangle(

@@ -183,7 +183,7 @@ human gates.
 
 ## Animated photo-card carousel
 
-Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo grows into the center position; neighboring cards remain visible on both sides at smaller scale and lower depth. The same scene graph drives playback and geometry checks.
+Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo grows into the center position; neighboring cards sit with clear gaps at roughly 55% scale, with a light image blur and lower opacity. The same scene graph drives playback and geometry checks.
 
 Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (or `composition`) to `photo-carousel`; `carousel.advance_seconds` controls how often the next photo takes the center, from 0.8 to 4 seconds. Optional `carousel.labels` supplies one short caption per image. Assets stay inside the project or brand asset scope.
 
@@ -200,4 +200,4 @@ Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (
 }
 ```
 
-Cards use a controlled depth hierarchy, rounded photo crops and a subdued opacity for off-center images. Each advance follows a cosine shaped easing curve, while the interval between advances varies smoothly by up to 16% over the orbit. Wraparound cards fade while they pass behind the stack so the loop remains legible. The carousel is a photographic montage, not a claim that adjacent images share a literal location or time; source licensing and attribution still need review.
+Cards use a controlled depth hierarchy, rounded photo crops, clear separation, and a light blur on off-center photos that resolves smoothly as a card approaches center. Each advance follows a finely sampled cosine easing curve, while the interval between advances varies smoothly by up to 22% over the orbit. Wraparound cards fade while they pass behind the stack so the loop remains legible. The carousel is a photographic montage, not a claim that adjacent images share a literal location or time; source licensing and attribution still need review.

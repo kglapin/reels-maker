@@ -21,15 +21,17 @@ def _slot(index: int, page: int, count: int) -> int:
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
     slot = _slot(index, page, count)
     distance = abs(slot)
-    scale = {0: 1.0, 1: .80, 2: .61, 3: .48}.get(distance, .40)
-    opacity = {0: 1.0, 1: .94, 2: .70, 3: .42}.get(distance, .30)
+    scale = {0: 1.0, 1: .55, 2: .39, 3: .30}.get(distance, .24)
+    opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
+    blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
     return {
         "slot": float(slot),
         "dx": float(slot) * spacing,
-        "dy": float(distance * 9),
+        "dy": float(distance * 7),
         "scale": scale,
         "opacity": opacity,
-        "rotation": float(slot) * 3.2,
+        "blur": blur,
+        "rotation": float(slot) * 2.2,
         "z_index": float(20 - distance),
     }
 
@@ -45,8 +47,8 @@ def _transition_schedule(duration: float, advance: float, count: int):
     step = 0
     while time < duration:
         interval = advance * (
-            1.0 + .16 * math.sin(2 * math.pi * (step % count) / count))
-        move = min(.68, interval * .52)
+            1.0 + .22 * math.sin(2 * math.pi * (step % count) / count))
+        move = min(.72, interval * .56)
         schedule.append((step, time, min(duration, time + move)))
         time += interval
         step += 1
@@ -75,8 +77,8 @@ def _motion_track(index: int, count: int, spacing: float,
         before = _state(index, page, count, spacing)
         after = _state(index, (page + 1) % count, count, spacing)
         wraps = abs(int(before["slot"]) - int(after["slot"])) > 1
-        for sample in range(13):
-            phase = sample / 12
+        for sample in range(17):
+            phase = sample / 16
             eased = .5 - .5 * math.cos(math.pi * phase)
             value = before[prop] + (after[prop] - before[prop]) * eased
             if prop == "opacity" and wraps:
@@ -104,8 +106,8 @@ def _indicator_track(index: int, count: int, duration: float,
     add(0.0, value(0))
     for step, start, end in _transition_schedule(duration, advance, count):
         first, second = value(step), value(step + 1)
-        for sample in range(13):
-            phase = sample / 12
+        for sample in range(17):
+            phase = sample / 16
             eased = .5 - .5 * math.cos(math.pi * phase)
             add(start + (end - start) * phase,
                 first + (second - first) * eased)
@@ -158,11 +160,14 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     body_rect = Rect(safe.x + safe.w * .04, headline_rect.bottom + 2,
                      safe.w * .92, safe.h * .09)
     cards_y = safe.y + safe.h * .615
-    card_w = min(safe.w * .62, safe.h * .37)
+    card_w = min(safe.w * .46, safe.h * .37)
     card_h = min(safe.h * .50, card_w * 1.38)
     center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                   card_w, card_h)
-    spacing = card_w * .94
+    side_scale = .55
+    clear_gap = max(ctx.tokens.px(18), card_w * .08)
+    rotation_buffer = card_h * math.sin(math.radians(2.2)) * .5
+    spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))
     dot_r = max(3.5, ctx.tokens.px(6))
@@ -217,6 +222,9 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                                           advance, "scale"))
         card.track("opacity", _motion_track(index, count, spacing, ctx.duration,
                                             advance, "opacity"))
+        card.children[1].track(
+            "prop.blur", _motion_track(index, count, spacing, ctx.duration,
+                                       advance, "blur"))
         card.track("rotation", _motion_track(index, count, spacing, ctx.duration,
                                               advance, "rotation"))
         card.track("prop.z_index", _motion_track(

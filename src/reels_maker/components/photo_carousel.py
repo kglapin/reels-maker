@@ -21,21 +21,19 @@ def _slot(index: int, page: int, count: int) -> int:
 
 
 @lru_cache(maxsize=128)
-def _card_jitter(index: int, count: int) -> tuple[float, float, float, float]:
-    """Return stable, visible per-card offsets for a natural layout."""
+def _card_jitter(index: int, count: int) -> tuple[float, float, float]:
+    """Return stable horizontal offsets and left-right tilts."""
     rng = random.Random(f"photo-carousel:{count}:{index}")
     horizontal = rng.uniform(-1.0, 1.0)
-    vertical = rng.uniform(-1.0, 1.0)
     angle = rng.uniform(-1.0, 1.0)
 
     def visible_offset(value: float, minimum: float, maximum: float) -> float:
         sign = -1.0 if value < 0 else 1.0
         return sign * (minimum + abs(value) * (maximum - minimum))
 
-    return (visible_offset(horizontal, 16.0, 26.0),
-            visible_offset(vertical, 14.0, 22.0),
-            visible_offset(angle, 6.0, 9.0),
-            rng.uniform(-.05, .05))
+    return (visible_offset(horizontal, 24.0, 36.0),
+            visible_offset(angle, 7.5, 10.0),
+            rng.uniform(-.03, .03))
 
 
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
@@ -44,18 +42,16 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
     base_scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
-    jitter_x, jitter_y, jitter_rotation, jitter_scale = _card_jitter(
-        index, count)
+    jitter_x, jitter_rotation, jitter_scale = _card_jitter(index, count)
     spread = 1.0 if distance else 0.0
-    angle = float(slot) * 1.2 + jitter_rotation
     rotation = (
-        math.copysign(min(12.5, max(6.5, abs(angle))),
-                      angle or jitter_rotation)
+        math.copysign(min(13.0, max(8.0, abs(jitter_rotation))),
+                      jitter_rotation)
         if distance else 0.0)
     return {
         "slot": float(slot),
         "dx": float(slot) * spacing + jitter_x * spread,
-        "dy": float(distance * 7) + jitter_y * spread,
+        "dy": 0.0,
         "scale": base_scale * (1.0 + jitter_scale * spread),
         "opacity": opacity,
         "blur": blur,
@@ -222,7 +218,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                   card_w, card_h)
     side_scale = .44
     clear_gap = max(ctx.tokens.px(24), card_w * .12)
-    rotation_buffer = card_h * math.sin(math.radians(12.5)) * .5
+    rotation_buffer = card_h * math.sin(math.radians(13.0)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))

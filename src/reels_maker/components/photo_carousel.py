@@ -21,19 +21,13 @@ def _slot(index: int, page: int, count: int) -> int:
 
 
 @lru_cache(maxsize=128)
-def _card_jitter(index: int, count: int) -> tuple[float, float, float]:
-    """Return stable horizontal offsets and left-right tilts."""
+def _card_jitter(index: int, count: int) -> tuple[float, float]:
+    """Return a stable left-right tilt and slight scale variation."""
     rng = random.Random(f"photo-carousel:{count}:{index}")
-    horizontal = rng.uniform(-1.0, 1.0)
     angle = rng.uniform(-1.0, 1.0)
-
-    def visible_offset(value: float, minimum: float, maximum: float) -> float:
-        sign = -1.0 if value < 0 else 1.0
-        return sign * (minimum + abs(value) * (maximum - minimum))
-
-    return (visible_offset(horizontal, 24.0, 36.0),
-            visible_offset(angle, 7.5, 10.0),
-            rng.uniform(-.03, .03))
+    sign = -1.0 if angle < 0 else 1.0
+    rotation = sign * (8.0 + abs(angle) * 2.0)
+    return rotation, rng.uniform(-.03, .03)
 
 
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
@@ -42,7 +36,7 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
     base_scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
-    jitter_x, jitter_rotation, jitter_scale = _card_jitter(index, count)
+    jitter_rotation, jitter_scale = _card_jitter(index, count)
     spread = 1.0 if distance else 0.0
     rotation = (
         math.copysign(min(13.0, max(8.0, abs(jitter_rotation))),
@@ -50,7 +44,7 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
         if distance else 0.0)
     return {
         "slot": float(slot),
-        "dx": float(slot) * spacing + jitter_x * spread,
+        "dx": float(slot) * spacing,
         "dy": 0.0,
         "scale": base_scale * (1.0 + jitter_scale * spread),
         "opacity": opacity,

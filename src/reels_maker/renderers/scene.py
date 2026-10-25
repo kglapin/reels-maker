@@ -59,7 +59,25 @@ class SceneRenderer:
         if time < 0 or time > scene.duration + 1e-6:
             raise ValueError("Render time is outside the scene")
         image = self._background(scene, time)
-        for node in scene.at(time):
+        sampled_nodes = scene.at(time)
+        if (scene.meta.get("component") == "photo-carousel"
+                and not getattr(self, "_carousel_rotation_debugged", False)):
+            rotations = []
+            for slot_node in sampled_nodes:
+                if slot_node.role.startswith("carousel-slot-") and slot_node.children:
+                    card = slot_node.children[0]
+                    frame = card.children[0] if card.children else None
+                    photo = card.children[1] if len(card.children) > 1 else None
+                    rotations.append((
+                        slot_node.role, card.rotation,
+                        getattr(frame, "rotation", None),
+                        getattr(frame, "props", {}).get("_carousel_rotation"),
+                        getattr(photo, "rotation", None),
+                        getattr(photo, "props", {}).get("_carousel_rotation"),
+                    ))
+            print("CAROUSEL_ROTATION_DEBUG", rotations)
+            self._carousel_rotation_debugged = True
+        for node in sampled_nodes:
             self._draw_node(image, node)
         transition = scene.meta.get("transition_in")
         if transition and transition != "cut":

@@ -72,25 +72,6 @@ jobs:
               assert item["overlay_ready"] is True, item
           print("Verified both demo clips are available, reviewed clean_source, and overlay_ready.")
           PY
-      - name: Verify catalog review state for demo footage
-        run: |
-          reels-maker catalog --brand asta-energy --json > photo-carousel-catalog.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          items = json.loads(Path("photo-carousel-catalog.json").read_text())["items"]
-          by_file = {item["file"]: item for item in items}
-          expected = (
-              "media/stock/agrivoltaics_heggelbach_01.webm",
-              "media/stock/agrivoltaics_heggelbach_05.webm",
-          )
-          for path in expected:
-              item = by_file[path]
-              assert item["available"], item
-              assert item["editorial_state"] == "clean_source", item
-              assert item["overlay_ready"] is True, item
-          print("Verified both demo clips are available, reviewed clean_source, and overlay_ready.")
-          PY
       - name: Extract temporary CC0 photo stills
         run: python examples/generate_photo_carousel_demo_assets.py
       - name: Audit Creative Spec against the reference library

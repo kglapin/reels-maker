@@ -1,5 +1,10 @@
 # Storage and Media Strategy (OPS-02/06/07)
 
+> **Historical proposal and inventory.** This document is not a live storage
+> report. The GitHub repository is PUBLIC as of 2026-10-25; private-repository
+> statements below describe a target access model, not the current deployment.
+> Treat all tracked files as public and keep confidential client material out.
+
 ## Repository Structure
 
 ```
@@ -28,8 +33,8 @@ renders/                      # Generated outputs (gitignored, not committed)
 
 ## Git/Git LFS Strategy
 
-### Current State (2026-10-22)
-- Repository is **private**, visibility: PRIVATE
+### Historical snapshot (2026-10-22; verify before relying on these figures)
+- The earlier private-visibility claim is superseded: the live repository is PUBLIC (verified 2026-10-25).
 - Git tree is approximately 716 MB of file content (primarily media)
 - 10 external stock media entries tracked via Git LFS pointers
 - 8 historical MP4 reference exports kept for regression evidence
@@ -77,7 +82,10 @@ Each render includes provenance metadata in the output JSON:
 4. Render: `reels-maker render <manifest> --root . --json`
 5. Verify: `reels-maker validate <manifest> --root . --json`
 
-## Private Access Control
+## Target private-access controls (not current deployment)
+
+If the owner later chooses to store confidential assets in this repository, first
+make it private and verify access controls. The current repository is public.
 
 - Repository visibility: PRIVATE
 - Collaborators: Owner (kglapin) only

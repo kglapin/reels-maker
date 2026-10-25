@@ -1,12 +1,12 @@
 # Reels Maker — MASTER PLAN 2.0: jeden połączony plan 2026–2027
 
-> **JEDYNE NADRZĘDNE ŹRÓDŁO PRAWDY dla rozwoju motion design, autonomicznych mediów, SVG, audio, animowanych danych i social media.** Aktualizacja 24.10.2026 (`e8f9bd3a` na `main`). Źródła połączenia: `PRO_MOTION_ROADMAP_2026.md` + `DATA_MOTION_DESIGN.md`; poprzedni plan archiwizowany w `MASTER_PLAN_LEGACY_V1.md`.
+> **JEDYNE NADRZĘDNE ŹRÓDŁO PRAWDY dla rozwoju motion design, autonomicznych mediów, SVG, audio, animowanych danych i social media.** Snapshot updated 2026-10-25 against `main` at `76ecde11`; verify per-item status against source and live CI. Źródła połączenia: `PRO_MOTION_ROADMAP_2026.md` + `DATA_MOTION_DESIGN.md`; poprzedni plan archiwizowany w `MASTER_PLAN_LEGACY_V1.md`.
 
 ## A. Cel i stan projektu
 
 **Produkt docelowy:** z krótkiego briefu LLM generuje Creative Intent i pełny scenariusz, wyszukuje i licencjonuje legalne obrazy, klipy wideo, muzykę/SFX i grafiki SVG, samodzielnie wybiera profesjonalną animację, typografię i wykresy/tabele, łączy je wspólną kamerą, dodaje dźwięk, waliduje rzeczywiste klatki, koryguje problemy, a następnie oddaje gotowy MP4 i raport wykorzystanych zasobów oraz danych.
 
-**Dziś mamy fundament, nie gotowy produkt docelowy.** Kod posiada Creative Spec v1, Studio i Camera Canvas, podstawowe transformacje i animacje, `bars/donut/stats` i liczniki, moduły audio, wstępne wyszukiwanie zdjęć oraz Lucide/Heroicons. Brak w pełni autonomicznego, licencjonowanego brokera multimediów i muzyki, pełnego animowania tabel, wspólnego grafu dowolnych obiektów, zaawansowanego solvera i niezawodnego autokorygowania estetyki. Część dawnych statusów projektu opisuje historyczne prototypy i wymaga audytu. Repozytorium jest obecnie publiczne; przed importem poufnych materiałów klientów trzeba ustalić politykę bezpieczeństwa.
+**Dziś mamy fundament, nie gotowy produkt docelowy.** Kod posiada Creative Spec v1, Studio i Camera Canvas, podstawowe transformacje i animacje, `bars/donut/stats` i liczniki, animowany `photo-carousel` i trzyrzędowy `photo-marquee`, moduły audio, wstępne wyszukiwanie zdjęć oraz Lucide/Heroicons. Brak w pełni autonomicznego, licencjonowanego brokera multimediów i muzyki, pełnego animowania tabel, wspólnego grafu dowolnych obiektów, zaawansowanego solvera i niezawodnego autokorygowania estetyki. Część dawnych statusów projektu opisuje historyczne prototypy i wymaga audytu. Repozytorium jest publiczne; nie umieszczać w nim poufnych materiałów klientów ani sekretów. Jeśli projekt będzie musiał przechowywać takie dane, najpierw należy wybrać prywatny sposób przechowywania.
 
 **Ważne:** plan zawiera 64 zadania: 44 pakiety `MD-*` oraz 20 pakietów `DM-*`. Status `fragmenty istnieją` nie oznacza wdrożenia ani odbioru. Nie wolno twierdzić, że każda animacja zawsze będzie profesjonalna wyłącznie na podstawie testów automatycznych; jakość wymaga testów i oceny człowieka.
 
@@ -51,7 +51,7 @@ Export + storyboard + rights/source/data ledger + ocena mobilna
 |---|---|---|---|---|
 | **MD-001** | P0 | verified audit recorded; runtime paths remain multiple | Inventory existing modules, deprecated pipelines, media/license state and identify single runtime of record. Evidence: `docs/F0_AUDIT.md`; repository catalog reproduced at 30 items. | — |
 | **MD-002** | P0 | partial; human-observation blocker | Establish 24-shot golden reference suite with human annotations and failure examples; store in golden manifests. Existing 18-item board has blank timecodes; do not invent annotations. | MD-001 |
-| **MD-003** | P0 | implemented locally; tests pass | Build public CapabilityRegistry v2 incl icon packs, stock providers, audio, current feature flags and limitations. Evidence: `CapabilityRegistry` and CLI tests; provider search is not rights clearance. | MD-001 |
+| **MD-003** | P0 | implemented on main; tests pass | Build public CapabilityRegistry v2 incl icon packs, stock providers, audio, current feature flags and limitations. Evidence: `CapabilityRegistry` and CLI tests; provider search is not rights clearance. | MD-001 |
 | **MD-004** | P0 | implemented locally; actual assets remain blocked | Establish licensed asset ID/provenance schema and default rights policy; block unreviewed footage/music. Unknown rights remain `delivery_ready: false`; do not infer clearance. | MD-001 |
 | **MD-005** | P0 | reconciled locally; owner gates remain open | Reconcile docs/MASTER_PLAN.md, docs/ROADMAP_STATUS.json and source status, especially repository privacy and client licensing. Evidence: `docs/F0_AUDIT.md`; GitHub visibility is PUBLIC. | MD-001; MD-003 |
 

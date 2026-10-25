@@ -204,15 +204,30 @@ Cards use a controlled depth hierarchy, rounded photo crops, clear separation, a
 
 ## Three-row photo marquee
 
-Use the Studio `photo-marquee` composition for a full-frame, image-led loop. It repeats 3–12 local stills across three equal-size rows; the top and bottom rows deliberately crop at the canvas edges. The rows travel left, right, and left, with a small sinusoidal speed variation that returns to the same phase and velocity at the loop seam. Cards have rounded photo crops, no visible frame, and a broad, soft shadow. Shadow offsets are recomputed from the card position relative to a point light at the center of the canvas, so the cast direction changes smoothly as each image crosses the frame. This composition omits copy so the three moving bands remain the focus.
+Use the Studio `photo-marquee` composition for a full-frame, image-led loop.
+It repeats 3–12 local stills across three equal-size rows; the top and bottom
+rows are deliberately cropped at the canvas edges. The rows move left, right,
+and left with a small sinusoidal speed variation that preserves the loop seam.
+Cards have rounded photo crops and no visible frame. Copy is omitted so the
+three moving bands remain the focus.
 
-```json
-{
-  "id": "photo-marquee",
-  "headline": "Photo marquee",
-  "layout": "photo-marquee",
-  "assets": ["images/one.jpg", "images/two.jpg", "images/three.jpg"]
-}
+Each card uses two shadows for a more natural sense of depth: a broad diffuse
+shadow (38% opacity, blur set to 17% of card width) and a subtle contact shadow
+(22% opacity, blur set to 2.8% of card width). Both follow the card's position
+relative to the canvas-centre light, so the cast direction changes smoothly as
+the card moves. In the 540 px demo, a 324 px card uses a 55.08 px diffuse blur,
+a maximum 30.78 px offset, and a 9.07 px contact blur.
+
+The complete Creative Spec and working asset paths are in
+[examples/photo-marquee-demo.json](../examples/photo-marquee-demo.json); images are supplied through
+`shots[].assets`. Validate and render the demo with:
+
+```sh
+reels-maker creative-validate examples/photo-marquee-demo.json --json
+reels-maker creative-render examples/photo-marquee-demo.json \
+  --output renders/photo-marquee-preview.mp4 \
+  --storyboard renders/photo-marquee-storyboard.png --json
 ```
 
-Assets stay inside the project or brand asset scope. Review the rendered MP4 for the crop, shadow direction, and loop seam before publication.
+Review the rendered MP4 for the edge crop, changing shadow direction, and loop
+seam before publication.

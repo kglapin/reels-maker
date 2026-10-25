@@ -1,16 +1,15 @@
 {
-  "current_milestone": "All 64 Plan 2.0 packages (F0..F6) have code-level implementation & synthetic/unit test coverage on main; human viewing (MD-002), repository privacy (SEC-06) and phone/legal sign-off (REL-07/REL-09) remain owner gates",
-  "status": "All 64 packages in MASTER_PLAN.md (44 MD-* and 20 DM-*) now have implemented code paths and automated test coverage integrated on main. Automated tests verify technical contracts and geometry/data conservation; human creative approval, 24-shot reference viewing and private repository configuration remain open owner gates.",
-  "next_action": "Owner review gates: (1) set repository visibility to PRIVATE before importing confidential client assets (SEC-06), (2) record human-viewed timecodes for the 24-shot reference board (MD-002), (3) conduct human phone playback and legal sign-off on candidate flagship reels (REL-07/REL-09).",
+  "current_milestone": "Mixed implementation snapshot on main at 76ecde11 (2026-10-25); see per-item entries. Partial work, human review, rights and public-repository asset restrictions remain.",
+  "status": "The plan contains 64 work packages (44 MD-* and 20 DM-*). Status is mixed: some paths are implemented, some are partial, and human creative/legal acceptance remains open. Per-item entries take precedence; code paths and automated tests do not mean the full product or release is complete.",
+  "next_action": "Compare per-item status with current source and live Actions when updating this snapshot. The repository is PUBLIC: do not commit secrets or confidential client material. Complete required human review and rights checks before publishing media.",
   "current_branch": "main",
-  "latest_commit": "HEAD on main (see git log -1; all 64 Plan 2.0 code slices integrated)",
+  "latest_commit": "76ecde11b6ecca8bd2ebc19a3e85b0db2d9f5287 (snapshot checked 2026-10-25)",
   "branch_up_to_date": true,
-  "worktree_clean": true,
-  "draft_pr_state": "PR #1 is MERGED; all F0..F6 code slices are integrated on main",
-  "ci_status": "GitHub Actions 5/5 workflows green on main (Python tests, Creative Engine MP4, Advanced Transitions, Editorial Rotation, Camera Canvas).",
-  "local_tests": "418 tests run locally: 411 passed, 7 skipped (unavailable LFS/media fixtures and opt-in live-provider tests). Existing ResourceWarnings/Pillow deprecations are non-fatal.",
+  "draft_pr_state": "PR #1 and PR #11 are MERGED; code merge does not approve a v1.0 release or creative output.",
+  "ci_status": "On main commit 76ecde11, the latest four push-triggered workflows passed: Python tests, Creative Engine v1 integration, Advanced transitions demo, and Editorial rotation. Check live GitHub Actions for newer runs.",
+  "local_tests": "Historical local report: 418 tests run, 411 passed and 7 skipped. This is not a fresh test count for main commit 76ecde11.",
   "completed_gates": {
-    "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
+    "G0": "Repository is PUBLIC as of 2026-10-25. Treat all tracked content as public; do not store secrets or client-confidential assets here.",
     "G1": "Historical v1 record is superseded: current catalog has 15 finished_promo ASTA footage, 11 unreviewed, 2 unknown and 2 separate clean_source stock items. No ASTA footage is established as clean overlay source.",
     "G2": "CORE-01/02/03/04/05/06/07/08/09/10/11/12 - Engine, schema, tests, caching, atomic publish, path safety, Unicode NFC normalization",
     "G3": "ART-01/02/03/04/05/06/07/08/09/10/11 - Visual grammar, reference annotations, rejection examples, minimum read times",
@@ -19,18 +18,18 @@
     "G6": "AUD-01/02/03/05/07/08 - Independent voiceover/music, sidechain ducking, sync marks, AAC output validated via render",
     "G8": "QA-01/02/03/05/09/10/11 - All QA checks: storyboard, motion strip, golden frames, format matrix, edge cases, review rubric",
     "G9": "PERF-01/03/05/06 - Benchmarks (cold/warm), cache invalidation, failure recovery, atomic replacement",
-    "G10": "OPS-01/02/06/07/08/10 - Storage strategy, provenance, creator runbook and roadmap status; private-repository requirement is currently unmet"
+    "G10": "OPS-01/02/06/07/08/10 records exist; private storage is a target option, while current repository visibility is PUBLIC."
   },
   "pending_g11": [
     "REL-07: Phone-size playback verification (human review required)",
     "REL-09: Human approval of creative content, brand usage, media/audio licensing",
     "REL-10: Approve final flagship MP4 and archive reproducible bundle",
     "REL-13: Fresh CI green on the reviewed release commit",
-    "REL-14: Owner release approval (PR #1 is already merged)",
+    "REL-14: Owner release approval (PR #1 and PR #11 are merged; v1.0 approval remains separate)",
     "REL-15: Tag version 1.0 after merge authorization"
   ],
   "blockers": [
-    "SEC-06: Repository currently PUBLIC; owner must restore/confirm private visibility before confidential/client material or new licensed media is imported",
+    "SEC-06: Repository is PUBLIC; do not store confidential/client-only assets here. If such material must live in this repository, switch it to PRIVATE first.",
     "F0/MD-002: 24-shot reference golden suite requires actually viewed, human-annotated clips; existing 18-entry board has blank timecodes",
     "Rights: owner sign-off remains pending for stock/logo/audio/FX publication; ASTA footage is finished_promo, not clean-source",
     "REL-09: Human creative review and approval"
@@ -38,9 +37,9 @@
   "plan2_progress": {
     "MD-001": "Audited module paths, legacy/default and opt-in render paths, dependencies and current media catalog; see docs/F0_AUDIT.md",
     "MD-002": "Partial/blocking: existing 18-reference board lacks human-viewed timestamps; 24-shot human-annotated suite not accepted",
-    "MD-003": "Registry v2 implemented locally; focused tests pass",
+    "MD-003": "Implemented on main: CapabilityRegistry v2 and CLI capability tests are present. Provider search remains candidate discovery, not rights clearance.",
     "MD-004": "Asset rights/provenance schema and fail-closed delivery_ready implemented locally; current two CC0 records remain unknown and not delivery-ready",
-    "MD-005": "Plan/status/source reconciled locally; repository confirmed PUBLIC, owner privacy and media-signoff gates remain",
+    "MD-005": "Partial: this status snapshot and public-repository guidance are being reconciled; per-item plan status still needs source evidence before F0 can be called complete.",
     "MD-101": "Official Pexels/Pixabay image+video, Unsplash image, Wikimedia Commons image/video/audio and Openverse image/audio (anonymous + optional OAuth) adapters plus ranked JSON-first `media-search --kind image|video|audio` CLI. Live search verified against Pexels, Pixabay, Wikimedia Commons and Openverse; results remain candidates with rights_status=unknown.",
     "MD-102": "Per-provider credentials (including local .env loader), local quotas (including Openverse anonymous 20/min and 200/day tiers), bounded retries, default User-Agent header, private persistent metadata cache and exact-item rights decision hooks implemented.",
     "MD-103": "JSON-first image/video/audio `media-download` wired to exact-item and URL-bound human rights decisions; provider host/IP/redirect limits, streamed size/time-bounded quarantine, checksum/FFprobe verification (including audio codecs/duration/channels) and bounded optional video transcode. Unsplash remains hotlink-only.",
@@ -269,5 +268,6 @@
     "status_rule": "Existing code or green CI alone does not mean a package is creatively approved.",
     "priority": "P0 foundation before P1 advanced motion and P2 optional 3D"
   },
-  "historical_status_notice": "Existing completed_gates, pending_g11, flagship_deliveries, local_tests, experimental_motion_system and motion_design_backlog refer to earlier v1 history; they are not the canonical current MD/DM task board."
+  "historical_status_notice": "Existing completed_gates, pending_g11, flagship_deliveries, local_tests, experimental_motion_system and motion_design_backlog refer to earlier v1 history; they are not the canonical current MD/DM task board.",
+  "snapshot_date": "2026-10-25"
 }

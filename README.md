@@ -3,21 +3,27 @@
 One Python/FFmpeg engine for many brands and video formats, usable from ChatGPT, Pi, OpenCode
 and any noninteractive terminal harness.
 
-**Refactor status:** `refactor/modular-render-engine` was merged through
-[PR #1](https://github.com/kglapin/reels-maker/pull/1) on 2026-10-23. The
-separate native motion-studio prototype is on local branch
-`feat/motion-design-system-20261023`; it has not been pushed or merged.
+## Project status
+
+`main` contains the legacy renderer and the opt-in Native Studio / Creative Spec
+renderer. Studio examples include the animated `photo-carousel` and three-row
+`photo-marquee`; see
+[docs/MOTION_DESIGN_SYSTEM.md](docs/MOTION_DESIGN_SYSTEM.md).
+
+The GitHub repository is **public** (verified 2026-10-25). Treat every tracked
+file and commit as public. Do not commit secrets or client-confidential assets.
+Add media only when its source and repository-use rights are documented; keep
+confidential client material in approved private storage. Automated checks do
+not replace creative, licensing or publication review.
 
 ## Canonical 1.0 completion plan
 
-The comprehensive, ordered backlog is
-[docs/MASTER_PLAN.md](docs/MASTER_PLAN.md), with a compact machine-readable
-[milestone status](docs/ROADMAP_STATUS.json). Use these for all follow-up
-work. A passing CI run is not a creative sign-off. The repository **must
-remain private**. A live GitHub check on 2026-10-23 reported `PUBLIC`, contrary
-to this policy. An owner must restore/confirm privacy; do not push the local
-prototype or media while this blocker is open. PR #1 is already merged; that
-does not approve the prototype or release.
+The ordered backlog is
+[docs/MASTER_PLAN.md](docs/MASTER_PLAN.md), with per-item status in
+[docs/ROADMAP_STATUS.json](docs/ROADMAP_STATUS.json). These are maintained
+planning snapshots, not live CI or privacy feeds. Check the current source and
+GitHub Actions before reporting implementation or check status. A passing CI
+run is not a creative sign-off.
 
 
 ## Professional typography and readable social video

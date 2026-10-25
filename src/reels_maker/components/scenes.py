@@ -2867,6 +2867,38 @@ def build_product_3d(ctx: SceneContext, scene: dict) -> BuiltScene:
                    meta={"component": "product_3d", "mesh_path": spec_3d.get("mesh_path")})
 
 
+def build_polaroid_burst(ctx: SceneContext, scene: dict) -> BuiltScene:
+    config = scene.get("polaroid_burst")
+    if not isinstance(config, dict):
+        raise ValueError("polaroid_burst scene requires a polaroid_burst object")
+    from ..motionkit.polaroid_burst import polaroid_burst_nodes
+
+    background = scene.get("background")
+    if background is None:
+        background = {"kind": "solid",
+                      "color": config.get("background", "#181525")}
+    base_scene = {**scene, "background": background, "headline": "",
+                  "title": "", "body": "", "subtitle": "", "kicker": ""}
+    built = build_statement(ctx, base_scene)
+    built.layout.recipe = "polaroid-burst"
+    built.layout.regions.clear()
+    nodes, shots = polaroid_burst_nodes(
+        config, ctx.width, ctx.height, ctx.duration, ctx.fps,
+        fallback_seed=ctx.seed)
+    cues = ([{"role": "polaroid_shutter", "local_frame": shot.flash_frame}
+             for shot in shots] if config.get("shutter_sound") else [])
+    built.scene = scene
+    built.nodes = nodes
+    built.elements = {}
+    built.meta.update({
+        "component": "polaroid_burst",
+        "photo_count": len(shots),
+        "audio_cues": cues,
+        "flash_frames": [shot.flash_frame for shot in shots],
+    })
+    return built
+
+
 # ------------------------------------------------------------------- dispatcher
 BUILDERS = {
     "amount": build_amount,
@@ -2895,6 +2927,7 @@ BUILDERS = {
     "sankey": build_sankey,
     "chart_morph": build_chart_morph,
     "product_3d": build_product_3d,
+    "polaroid_burst": build_polaroid_burst,
     "table": build_table,
     "energy": build_energy,
     "quote": build_quote,

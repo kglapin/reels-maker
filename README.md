@@ -64,6 +64,7 @@ and ideas must not be copied or imported as media assets.
 - `brands/<slug>/brand.json` — machine-readable colors, logo and defaults.
 - `brands/<slug>/BRAND.md` — human/agent-facing visual editorial guidelines.
 - `brands/<slug>/media/` — footage, licensed stock, audio and effects.
+- `shared_media/` — app-level media addressed by any brand with `shared://` paths.
 - `brands/<slug>/projects/` — reusable JSON animation manifests.
 - `renders/<slug>/` — new MP4 output (ignored by Git).
 - `renders/<slug>/archive/` — preserved historical reference exports.

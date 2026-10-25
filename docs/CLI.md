@@ -452,3 +452,48 @@ visual entrances. It does not prove a WAV actually contains that word, or
 replace listening to the final file. When narration is retrimmed, re-check
 the original source timestamps. Never silently treat unmarked speech as
 aligned.
+
+## Fast Polaroid photo burst
+
+Use a `polaroid_burst` scene to pop in several photos as overlapping white
+Polaroid cards. Each card receives a deterministic random position and a
+gentle left or right tilt (about 4.5–7 degrees by default), enters with a quick
+scale settle, and remains in the stack. The cards use a diffuse, soft shadow.
+A brief white flash is placed above the cards at each shot. If
+`shutter_sound` is set, the Studio loader creates one SFX event on the same
+frame as each flash; the existing audio mixer adds it to the exported AAC.
+
+```json
+{
+  "type": "polaroid_burst",
+  "duration": 3.2,
+  "background": {"kind": "solid", "color": "#181525"},
+  "polaroid_burst": {
+    "photos": [
+      "media/photos/shot-01.jpg",
+      "media/photos/shot-02.jpg",
+      "media/photos/shot-03.jpg",
+      "media/photos/shot-04.jpg",
+      "media/photos/shot-05.jpg"
+    ],
+    "shutter_sound": "shared://audio/polaroid-shutter-click.mp3",
+    "shutter_gain_db": 2,
+    "interval": 0.20,
+    "first_at": 0.06,
+    "rotation_degrees": 7,
+    "card_width_fraction": 0.58,
+    "spread_x": 0.13,
+    "spread_y": 0.15,
+    "seed": 12
+  }
+}
+```
+
+Photo and sound paths resolve inside the selected brand folder by default.
+Use `shared://<path>` for an app-level asset under `shared_media/`; the shared
+resolver rejects paths that escape that directory. This lets any brand use the
+same maintained sound file without copying it into each brand folder. `photos`
+accepts 2–16 PNG, JPG or WebP stills. The interval, entrance and flash are
+quantized to the project FPS; the scene must leave enough time for the final
+flash and a short hold. Keep `seed` fixed to reproduce a reviewed arrangement.
+The effect uses the supplied SFX path and does not add music automatically.

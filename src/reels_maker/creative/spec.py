@@ -93,7 +93,7 @@ def validate_creative_spec(spec):
         _keys(shot,{"id","intent","headline","subtitle","duration","asset",
                     "composition","layout","camera","typography","transition",
                     "value","visual","icon_library","icon_assets","rotation",
-                    "chart","kicker","allow_repeat_reason"},p)
+                    "chart","kicker","allow_repeat_reason","assets","carousel"},p)
         sid=_text(shot.get("id"),p+".id",80)
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*",sid):
             raise CreativeSpecError(p+".id","invalid scene identifier")

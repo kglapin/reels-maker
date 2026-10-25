@@ -29,7 +29,8 @@ def _card_jitter(index: int, count: int) -> float:
     return sign * (8.0 + abs(angle) * 2.0)
 
 
-def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
+def _state(index: int, page: int, count: int, spacing: float,
+           direction: str = "horizontal") -> dict[str, float]:
     slot = _slot(index, page, count)
     distance = abs(slot)
     base_scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
@@ -42,8 +43,8 @@ def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float
         if distance else 0.0)
     return {
         "slot": float(slot),
-        "dx": float(slot) * spacing,
-        "dy": 0.0,
+        "dx": float(slot) * spacing if direction == "horizontal" else 0.0,
+        "dy": float(slot) * spacing if direction == "vertical" else 0.0,
         "scale": base_scale,
         "opacity": opacity,
         "blur": blur,
@@ -72,9 +73,10 @@ def _transition_schedule(duration: float, advance: float, count: int):
 
 
 def _motion_track(index: int, count: int, spacing: float,
-                  duration: float, advance: float, prop: str) -> Track:
+                  duration: float, advance: float, prop: str,
+                  direction: str = "horizontal") -> Track:
     def value_for_page(page: int) -> float:
-        return _state(index, page % count, count, spacing)[prop]
+        return _state(index, page % count, count, spacing, direction)[prop]
 
     # Only opacity needs a wrap fade; detect it for this card rather than for
     # the ring's first card (which may not be the card crossing the edge).
@@ -90,8 +92,8 @@ def _motion_track(index: int, count: int, spacing: float,
     add(0.0, value_for_page(0))
     for step, start, end in _transition_schedule(duration, advance, count):
         page = step % count
-        before = _state(index, page, count, spacing)
-        after = _state(index, (page + 1) % count, count, spacing)
+        before = _state(index, page, count, spacing, direction)
+        after = _state(index, (page + 1) % count, count, spacing, direction)
         wraps = abs(int(before["slot"]) - int(after["slot"])) > 1
         for sample in range(17):
             phase = sample / 16
@@ -193,6 +195,9 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
 
     config = scene.get("carousel") or {}
     items = config.get("items") or []
+    direction = str(config.get("direction", "horizontal")).strip().lower()
+    if direction not in ("horizontal", "vertical"):
+        raise ValueError("carousel.direction must be horizontal or vertical")
     if not isinstance(items, list) or not 3 <= len(items) <= 12:
         raise ValueError("photo-carousel requires between 3 and 12 image items")
     advance = float(config.get("advance_seconds", 1.6))
@@ -203,24 +208,41 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     headline_rect = Rect(safe.x, kicker_rect.bottom + 5, safe.w, safe.h * .155)
     body_rect = Rect(safe.x + safe.w * .04, headline_rect.bottom + 2,
                      safe.w * .92, safe.h * .09)
-    cards_y = safe.y + safe.h * .615
-    card_w = min(safe.w * .58, safe.h * .37)
-    card_h = min(safe.h * .50, card_w * 1.38)
-    center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
-                  card_w, card_h)
-    side_scale = .44
-    clear_gap = max(ctx.tokens.px(24), card_w * .12)
-    rotation_buffer = card_h * math.sin(math.radians(13.0)) * .5
-    spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
                 safe.bottom - ctx.tokens.space("sm"))
     dot_r = max(3.5, ctx.tokens.px(6))
+    if direction == "vertical":
+        side_scale = .42
+        card_h = min(safe.h * .39, safe.w * .52 * 1.38)
+        card_w = card_h / 1.38
+        cards_y = safe.y + safe.h * .725
+        center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
+                      card_w, card_h)
+        clear_gap = max(ctx.tokens.px(24), card_h * .08)
+        rotation_buffer = card_w * math.sin(math.radians(13.0)) * .5
+        spacing = card_h * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
+        visual_top = max(0.0, center.y - spacing
+                         - card_h * side_scale / 2 - rotation_buffer)
+        visual_bottom = min(float(ctx.height), center.bottom + spacing
+                            + card_h * side_scale / 2 + rotation_buffer)
+        visual_region = Rect(0, visual_top, float(ctx.width),
+                             max(0.0, visual_bottom - visual_top))
+    else:
+        cards_y = safe.y + safe.h * .615
+        card_w = min(safe.w * .58, safe.h * .37)
+        card_h = min(safe.h * .50, card_w * 1.38)
+        center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
+                      card_w, card_h)
+        side_scale = .44
+        clear_gap = max(ctx.tokens.px(24), card_w * .12)
+        rotation_buffer = card_h * math.sin(math.radians(13.0)) * .5
+        spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
+        visual_region = Rect(safe.x, center.y, safe.w, card_h)
 
     layout = LayoutPlan(
         "photo-carousel", Rect(0, 0, ctx.width, ctx.height), safe,
         {"kicker": kicker_rect, "headline": headline_rect,
-         "body": body_rect, "visual": Rect(
-             safe.x, center.y, safe.w, card_h)})
+         "body": body_rect, "visual": visual_region})
     theme = _theme(ctx, scene)
     elements = {}
     if scene.get("kicker"):
@@ -261,12 +283,12 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         # center. The outer slot remains a pure translation, so scaling cannot
         # compress the carousel spacing.
         scale_track = _motion_track(
-            index, count, spacing, ctx.duration, advance, "scale")
+            index, count, spacing, ctx.duration, advance, "scale", direction)
         anchor_x = center.x + center.w / 2
         anchor_y = center.y + center.h / 2
         card_pad = ctx.tokens.space("sm")
         rotation_track = _motion_track(
-            index, count, spacing, ctx.duration, advance, "rotation")
+            index, count, spacing, ctx.duration, advance, "rotation", direction)
         for part in card.children:
             # Rotate the image and frame separately around one shared center
             # so the visible tilt stays aligned through every renderer path.
@@ -296,10 +318,10 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                             scale_track, "size",
                             float(part.props[prop])))
         card.track("opacity", _motion_track(index, count, spacing, ctx.duration,
-                                            advance, "opacity"))
+                                            advance, "opacity", direction))
         card.children[1].track(
             "prop.blur", _motion_track(index, count, spacing, ctx.duration,
-                                       advance, "blur"))
+                                       advance, "blur", direction))
 
         # Keep the slot translation outside the card's scale/rotation layer.
         # Shrinking a card then cannot pull its center back toward the middle.
@@ -307,20 +329,27 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                     children=[card], qa_class="decor",
                     meta={"carousel_item": index})
         slot.track("dx", _motion_track(index, count, spacing, ctx.duration,
-                                       advance, "dx"))
+                                       advance, "dx", direction))
         slot.track("dy", _motion_track(index, count, spacing, ctx.duration,
-                                       advance, "dy"))
+                                       advance, "dy", direction))
         slot.track("prop.z_index", _motion_track(
-            index, count, spacing, ctx.duration, advance, "z_index"))
+            index, count, spacing, ctx.duration, advance, "z_index", direction))
         nodes.append(slot)
 
     indicator_gap = dot_r * 3.2
     start_x = ctx.width / 2 - indicator_gap * (count - 1) / 2
+    vertical_indicator_x = center.right + max(ctx.tokens.px(18), dot_r * 5.5)
     for index in range(count):
+        if direction == "vertical":
+            indicator_cx = vertical_indicator_x
+            indicator_cy = center.y + indicator_gap * (index - (count - 1) / 2)
+        else:
+            indicator_cx = start_x + indicator_gap * index
+            indicator_cy = dot_y
         dot = Node(
             kind="circle", role=f"carousel-indicator-{index}",
-            props={"cx": start_x + indicator_gap * index,
-                   "cy": dot_y, "r": dot_r,
+            props={"cx": indicator_cx,
+                   "cy": indicator_cy, "r": dot_r,
                    "fill": theme["accent"]},
             opacity=.28, qa_class="decor")
         dot.track("opacity", _indicator_track(
@@ -335,5 +364,6 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
          _spec("body", 4)],
         decor=nodes, meta={"component": "photo-carousel",
                            "carousel_items": count,
+                           "carousel_direction": direction,
                            "advance_seconds": advance,
-                           "motion_system": "looping-photo-card-ring"})
+                           "motion_system": f"looping-photo-card-ring-{direction}"})

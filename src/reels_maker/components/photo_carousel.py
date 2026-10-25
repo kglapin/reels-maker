@@ -351,7 +351,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     for index in range(count):
         if direction == "vertical":
             indicator_cx = vertical_indicator_x
-            indicator_cy = center.y + indicator_gap * (index - (count - 1) / 2)
+            indicator_cy = center.y + center.h / 2 + indicator_gap * (index - (count - 1) / 2)
         else:
             indicator_cx = start_x + indicator_gap * index
             indicator_cy = dot_y

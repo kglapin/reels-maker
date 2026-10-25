@@ -20,9 +20,7 @@ _ROW_DIRECTIONS = (-1.0, 1.0, -1.0)
 _ROW_PHASES = (0.36, 0.15, 0.66)
 _SPEED_VARIATION = 0.12
 _TRACK_SAMPLES = 49
-_SHADOW_BLUR = 34.0
-_SHADOW_OPACITY = 0.46
-_SHADOW_REACH = 18.0
+_SHADOW_OPACITY = 0.70
 
 
 def _paced_phase(phase: float, phase_shift: float) -> float:
@@ -46,22 +44,28 @@ def _row_motion_track(duration: float, cycle_width: float, direction: float,
 def _shadow_tracks(card_x: float, card_y: float, card_w: float,
                    card_h: float, canvas_w: float, canvas_h: float,
                    duration: float, cycle_width: float, direction: float,
-                   phase_shift: float) -> tuple[Track, Track]:
+                   phase_shift: float, shadow_reach: float) -> tuple[Track, Track]:
     dx_keys = []
     dy_keys = []
     light_x, light_y = canvas_w / 2.0, canvas_h / 2.0
+    half_width, half_height = max(1.0, light_x), max(1.0, light_y)
     for step in range(_TRACK_SAMPLES):
         phase = step / (_TRACK_SAMPLES - 1)
         time = duration * phase
         row_dx = direction * cycle_width * _paced_phase(phase, phase_shift)
         object_x = card_x + card_w / 2.0 + row_dx
         object_y = card_y + card_h / 2.0
-        vector_x, vector_y = object_x - light_x, object_y - light_y
-        length = max(1.0, math.hypot(vector_x, vector_y))
+        # Normalize each axis to the canvas so horizontal movement remains
+        # visible on a tall 9:16 frame, while the source stays at canvas center.
+        vector_x = (object_x - light_x) / half_width
+        vector_y = (object_y - light_y) / half_height
+        distance = math.hypot(vector_x, vector_y)
+        strength = min(1.0, distance / 0.20)
+        length = max(1e-9, distance)
         dx_keys.append(Keyframe(
-            time, _SHADOW_REACH * vector_x / length, "linear"))
+            time, shadow_reach * strength * vector_x / length, "linear"))
         dy_keys.append(Keyframe(
-            time, _SHADOW_REACH * vector_y / length, "linear"))
+            time, shadow_reach * strength * vector_y / length, "linear"))
     return Track(dx_keys), Track(dy_keys)
 
 
@@ -90,6 +94,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
     cycle_width = stride * count
     copies = 2
     radius = ctx.tokens.radius("md")
+    shadow_blur = card_w * 0.16
+    shadow_reach = card_w * 0.105
     row_centers = (ctx.height * 0.13, ctx.height * 0.50,
                    ctx.height * 0.87)
     rows = []
@@ -115,7 +121,7 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
                     "x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
                     "r": radius, "fill": (18, 24, 28), "border": None,
                     "border_width": 0, "shadow": True,
-                    "shadow_blur": _SHADOW_BLUR,
+                    "shadow_blur": shadow_blur,
                     "shadow_opacity": _SHADOW_OPACITY,
                     "shadow_dx": 0.0, "shadow_dy": 0.0,
                 },
@@ -124,7 +130,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             )
             shadow_dx, shadow_dy = _shadow_tracks(
                 card_x, row_y, card_w, card_h, ctx.width, ctx.height,
-                ctx.duration, cycle_width, direction, phase_shift)
+                ctx.duration, cycle_width, direction, phase_shift,
+                shadow_reach)
             shadow.track("prop.shadow_dx", shadow_dx)
             shadow.track("prop.shadow_dy", shadow_dy)
 
@@ -185,7 +192,7 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             "card_size": [round(card_w, 2), round(card_h, 2)],
             "edge_rows_cropped": True,
             "shadow_light_source": "canvas_center",
-            "shadow_blur": _SHADOW_BLUR,
+            "shadow_blur": round(shadow_blur, 2),
             "motion_system": "looping-three-row-photo-marquee",
             "motion_profile": "sinusoidal-speed-modulation",
         },

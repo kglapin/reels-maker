@@ -23,6 +23,7 @@ STUDIO_COMPOSITIONS = (
     "spotlight", "quote", "amount", "stats", "bars", "line-chart",
     "checklist", "cta", "photo-carousel",
 )
+PHOTO_CAROUSEL_DIRECTIONS = ("horizontal", "vertical")
 CAMERA_SHOT_LIMIT = 6
 
 
@@ -61,6 +62,7 @@ class CapabilityRegistry:
                 "studio": {
                     "status": "implemented",
                     "compositions": list(STUDIO_COMPOSITIONS),
+                    "photo_carousel_directions": list(PHOTO_CAROUSEL_DIRECTIONS),
                     "typography_presets": sorted(PRESETS),
                     "transitions": sorted(EFFECTS),
                     "editorial_rotations": list(ROTATION_FAMILIES),

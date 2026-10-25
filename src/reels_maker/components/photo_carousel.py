@@ -214,8 +214,12 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         image = str(item["image"])
         label = str(item.get("label") or "")
         card = _card(ctx, image, label, index, center, theme)
-        card.track("scale", _motion_track(index, count, spacing, ctx.duration,
-                                          advance, "scale"))
+        # Scale the frame, photo and caption around their own centers. The
+        # outer slot remains a pure translation, so shrinking cannot compress
+        # the carousel spacing.
+        for part in card.children:
+            part.track("scale", _motion_track(
+                index, count, spacing, ctx.duration, advance, "scale"))
         card.track("opacity", _motion_track(index, count, spacing, ctx.duration,
                                             advance, "opacity"))
         card.children[1].track(

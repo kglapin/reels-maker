@@ -21,7 +21,7 @@ def _slot(index: int, page: int, count: int) -> int:
 def _state(index: int, page: int, count: int, spacing: float) -> dict[str, float]:
     slot = _slot(index, page, count)
     distance = abs(slot)
-    scale = {0: 1.0, 1: .45, 2: .32, 3: .23}.get(distance, .16)
+    scale = {0: 1.0, 1: .42, 2: .30, 3: .22}.get(distance, .16)
     opacity = {0: 1.0, 1: .84, 2: .56, 3: .38}.get(distance, .28)
     blur = {0: 0.0, 1: 3.0, 2: 6.5, 3: 9.0}.get(distance, 12.0)
     return {
@@ -130,35 +130,22 @@ def _scaled_box_track(source: Track, prop: str, base: float,
     ])
 
 
-def _card(ctx: SceneContext, image: str, label: str, index: int,
-          rect: Rect, theme: dict) -> Node:
+def _card(ctx: SceneContext, image: str, index: int,
+          rect: Rect) -> Node:
     frame = panel_node(
         f"carousel-frame-{index}", rect, ctx.tokens,
         fill=(255, 255, 255), radius="lg", shadow=True,
         qa_class="decor")
     pad = ctx.tokens.space("sm")
-    label_h = min(ctx.tokens.space("xl"), rect.h * .16) if label else 0.0
     photo_rect = Rect(rect.x + pad, rect.y + pad,
-                      rect.w - 2 * pad,
-                      rect.h - 2 * pad - label_h)
+                      rect.w - 2 * pad, rect.h - 2 * pad)
     photo = image_node(f"carousel-photo-{index}", image, photo_rect,
                        qa_class="decor")
     photo.props["radius"] = ctx.tokens.radius("md")
-    children = [frame, photo]
-    if label:
-        style = resolve_text_style(ctx.tokens, "caption", theme["ink"],
-                                   align="center", max_lines=1)
-        caption_rect = Rect(rect.x + pad, rect.bottom - pad - label_h,
-                            rect.w - 2 * pad, label_h)
-        caption = text_node(
-            f"carousel-label-{index}", label, style, caption_rect,
-            ctx.fonts, align="center", valign="center", qa_class="decor")
-        if caption is not None:
-            children.append(caption)
     return Node(
-        kind="group", role=f"carousel-card-{index}", children=children,
-        qa_class="decor", meta={"carousel_item": index, "image": image})
-
+        kind="group", role=f"carousel-card-{index}",
+        children=[frame, photo], qa_class="decor",
+        meta={"carousel_item": index, "image": image})
 
 def build_photo_carousel(ctx: SceneContext, scene: dict):
     from .scenes import _background, _finish, _spec, _theme
@@ -176,12 +163,12 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     body_rect = Rect(safe.x + safe.w * .04, headline_rect.bottom + 2,
                      safe.w * .92, safe.h * .09)
     cards_y = safe.y + safe.h * .615
-    card_w = min(safe.w * .46, safe.h * .37)
+    card_w = min(safe.w * .58, safe.h * .37)
     card_h = min(safe.h * .50, card_w * 1.38)
     center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                   card_w, card_h)
-    side_scale = .45
-    clear_gap = max(ctx.tokens.px(24), card_w * .10)
+    side_scale = .42
+    clear_gap = max(ctx.tokens.px(24), card_w * .14)
     rotation_buffer = card_h * math.sin(math.radians(2.2)) * .5
     spacing = card_w * (1.0 + side_scale) / 2 + clear_gap + rotation_buffer
     dot_y = min(ctx.height - ctx.tokens.space("xl"),
@@ -228,8 +215,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         if not isinstance(item, dict) or not item.get("image"):
             raise ValueError(f"carousel.items[{index}] requires an image")
         image = str(item["image"])
-        label = str(item.get("label") or "")
-        card = _card(ctx, image, label, index, center, theme)
+        card = _card(ctx, image, index, center)
         # Resize photo and frame geometry directly around the shared card
         # center. The outer slot remains a pure translation, so scaling cannot
         # compress the carousel spacing.

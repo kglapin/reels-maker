@@ -33,14 +33,7 @@
         "photo-carousel-preview-assets/farm-05-4.jpg"
       ],
       "carousel": {
-        "advance_seconds": 1.6,
-        "labels": [
-          "Heggelbach · 01",
-          "Widok z góry",
-          "Heggelbach · 05",
-          "Między panelami",
-          "Układ instalacji"
-        ]
+        "advance_seconds": 1.6
       }
     }
   ]

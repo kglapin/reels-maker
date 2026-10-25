@@ -183,9 +183,9 @@ human gates.
 
 ## Animated photo-card carousel
 
-Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo grows into the center position; neighboring cards sit with clear gaps at roughly 45% scale, with a light image blur and lower opacity. The same scene graph drives playback and geometry checks.
+Use the Studio `photo-carousel` composition when the sequence should keep several photographs visible as one continuous, looping unit. The active photo fills a larger center card; neighboring cards sit with wide gaps at roughly 42% scale, with a light image blur and lower opacity. Card frames keep an even photo inset on all four sides, with no captions below the images. The same scene graph drives playback and geometry checks.
 
-Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (or `composition`) to `photo-carousel`; `carousel.advance_seconds` controls how often the next photo takes the center, from 0.8 to 4 seconds. Optional `carousel.labels` supplies one short caption per image. Assets stay inside the project or brand asset scope.
+Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (or `composition`) to `photo-carousel`; `carousel.advance_seconds` controls how often the next photo takes the center, from 0.8 to 4 seconds. Assets stay inside the project or brand asset scope.
 
 ```json
 {
@@ -194,8 +194,7 @@ Creative Spec v1 accepts 3–12 local stills in `shots[].assets`. Set `layout` (
   "layout": "photo-carousel",
   "assets": ["images/one.jpg", "images/two.jpg", "images/three.jpg"],
   "carousel": {
-    "advance_seconds": 1.6,
-    "labels": ["Studio", "Install", "Detail"]
+    "advance_seconds": 1.6
   }
 }
 ```

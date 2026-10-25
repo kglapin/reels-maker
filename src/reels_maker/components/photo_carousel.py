@@ -284,6 +284,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
             # so the visible tilt stays aligned through every renderer path.
             part.anchor = (anchor_x, anchor_y)
             part.track("rotation", rotation_track)
+            part.track("prop._carousel_rotation", rotation_track)
             if part.kind == "text":
                 part.track("scale", scale_track)
                 continue

@@ -155,19 +155,25 @@ class SceneRenderer:
                         for line in block.lines for word in line.words)):
             self._draw_negative_text(target, node, ox, oy)
             return
+        rotation = float(node.props.get(
+            "_carousel_rotation", node.rotation))
         needs_layer = (node.opacity < .999 or node.scale != 1
-                       or abs(node.rotation) > 1e-6
+                       or abs(rotation) > 1e-6
                        or node.clip is not None or progress < .999)
         if not needs_layer:
             self._content(target, node, ox, oy)
             return
         layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
         self._content(layer, node, ox, oy)
-        self._apply_node_state(layer, node, ox, oy, progress)
+        self._apply_node_state(layer, node, ox, oy, progress, rotation)
         target.alpha_composite(layer)
 
     def _apply_node_state(self, layer: Image.Image, node: Node,
-                          ox: float, oy: float, progress: float) -> Image.Image:
+                          ox: float, oy: float, progress: float,
+                          rotation: float | None = None) -> Image.Image:
+        rotation = float(node.props.get(
+            "_carousel_rotation",
+            node.rotation if rotation is None else rotation))
         if node.clip is not None or progress < .999:
             visible = node.world_bounds()
             if visible is None:
@@ -184,7 +190,7 @@ class SceneRenderer:
             alpha = node.opacity
             layer.putalpha(layer.getchannel("A").point(
                 lambda value: int(value * alpha)))
-        if node.scale != 1 or abs(node.rotation) > 1e-6:
+        if node.scale != 1 or abs(rotation) > 1e-6:
             anchor = node.anchor
             if anchor is None:
                 base = node.base_bounds()
@@ -192,7 +198,7 @@ class SceneRenderer:
                     return layer
                 anchor = ((base[0] + base[2]) / 2, (base[1] + base[3]) / 2)
             ax, ay = anchor[0] * self.ss + ox * self.ss, anchor[1] * self.ss + oy * self.ss
-            angle = math.radians(node.rotation)
+            angle = math.radians(rotation)
             cosine, sine = math.cos(angle), math.sin(angle)
             scale = node.scale if node.scale > 0 else 1e-6
             matrix = (cosine / scale, sine / scale,

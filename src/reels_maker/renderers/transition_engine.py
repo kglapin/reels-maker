@@ -41,8 +41,10 @@ def transition_frame(outgoing: Image.Image, incoming: Image.Image,
     if t >= 1:
         return incoming.copy()
     w, h = outgoing.size
-    a = outgoing.convert("RGB")
-    b = incoming.convert("RGB")
+    # Renderer frames are already RGB. Reuse those buffers directly;
+    # transition branches only read them and build a separate output image.
+    a = outgoing if outgoing.mode == "RGB" else outgoing.convert("RGB")
+    b = incoming if incoming.mode == "RGB" else incoming.convert("RGB")
     if effect == "diagonal-wipe":
         mask = Image.new("L", (w, h), 0)
         d = ImageDraw.Draw(mask)

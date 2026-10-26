@@ -1,7 +1,9 @@
 """Pixel-parity checks for exact render-path reuse optimizations."""
 from __future__ import annotations
 
+import io
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -13,6 +15,7 @@ from reels_maker.design.tokens import resolve_tokens
 from reels_maker.motionkit.keyframes import Keyframe, Track
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.textkit.typesetter import FontBook
+from reels_maker.renderers.studio import _encode_studio_scene
 
 
 class SettledFrameReuseTests(unittest.TestCase):
@@ -125,6 +128,55 @@ class FramedImageCacheTests(unittest.TestCase):
                 self.assertEqual(expected.tobytes(), actual.tobytes())
 
             self.assertEqual(len(cached._framed_images), 1)
+
+
+
+class TransitionFrameReuseTests(unittest.TestCase):
+    def test_incoming_scene_frame_is_rendered_once_per_transition(self):
+        class RecordingRenderer:
+            def __init__(self):
+                self.calls = []
+
+            def render(self, scene, time):
+                self.calls.append((scene, time))
+                return Image.new("RGB", (8, 8), scene.color)
+
+        class MemoryProcess:
+            def __init__(self):
+                self.stdin = io.BytesIO()
+                self.stderr = io.BytesIO()
+
+            def wait(self):
+                return 0
+
+            def poll(self):
+                return 0
+
+            def kill(self):
+                pass
+
+        renderer = RecordingRenderer()
+        process = MemoryProcess()
+        outgoing = SimpleNamespace(index=0, duration=1.0, color="#152023")
+        incoming = SimpleNamespace(index=1, duration=1.0, color="#47A013")
+        project = SimpleNamespace(width=8, height=8, fps=4)
+        timing = SimpleNamespace(frames=4)
+
+        with patch("reels_maker.renderers.studio.require_tool",
+                   return_value="ffmpeg"), \\
+             patch("reels_maker.renderers.studio.subprocess.Popen",
+                   return_value=process):
+            written = _encode_studio_scene(
+                project, renderer, outgoing, timing, Path("unused.mp4"),
+                codec="libx264", crf=17, preset="slow", frames_done=0,
+                total_frames=4, progress=None, next_scene=incoming,
+                transition={"duration": .5, "type": "radial-reveal"},
+            )
+
+        incoming_calls = [call for call in renderer.calls
+                          if call[0] is incoming]
+        self.assertEqual(written, timing.frames)
+        self.assertEqual(len(incoming_calls), 1)
 
 
 if __name__ == "__main__":

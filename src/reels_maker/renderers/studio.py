@@ -309,29 +309,36 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
     written = 0
     render_seconds = 0.0
     frame_write_seconds = 0.0
+    transition_renderer = None
+    transition_frames = 0
+    transition_start = timing.frames
+    incoming_frame = None
+    if next_scene is not None and transition is not None:
+        from .transition_engine import transition_frame
+        transition_renderer = transition_frame
+        transition_frames = max(2, round(
+            float(transition.get("duration", .55)) * project.fps))
+        transition_frames = min(transition_frames, timing.frames)
+        transition_start = timing.frames - transition_frames
     try:
         try:
             for frame in range(timing.frames):
                 time = frame / project.fps
                 render_started = perf_counter()
                 image = renderer.render(built, min(time, built.duration))
-                if next_scene is not None and transition is not None:
-                    from .transition_engine import transition_frame
-                    transition_frames = max(2, round(
-                        float(transition.get("duration", .55)) * project.fps))
-                    transition_frames = min(transition_frames, timing.frames)
-                    start = timing.frames - transition_frames
-                    if frame >= start:
-                        progress_t = (frame - start) / max(1, transition_frames - 1)
-                        # Render the adjacent scene at its actual opening time.
-                        # The final transition frame equals scene B at t=0.
-                        incoming = renderer.render(next_scene, 0.0)
-                        image = transition_frame(
-                            image, incoming, progress_t,
-                            effect=transition.get("type", "color-takeover"),
-                            color=transition.get("color", "#47A013"),
-                            anchor=tuple(transition.get("anchor", (.5, .5))),
-                            direction=transition.get("direction", "left"))
+                if transition_renderer is not None and frame >= transition_start:
+                    progress_t = ((frame - transition_start)
+                                  / max(1, transition_frames - 1))
+                    # Scene B starts from the same frame throughout this
+                    # transition, so render it once and reuse its pixels.
+                    if incoming_frame is None:
+                        incoming_frame = renderer.render(next_scene, 0.0)
+                    image = transition_renderer(
+                        image, incoming_frame, progress_t,
+                        effect=transition.get("type", "color-takeover"),
+                        color=transition.get("color", "#47A013"),
+                        anchor=tuple(transition.get("anchor", (.5, .5))),
+                        direction=transition.get("direction", "left"))
                 render_seconds += perf_counter() - render_started
                 write_started = perf_counter()
                 try:

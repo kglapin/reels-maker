@@ -59,6 +59,10 @@ def main(argv: list[str] | None = None) -> int:
     kinetic.add_argument("--engine", choices=("legacy", "studio"),
                          default="legacy",
                          help="Use shared studio primitives (legacy Cairo remains default)")
+    kinetic.add_argument("--cache-dir", type=Path,
+                         help="Studio segment cache location")
+    kinetic.add_argument("--no-cache", action="store_true",
+                         help="Disable the Studio segment cache")
     kinetic.add_argument("--json", action="store_true")
 
     studio = commands.add_parser(
@@ -71,7 +75,9 @@ def main(argv: list[str] | None = None) -> int:
                                               "high-motion"))
     studio.add_argument("--supersample", type=int, choices=(1, 2))
     studio.add_argument("--cache-dir", type=Path,
-                        help="Opt-in per-scene segment cache directory")
+                        help="Override the default Studio segment cache directory")
+    studio.add_argument("--no-cache", action="store_true",
+                        help="Disable the Studio segment cache")
     studio.add_argument("--json", action="store_true")
 
     studio_qa = commands.add_parser(
@@ -293,6 +299,10 @@ def main(argv: list[str] | None = None) -> int:
     creative_render.add_argument("--root", type=Path)
     creative_render.add_argument("--output", type=Path, required=True)
     creative_render.add_argument("--storyboard", type=Path)
+    creative_render.add_argument("--cache-dir", type=Path,
+                                 help="Override the default Studio segment cache directory")
+    creative_render.add_argument("--no-cache", action="store_true",
+                                 help="Disable the Studio segment cache")
     creative_render.add_argument("--strict", action="store_true")
     creative_render.add_argument("--json", action="store_true")
 
@@ -382,7 +392,10 @@ def main(argv: list[str] | None = None) -> int:
                             tmp.write(json.dumps(manifest,ensure_ascii=False)+"\n")
                         try:
                             project=load_studio(path,root=args.root)
-                            rendered=render_studio(project,output=args.output,supersample=1)
+                            rendered=render_studio(
+                                project, output=args.output, supersample=1,
+                                cache_dir=args.cache_dir,
+                                cache=not args.no_cache)
                             sheet=None
                             if args.storyboard:
                                 sheet=make_studio_storyboard(
@@ -452,9 +465,13 @@ def main(argv: list[str] | None = None) -> int:
                 project, default_output = load_kinetic_studio(
                     args.manifest, root=args.root)
                 result = render_studio(
-                    project, output=args.output or default_output)
+                    project, output=args.output or default_output,
+                    cache_dir=args.cache_dir, cache=not args.no_cache)
                 result["engine"] = "studio"
             else:
+                if args.cache_dir is not None or args.no_cache:
+                    raise ProjectError(
+                        "--cache-dir and --no-cache require --engine studio")
                 from .kinetic_video import render_kinetic
                 result = render_kinetic(args.manifest, root=args.root,
                                         output=args.output)
@@ -466,7 +483,8 @@ def main(argv: list[str] | None = None) -> int:
             result = render_studio(project, output=args.output,
                                    profile=args.profile,
                                    supersample=args.supersample,
-                                   cache_dir=args.cache_dir)
+                                   cache_dir=args.cache_dir,
+                                   cache=not args.no_cache)
         elif args.command == "studio-inspect":
             from .studio import load_studio
             project = load_studio(args.manifest, root=args.root,

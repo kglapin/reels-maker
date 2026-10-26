@@ -49,11 +49,13 @@ class StudioRenderCacheTests(unittest.TestCase):
             self.assertLess(warm["render_seconds"], cold["render_seconds"])
             self.assertTrue(warm["cache_signature"])
             self.assertLess(warm["render_seconds"], 2.0)
-            # Any scene edit or encoder change must invalidate that scene.
+            # A scene edit invalidates only that segment; the other two
+            # scenes remain reusable because they have no transition dependency.
             _manifest(manifest, headline="CACHE B")
             changed = render_studio(load_studio(manifest, root=base),
                                     cache_dir=cache, supersample=1)
-            self.assertEqual(changed["cache_misses"], 3)
+            self.assertEqual(changed["cache_misses"], 1)
+            self.assertEqual(changed["cache_hits"], 2)
             self.assertNotEqual(changed["cache_signature"][:6],
                                 cold["cache_signature"][:6])
 

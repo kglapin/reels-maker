@@ -1,9 +1,8 @@
 """Studio render pipeline: graph -> frames -> H.264 (+ optional audio mix).
 
-An optional per-scene segment cache (opt-in ``cache_dir``) stores encoded
-scene parts keyed by a signature of scene data, tokens and timings. A cache
-hit streams the stored segment unchanged; scenes are re-encoded only when the
-signature differs, mirroring the classic renderer's cache contract.
+A default-on per-scene segment cache stores encoded scene parts by render
+settings, scene data and referenced asset metadata. Unchanged scenes are reused
+without copying their cached files; edited scenes are re-encoded independently.
 """
 from __future__ import annotations
 
@@ -29,6 +28,7 @@ CRF = {"preview": 23, "review": 20, "final": 17, "high-motion": 17}
 PRESET = {"preview": "veryfast", "review": "medium", "final": "slow",
           "high-motion": "slow"}
 SLUG = re.compile(r"[^a-z0-9-]+")
+STUDIO_CACHE_SCHEMA = 2
 
 
 def _output_path(project: StudioProject, profile: str | None,
@@ -129,17 +129,25 @@ def _font_signature(fonts) -> dict:
     return signature
 
 
+def _hash_payload(payload: dict) -> str:
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                     default=str).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
 def _cache_signature(project: StudioProject, profile: str | None,
                      supersample: int, codec: str, crf: int, preset: str,
-                     timeline, built) -> str:
-    """Deterministic signature: payload, tokens, fonts and per-scene data."""
+                     timeline, built, *,
+                     font_signature: dict | None = None) -> str:
+    """Aggregate project signature retained for reporting and diagnostics."""
     payload = {
         "width": project.width, "height": project.height, "fps": project.fps,
         "profile": profile, "codec": codec, "crf": crf, "preset": preset,
         "supersample": supersample, "style": project.style,
         "brand": project.brand, "name": project.name,
         "tokens": project.tokens.to_dict(),
-        "fonts": _font_signature(project.fonts),
+        "fonts": font_signature or _font_signature(project.fonts),
+        "cache_schema": STUDIO_CACHE_SCHEMA,
         "transition_engine_version": 1,
         "scenes": [
             {"scene": scene, "frames": timing.frames,
@@ -148,9 +156,112 @@ def _cache_signature(project: StudioProject, profile: str | None,
             for scene, timing, item in zip(project.scenes, timeline.scenes,
                                            built)],
     }
-    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False,
-                     default=str).encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()
+    return _hash_payload(payload)
+
+
+def _cache_settings_signature(project: StudioProject, profile: str | None,
+                              supersample: int, codec: str, crf: int,
+                              preset: str, font_signature: dict) -> str:
+    """Settings shared by every scene cache entry."""
+    return _hash_payload({
+        "cache_schema": STUDIO_CACHE_SCHEMA,
+        "width": project.width, "height": project.height, "fps": project.fps,
+        "profile": profile, "codec": codec, "crf": crf, "preset": preset,
+        "supersample": supersample, "style": project.style,
+        "brand": project.brand,
+        "tokens": project.tokens.to_dict(),
+        "fonts": font_signature,
+    })
+
+
+_ASSET_PATH_FIELDS = frozenset({
+    "asset", "file", "image", "logo", "mesh_path", "path", "photo",
+    "photo_source", "photos", "video_source",
+})
+
+
+def _iter_asset_paths(value, *, path_field: bool = False):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from _iter_asset_paths(
+                child, path_field=key in _ASSET_PATH_FIELDS)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            yield from _iter_asset_paths(child, path_field=path_field)
+    elif path_field and isinstance(value, str):
+        yield value
+
+
+def _asset_path(project: StudioProject, value: str) -> Path:
+    if value.startswith("shared://"):
+        return (project.root / "shared_media"
+                / value.removeprefix("shared://")).resolve()
+    path = Path(value)
+    if path.is_absolute():
+        return path.resolve()
+    if value.startswith("brands/"):
+        return (project.root / path).resolve()
+    brand_root = (project.root / "brands" / project.brand
+                  if project.brand else project.path.parent)
+    return (brand_root / path).resolve()
+
+
+def _asset_fingerprints(project: StudioProject, scene: dict, built) -> list[dict]:
+    """Return cheap stat signatures for local visual assets used by a scene."""
+    structures = [scene, built.background]
+    for node in built.nodes:
+        structures.extend(child.props for child in node.flatten())
+    paths = set()
+    for structure in structures:
+        for value in _iter_asset_paths(structure):
+            try:
+                path = _asset_path(project, value)
+                if path.is_file():
+                    paths.add(path)
+            except (OSError, RuntimeError, ValueError):
+                continue
+    signatures = []
+    for path in sorted(paths, key=str):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        signatures.append({
+            "path": str(path),
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+        })
+    return signatures
+
+
+def _scene_cache_key(settings_signature: str, project: StudioProject,
+                     index: int, scene: dict, timing, built,
+                     next_scene=None) -> str:
+    """Hash only the inputs that can change this encoded scene segment."""
+    payload = {
+        "settings": settings_signature,
+        "index": index,
+        "seed": getattr(built.context, "seed", index * 17 + 3),
+        "scene": scene,
+        "frames": timing.frames,
+        "transition_in": built.meta.get("transition_in"),
+        "transition_duration": built.meta.get("transition_duration"),
+        "assets": _asset_fingerprints(project, scene, built),
+    }
+    transition_out = scene.get("transition_out")
+    if transition_out and next_scene is not None:
+        payload["outgoing_dependency"] = {
+            "transition": transition_out,
+            "index": next_scene.index,
+            "scene": next_scene.scene,
+            "seed": getattr(
+                next_scene.context, "seed", next_scene.index * 17 + 3),
+            "transition_in": next_scene.meta.get("transition_in"),
+            "transition_duration": next_scene.meta.get("transition_duration"),
+            "assets": _asset_fingerprints(
+                project, next_scene.scene, next_scene),
+        }
+    return _hash_payload(payload)
 
 
 def _encode_studio_scene(project: StudioProject, renderer, built, timing,
@@ -232,13 +343,13 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
 
 def render_studio(project: StudioProject, *, output: str | Path | None = None,
                   profile: str | None = None, supersample: int | None = None,
-                  cache_dir: str | Path | None = None,
+                  cache_dir: str | Path | None = None, cache: bool = True,
                   progress: Callable[[dict], None] | None = None) -> dict:
     """Render a studio project and return a JSON-friendly delivery report.
 
-    With ``cache_dir`` the render reuses per-scene H.264 segments keyed by a
-    signature of scene data, tokens, fonts and encoder settings; unchanged
-    scenes stream-copy from cache instead of re-rendering frames.
+    Per-scene H.264 caching is enabled by default under
+    .cache/reels-maker/studio. Set cache=False to disable it, or pass
+    cache_dir to select a different cache directory.
     """
     if profile and profile not in PROFILES:
         raise RenderError(f"Unknown export profile {profile!r}")
@@ -274,11 +385,20 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     crf = int(project.export.get("crf", CRF.get(effective_profile or "final", 18)))
     preset = str(project.export.get("preset", PRESET.get(effective_profile or "final",
                                                          "medium")))
-    cache_root = Path(cache_dir).resolve() if cache_dir else None
-    if cache_root is not None:
+    cache_root = None
+    cache_signature = None
+    settings_signature = None
+    if cache:
+        cache_root = (Path(cache_dir).resolve() if cache_dir is not None else
+                      project.root / ".cache" / "reels-maker" / "studio")
         cache_root.mkdir(parents=True, exist_ok=True)
-    cache_signature = _cache_signature(project, effective_profile, supersample,
-                                       codec, crf, preset, timeline, built)
+        font_signature = _font_signature(project.fonts)
+        cache_signature = _cache_signature(
+            project, effective_profile, supersample, codec, crf, preset,
+            timeline, built, font_signature=font_signature)
+        settings_signature = _cache_settings_signature(
+            project, effective_profile, supersample, codec, crf, preset,
+            font_signature)
     started = perf_counter()
     try:
         from ..renderer import _join
@@ -289,11 +409,16 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         for index, (scene, timing, item) in enumerate(
                 zip(project.scenes, timeline.scenes, built)):
             part = scratch / f"scene-{item.index}.mp4"
-            key = f"{cache_signature}-{item.index}"
-            cached = cache_root / f"{key}.mp4" if cache_root else None
+            next_scene = built[index + 1] if index + 1 < len(built) else None
+            key = (_scene_cache_key(
+                settings_signature, project, index, scene, timing, item,
+                next_scene=next_scene) if cache_root is not None else None)
+            cached = cache_root / f"{key}.mp4" if cache_root is not None else None
             if cached is not None and cached.is_file() \
                     and cached.stat().st_size > 0:
-                shutil.copyfile(cached, part)
+                # The concat demuxer reads cache objects directly; no full-file
+                # copy is needed on a warm render.
+                part = cached
                 cache_hits += 1
             else:
                 encoded = _encode_studio_scene(
@@ -302,7 +427,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     frames_done=frames_done,
                     total_frames=timeline.total_frames,
                     progress=progress,
-                    next_scene=built[index + 1] if index + 1 < len(built) else None,
+                    next_scene=next_scene,
                     transition=scene.get("transition_out"))
                 encodes += 1
                 if encoded != timing.frames:  # defensive; encoder raises first
@@ -346,7 +471,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         "export_quality": export_quality,
         "cache_hits": cache_hits,
         "cache_misses": encodes,
-        "cache_signature": (cache_signature[:12] if cache_root else None),
+        "cache_signature": (cache_signature[:12] if cache_signature else None),
         "icon_provenance": _icon_provenance(built),
         "scenes": [scene.to_dict() for scene in built],
         "warnings": [issue for scene in built

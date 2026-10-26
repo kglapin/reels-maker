@@ -11,17 +11,36 @@ from reels_maker.spec import Project
 
 class CanvasLayoutTests(unittest.TestCase):
     def test_explicit_pixels_are_not_scaled(self):
-        for width,height in ((1080,1920),(1920,1080),(1080,1080),(512,512)):
+        for width,height in ((1920,1080),(1080,1080),(512,512)):
             margin, top, bottom = resolve_safe_areas(
                 width,height,{"horizontal_pixels":65,"top_pixels":70,"bottom_pixels":85})
             self.assertEqual((margin,top,bottom),(65,70,85))
 
+        # On a standard vertical Reel the shared platform content zone sets
+        # minimum margins, but larger explicit pixel values remain literal.
+        self.assertEqual(
+            resolve_safe_areas(
+                1080,1920,{"horizontal_pixels":120,"top_pixels":240,
+                           "bottom_pixels":320}),
+            (120,240,320))
+
+    def test_vertical_reels_minimum_safe_zone_cannot_be_reduced(self):
+        for width,height in ((1080,1920),(320,568)):
+            with self.subTest(width=width,height=height):
+                margin,top,bottom=resolve_safe_areas(
+                    width,height,{"horizontal_pixels":1,"top_pixels":1,
+                                  "bottom_pixels":1})
+                self.assertEqual(margin,round(width*.075))
+                self.assertEqual(top,round(height*.09))
+                self.assertEqual(bottom,round(height*.16))
+
     def test_defaults_are_based_on_requested_canvas(self):
         for width,height in ((1920,1080),(1080,1920),(1024,1024),(320,568)):
             margin,top,bottom=resolve_safe_areas(width,height,{})
+            is_vertical_reel = abs(width / height - 9 / 16) <= .01
             self.assertAlmostEqual(margin/width,.085,delta=.003)
-            self.assertAlmostEqual(top/height,.085,delta=.004)
-            self.assertAlmostEqual(bottom/height,.13,delta=.004)
+            self.assertAlmostEqual(top/height,.09 if is_vertical_reel else .085,delta=.004)
+            self.assertAlmostEqual(bottom/height,.16 if is_vertical_reel else .13,delta=.004)
 
     def test_type_scale_is_rotation_independent(self):
         self.assertEqual(design_scale(1920,1080),design_scale(1080,1920))

@@ -26,7 +26,7 @@ from ..design.typography_policy import (
 )
 from ..motionkit.choreography import variety_report
 from ..core.transforms import Affine2D, Space
-from ..textkit.safe_geometry import SafePolygon, check_text_block
+from ..textkit.safe_geometry import InkBounds, SafePolygon, check_text_block
 from ..textkit.typesetter import FontBook, TextBlock
 
 MIN_HOLD = .42
@@ -85,6 +85,17 @@ def _ring_pixels(image: Image.Image, box, thickness: int = 5):
 
 def _safe_box(rect) -> tuple[float, float, float, float]:
     return (rect.x, rect.y, rect.right, rect.bottom)
+
+
+def _inside_polygon(bounds: tuple[float, float, float, float],
+                    polygon: SafePolygon) -> bool:
+    """Check whether an entire axis-aligned visual bound fits in a safe zone."""
+    try:
+        rectangle = InkBounds(*bounds)
+    except (TypeError, ValueError):
+        # Invalid or degenerate visual bounds must fail closed in placement QA.
+        return False
+    return polygon.contains_bounds(rectangle)
 
 
 def _overlaps(a, b, padding: float) -> bool:

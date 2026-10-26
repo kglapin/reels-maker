@@ -77,6 +77,17 @@ class SafePolygon:
         """Return True when ``(x, y)`` lies inside or on the boundary of this polygon."""
         return _inside((float(x), float(y)), self)
 
+    def contains_bounds(self, bounds: InkBounds) -> bool:
+        """Return True when the full axis-aligned bounds fit inside this polygon.
+
+        Checking only the four corners is insufficient for concave polygons: a
+        rectangle can have every corner inside while one of its edges crosses
+        an excluded notch.
+        """
+        if not isinstance(bounds, InkBounds):
+            raise TypeError("bounds must be an InkBounds instance")
+        return _bounds_inside(bounds, self)
+
 
 @dataclass(frozen=True)
 class WordInk:

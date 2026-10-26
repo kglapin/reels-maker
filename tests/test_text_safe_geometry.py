@@ -3,7 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from reels_maker.core.transforms import Affine2D
-from reels_maker.textkit.safe_geometry import SafePolygon, check_text_block
+from reels_maker.textkit.safe_geometry import InkBounds, SafePolygon, check_text_block
 from reels_maker.textkit.typesetter import FontBook, Run, TextStyle, typeset, typeset_runs
 
 
@@ -66,6 +66,15 @@ class SafeGeometryTests(unittest.TestCase):
                              (130, 30), (70, 30), (70, 100), (0, 100)), "notch")
         report = check_text_block(block, self.fonts, (notch,))
         self.assertFalse(report.safe)
+
+    def test_polygon_checks_entire_visual_bounds(self):
+        notch = SafePolygon(((0, 0), (200, 0), (200, 100), (130, 100),
+                             (130, 30), (70, 30), (70, 100), (0, 100)), "notch")
+        self.assertTrue(notch.contains_bounds(InkBounds(10, 40, 60, 90)))
+        # All four corners are inside the U-shaped polygon, but the bottom
+        # edge crosses its excluded center notch.
+        self.assertFalse(notch.contains_bounds(InkBounds(30, 10, 170, 50)))
+        self.assertFalse(notch.contains_bounds(InkBounds(80, 40, 120, 90)))
 
     def test_rejects_bad_polygons_truncation_and_unsafe_transform(self):
         with self.assertRaisesRegex(ValueError, "finite"):

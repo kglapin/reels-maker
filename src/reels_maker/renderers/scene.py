@@ -53,7 +53,10 @@ class SceneRenderer:
         self.ss = self.options.supersample
         self.W, self.H = width * self.ss, height * self.ss
         self._backgrounds: dict[tuple, Image.Image] = {}
-        self._sources: dict[str, Image.Image] = {}
+        self._sources: dict[object, Image.Image] = {}
+        self._framed_images: OrderedDict[tuple, Image.Image] = OrderedDict()
+        self._framed_image_bytes = 0
+        self._framed_image_budget = 128 * 1024 * 1024
         self._settled_frame_times: dict[int, float | None] = {}
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
@@ -467,33 +470,65 @@ class SceneRenderer:
         path = Path(props["path"])
         if not path.is_file():
             raise ValueError(f"Missing image asset: {path}")
-        cache_key = str(path.resolve())
-        if cache_key not in self._sources:
-            self._sources[cache_key] = cv.load_image(path)
-        source = self._sources[cache_key]
+        stat = path.stat()
+        source_key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+        source = self._sources.get(source_key)
+        if source is None:
+            source = cv.load_image(path)
+            self._sources[source_key] = source
         x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
         w, h = props["w"] * s, props["h"] * s
         if x + w <= 0 or y + h <= 0 or x >= self.W or y >= self.H:
             return
         zoom = float(props.get("zoom", 1.0))
-        image = cv.cover(source, int(max(1, w)), int(max(1, h)),
-                         cv.Camera(zoom=zoom,
-                                   x=float(props.get("pan_x", 0)),
-                                   y=float(props.get("pan_y", 0))))
         blur = float(props.get("blur", 0.0))
         if not math.isfinite(blur) or blur < 0:
-            raise ValueError("Image blur radius must be finite and non-negative")
-        if blur > 0:
-            image = image.filter(ImageFilter.GaussianBlur(
-                radius=min(blur, 24.0) * s))
-        if props.get("radius"):
-            mask = Image.new("L", image.size, 0)
-            ImageDraw.Draw(mask).rounded_rectangle(
-                (0, 0, image.width - 1, image.height - 1),
-                radius=float(props["radius"]) * s, fill=255)
-            image.putalpha(Image.composite(
-                image.getchannel("A"), Image.new("L", image.size, 0), mask))
-        target.alpha_composite(image.convert("RGBA"), (int(x), int(y)))
+            raise ValueError(
+                "Image blur radius must be finite and non-negative")
+        blur_radius = min(blur, 24.0) * s if blur > 0 else 0.0
+        radius = float(props["radius"]) * s if props.get("radius") else None
+        width, height = int(max(1, w)), int(max(1, h))
+        framed_key = (source_key, width, height, zoom,
+                      float(props.get("pan_x", 0)),
+                      float(props.get("pan_y", 0)), blur_radius, radius)
+        image = self._framed_images.get(framed_key)
+        if image is not None:
+            self._framed_images.move_to_end(framed_key)
+        else:
+            image = cv.cover(
+                source, width, height,
+                cv.Camera(zoom=zoom,
+                          x=float(props.get("pan_x", 0)),
+                          y=float(props.get("pan_y", 0))))
+            if blur_radius > 0:
+                image = image.filter(
+                    ImageFilter.GaussianBlur(radius=blur_radius))
+            if radius is not None:
+                mask = Image.new("L", image.size, 0)
+                ImageDraw.Draw(mask).rounded_rectangle(
+                    (0, 0, image.width - 1, image.height - 1),
+                    radius=radius, fill=255)
+                image.putalpha(Image.composite(
+                    image.getchannel("A"),
+                    Image.new("L", image.size, 0), mask))
+            image = image.convert("RGBA")
+            self._remember_framed_image(framed_key, image)
+        target.alpha_composite(image, (int(x), int(y)))
+
+    def _remember_framed_image(self, key: tuple, image: Image.Image) -> None:
+        size = image.width * image.height * len(image.getbands())
+        if size > self._framed_image_budget:
+            return
+        previous = self._framed_images.pop(key, None)
+        if previous is not None:
+            self._framed_image_bytes -= (
+                previous.width * previous.height * len(previous.getbands()))
+        self._framed_images[key] = image
+        self._framed_image_bytes += size
+        while self._framed_image_bytes > self._framed_image_budget:
+            _, evicted = self._framed_images.popitem(last=False)
+            self._framed_image_bytes -= (
+                evicted.width * evicted.height * len(evicted.getbands()))
 
     def _video(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
         s = self.ss

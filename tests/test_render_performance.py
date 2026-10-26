@@ -163,15 +163,15 @@ class TransitionFrameReuseTests(unittest.TestCase):
         timing = SimpleNamespace(frames=4)
 
         with patch("reels_maker.renderers.studio.require_tool",
-                   return_value="ffmpeg"), \\
-             patch("reels_maker.renderers.studio.subprocess.Popen",
-                   return_value=process):
-            written = _encode_studio_scene(
-                project, renderer, outgoing, timing, Path("unused.mp4"),
-                codec="libx264", crf=17, preset="slow", frames_done=0,
-                total_frames=4, progress=None, next_scene=incoming,
-                transition={"duration": .5, "type": "radial-reveal"},
-            )
+                   return_value="ffmpeg"):
+            with patch("reels_maker.renderers.studio.subprocess.Popen",
+                       return_value=process):
+                written = _encode_studio_scene(
+                    project, renderer, outgoing, timing, Path("unused.mp4"),
+                    codec="libx264", crf=17, preset="slow", frames_done=0,
+                    total_frames=4, progress=None, next_scene=incoming,
+                    transition={"duration": .5, "type": "radial-reveal"},
+                )
 
         incoming_calls = [call for call in renderer.calls
                           if call[0] is incoming]

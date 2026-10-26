@@ -40,6 +40,7 @@ class VideoStreamDecodeTests(unittest.TestCase):
                     for timestamp in timestamps
                 ]
 
+            self.assertTrue(all(frame.mode == "RGBA" for frame in streamed))
             self.assertEqual([frame.tobytes() for frame in streamed],
                              [frame.tobytes() for frame in reference])
             self.assertEqual(metrics["video_decode_calls"], 1)

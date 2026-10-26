@@ -82,7 +82,7 @@ class _VideoFrameStream:
         self.path = path
         self.metrics = metrics
         self.process = None
-        self.timestamps: queue.Queue[float | None] = queue.Queue()
+        self.timestamps: queue.Queue[tuple[float, int, int] | None] = queue.Queue()
         self.stderr_thread = None
         self.last_requested: float | None = None
         self.timestamp_offset: float | None = None
@@ -93,7 +93,7 @@ class _VideoFrameStream:
             "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "info",
             "-ss", f"{max(0.0, timestamp):.3f}", "-i", self.path,
             "-an", "-vf", "showinfo", "-fps_mode", "passthrough",
-            "-f", "image2pipe", "-vcodec", "png", "pipe:1",
+            "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1",
         ]
         self.process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -104,10 +104,15 @@ class _VideoFrameStream:
             if self.process is None or self.process.stderr is None:
                 return
             for line in self.process.stderr:
-                match = re.search(rb"pts_time:([^\s]+)", line)
-                if match:
+                timestamp_match = re.search(rb"pts_time:([^\s]+)", line)
+                size_match = re.search(rb"\bs:(\d+)x(\d+)\b", line)
+                if timestamp_match and size_match:
                     try:
-                        self.timestamps.put(float(match.group(1)))
+                        self.timestamps.put((
+                            float(timestamp_match.group(1)),
+                            int(size_match.group(1)),
+                            int(size_match.group(2)),
+                        ))
                     except ValueError:
                         self.timestamps.put(None)
 
@@ -118,31 +123,21 @@ class _VideoFrameStream:
     def _read_exact(self, size: int) -> bytes:
         if self.process is None or self.process.stdout is None:
             raise EOFError("Video decoder is not running")
-        result = bytearray()
-        while len(result) < size:
-            chunk = self.process.stdout.read(size - len(result))
-            if not chunk:
+        result = bytearray(size)
+        view = memoryview(result)
+        offset = 0
+        while offset < size:
+            read = self.process.stdout.readinto(view[offset:])
+            if not read:
                 raise EOFError("Video decoder ended before the requested frame")
-            result.extend(chunk)
+            offset += read
         return bytes(result)
 
-    def _read_png(self) -> Image.Image:
-        signature = self._read_exact(8)
-        if signature != b"\x89PNG\r\n\x1a\n":
-            raise ValueError("FFmpeg returned an invalid PNG frame stream")
-        payload = bytearray(signature)
-        while True:
-            header = self._read_exact(8)
-            length = int.from_bytes(header[:4], "big")
-            if length > 512 * 1024 * 1024:
-                raise ValueError("FFmpeg PNG frame chunk exceeds the safe limit")
-            payload.extend(header)
-            payload.extend(self._read_exact(length + 4))
-            if header[4:] == b"IEND":
-                break
-        image = Image.open(BytesIO(payload))
-        image.load()
-        return image.convert("RGBA")
+    def _read_raw_frame(self, width: int, height: int) -> Image.Image:
+        if width < 1 or height < 1 or width * height * 3 > 512 * 1024 * 1024:
+            raise ValueError("FFmpeg raw frame dimensions exceed the safe limit")
+        pixels = self._read_exact(width * height * 3)
+        return Image.frombytes("RGB", (width, height), pixels).convert("RGBA")
 
     def frame(self, timestamp: float) -> Image.Image | None:
         cached = self.frames.get(timestamp)
@@ -155,13 +150,14 @@ class _VideoFrameStream:
         if self.process is None:
             self._start(timestamp)
         while True:
-            image = self._read_png()
             try:
-                frame_time = self.timestamps.get(timeout=10.0)
+                frame_info = self.timestamps.get(timeout=10.0)
             except queue.Empty as exc:
                 raise ValueError("FFmpeg did not report a timestamp for a frame") from exc
-            if frame_time is None:
-                raise ValueError("FFmpeg returned a frame without a timestamp")
+            if frame_info is None:
+                raise ValueError("FFmpeg returned a frame without metadata")
+            frame_time, width, height = frame_info
+            image = self._read_raw_frame(width, height)
             self.metrics["video_decoded_frames"] += 1
             if self.timestamp_offset is None:
                 # Input-side -ss resets timestamps on some containers. The

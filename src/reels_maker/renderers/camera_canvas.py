@@ -1,6 +1,7 @@
 """Opt-in shared canvas: arbitrary camera stops, rotation, and delayed text."""
 from __future__ import annotations
 import math
+from collections import OrderedDict
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from ..core.transforms import (
@@ -44,6 +45,9 @@ class CameraCanvasRenderer:
     def __init__(self,project):
         self.scenes=project.scenes
         self.w,self.h=project.width,project.height
+        self._settled_frames=OrderedDict()
+        self._settled_frame_bytes=0
+        self._settled_frame_budget=128*1024*1024
         validate_camera_canvas(self.scenes)
         stops=[]
         for s in self.scenes:
@@ -153,6 +157,21 @@ class CameraCanvasRenderer:
         return world.transform((w,h),Image.Transform.AFFINE,mat,
                                resample=Image.Resampling.BILINEAR).convert("RGBA")
 
+    def _remember_settled_frame(self,index,image):
+        size=image.width*image.height*len(image.getbands())
+        if size>self._settled_frame_budget:
+            return
+        previous=self._settled_frames.pop(index,None)
+        if previous is not None:
+            self._settled_frame_bytes-=(
+                previous.width*previous.height*len(previous.getbands()))
+        self._settled_frames[index]=image.copy()
+        self._settled_frame_bytes+=size
+        while self._settled_frame_bytes>self._settled_frame_budget:
+            _,evicted=self._settled_frames.popitem(last=False)
+            self._settled_frame_bytes-=(
+                evicted.width*evicted.height*len(evicted.getbands()))
+
     def render(self,built,time):
         """Travel across preexisting canvas; reveal shot-local type only on arrival."""
         from PIL import ImageChops
@@ -161,6 +180,13 @@ class CameraCanvasRenderer:
         delay=float(cfg.get("reveal_delay",.18))
         duration=float(cfg.get("reveal_duration",.55))
         p=ease((time-move-delay)/duration)
+        is_settled=(not self.scenes[i].get("video")
+                    and p>=1.0 and time>=move)
+        if is_settled:
+            cached=self._settled_frames.get(i)
+            if cached is not None:
+                self._settled_frames.move_to_end(i)
+                return cached.copy()
         stop=self.camera(i,time)
         stage_world = self.stages[i]
         if self.scenes[i].get("video"):
@@ -209,7 +235,10 @@ class CameraCanvasRenderer:
         if effect=="slide-up":
             y+=round((1-p)*min(self.h*.085,62))
         base.alpha_composite(overlay,(x,y))
-        return base.convert("RGB")
+        result=base.convert("RGB")
+        if is_settled:
+            self._remember_settled_frame(i,result)
+        return result
 
 
 def camera_viewport_to_world(cx: float, cy: float, angle: float, zoom: float,

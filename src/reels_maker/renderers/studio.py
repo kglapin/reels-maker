@@ -298,7 +298,7 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
     """Encode one scene's frames into a standalone stream-copyable MP4."""
     command = [
         require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y",
-        "-f", "rawvideo", "-pix_fmt", "bgra",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
         "-s", f"{project.width}x{project.height}", "-r", str(project.fps),
         "-i", "-", "-an", "-c:v", codec, "-preset", preset,
         "-crf", str(crf), "-pix_fmt", "yuv420p", str(dest),
@@ -342,8 +342,12 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                 render_seconds += perf_counter() - render_started
                 write_started = perf_counter()
                 try:
-                    process.stdin.write(
-                        image.convert("RGBA").tobytes("raw", "BGRA"))
+                    raw_frame = (
+                        image.tobytes("raw", "RGB")
+                        if image.mode == "RGB"
+                        else image.convert("RGB").tobytes("raw", "RGB")
+                    )
+                    process.stdin.write(raw_frame)
                 except (BrokenPipeError, OSError) as exc:
                     stderr = process.stderr.read().decode("utf-8", "replace") \
                         if process.stderr else ""

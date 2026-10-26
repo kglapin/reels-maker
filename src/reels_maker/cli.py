@@ -13,7 +13,7 @@ from .catalog import catalog
 from .envfile import load_env
 from .ffmpeg import RenderError, probe, require_tool
 from .paths import ROOT, AssetError
-from .renderer import preflight, render
+from .renderer import preflight
 from .spec import ProjectError, load_project
 from .quality import review_project
 
@@ -381,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
                                 "plan":plan,"qa":qa}
                     else:
                         from .studio import load_studio
-                        from .renderers.studio import render_studio
+                        from .renderers.backend import BackendOptions, render_with_backend
                         from .storyboard import make_studio_storyboard
                         # Keep temporary manifest beside spec, because the Studio
                         # asset resolver intentionally scopes local assets to it.
@@ -392,10 +392,12 @@ def main(argv: list[str] | None = None) -> int:
                             tmp.write(json.dumps(manifest,ensure_ascii=False)+"\n")
                         try:
                             project=load_studio(path,root=args.root)
-                            rendered=render_studio(
-                                project, output=args.output, supersample=1,
-                                cache_dir=args.cache_dir,
-                                cache=not args.no_cache)
+                            rendered=render_with_backend(
+                                "studio", project,
+                                BackendOptions(
+                                    output=args.output, supersample=1,
+                                    cache_dir=args.cache_dir,
+                                    cache=not args.no_cache))
                             sheet=None
                             if args.storyboard:
                                 sheet=make_studio_storyboard(
@@ -461,12 +463,14 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "kinetic-render":
             if args.engine == "studio":
                 from .studio import load_kinetic_studio
-                from .renderers.studio import render_studio
+                from .renderers.backend import BackendOptions, render_with_backend
                 project, default_output = load_kinetic_studio(
                     args.manifest, root=args.root)
-                result = render_studio(
-                    project, output=args.output or default_output,
-                    cache_dir=args.cache_dir, cache=not args.no_cache)
+                result = render_with_backend(
+                    "studio", project,
+                    BackendOptions(output=args.output or default_output,
+                                   cache_dir=args.cache_dir,
+                                   cache=not args.no_cache))
                 result["engine"] = "studio"
             else:
                 if args.cache_dir is not None or args.no_cache:
@@ -477,14 +481,15 @@ def main(argv: list[str] | None = None) -> int:
                                         output=args.output)
         elif args.command == "studio-render":
             from .studio import load_studio
-            from .renderers.studio import render_studio
+            from .renderers.backend import BackendOptions, render_with_backend
             project = load_studio(args.manifest, root=args.root,
                                   profile=args.profile)
-            result = render_studio(project, output=args.output,
-                                   profile=args.profile,
-                                   supersample=args.supersample,
-                                   cache_dir=args.cache_dir,
-                                   cache=not args.no_cache)
+            result = render_with_backend(
+                "studio", project,
+                BackendOptions(output=args.output, profile=args.profile,
+                               supersample=args.supersample,
+                               cache_dir=args.cache_dir,
+                               cache=not args.no_cache))
         elif args.command == "studio-inspect":
             from .studio import load_studio
             project = load_studio(args.manifest, root=args.root,
@@ -789,10 +794,13 @@ def main(argv: list[str] | None = None) -> int:
                                          "message": "Resolve design warnings before rendering"}},
                               error=True)
                         return 2
-                result = render(project, root=args.root, output=args.output,
-                                cache_dir=args.cache_dir,
-                                cache=not args.no_cache, jobs=args.jobs,
-                                title_engine=args.title_engine)
+                from .renderers.backend import BackendOptions, render_with_backend
+                result = render_with_backend(
+                    "legacy", project,
+                    BackendOptions(output=args.output, root=args.root,
+                                   cache_dir=args.cache_dir,
+                                   cache=not args.no_cache, jobs=args.jobs,
+                                   title_engine=args.title_engine))
         if args.command == "validate":
             quality = review_project(project, root=args.root)
             result["quality"] = quality

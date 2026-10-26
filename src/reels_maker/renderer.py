@@ -24,6 +24,7 @@ from .spec import Project
 from .quality import review_project
 from .transitions import assemble, timeline_frames, transition_plan
 from .export_quality import verify_metadata
+from .segment_assembly import join_segments
 
 CACHE_SCHEMA = 5
 SUPPORTED_ENCODER = "libx264"
@@ -191,20 +192,8 @@ def _encode_studio_overlay(source: Path, scene: dict, project: Project,
 
 def _join(parts: list[Path], destination: Path, scratch: Path,
           *, max_frames: int | None = None) -> None:
-    # FFmpeg concat demuxer: stream-copy when segments have identical video settings.
-    # Studio output must be frame-exact. Segment edit lists can contribute a few
-    # trailing packets at MP4 boundaries, so bound the stream-copy by its timeline.
-    manifest = scratch / "segments.txt"
-    def quote_path(p: Path) -> str:
-        return str(p).replace("'", "'\\''")
-    manifest.write_text("".join(f"file '{quote_path(p)}'\n" for p in parts))
-    args = ["-f", "concat", "-safe", "0", "-i", str(manifest),
-            "-map", "0:v:0", "-an", "-c:v", "copy"]
-    if max_frames is not None:
-        if isinstance(max_frames, bool) or max_frames < 1:
-            raise RenderError("max_frames must be a positive frame count")
-        args += ["-frames:v", str(max_frames)]
-    execute(args + [str(destination)])
+    """Backward-compatible wrapper around the shared segment assembler."""
+    join_segments(parts, destination, scratch, max_frames=max_frames)
 
 
 def render(project: Project, *, root: Path = ROOT,
@@ -280,7 +269,7 @@ def render(project: Project, *, root: Path = ROOT,
         if any(t["type"] != "cut" for t in transitions):
             assemble(parts, frames, project.fps, transitions, silent)
         else:
-            _join(parts, silent, scratch)
+            join_segments(parts, silent, scratch)
         final = scratch / "final.mp4"
         audio_report = None
         if inputs["music"] or inputs["voiceover"]:

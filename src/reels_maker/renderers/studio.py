@@ -454,7 +454,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     cache_setup_seconds = perf_counter() - cache_setup_started
     started = perf_counter()
     try:
-        from ..renderer import _join
+        from ..segment_assembly import join_segments
         parts: list[Path] = []
         frames_done = 0
         cache_hits = 0
@@ -534,7 +534,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
             parts.append(part)
         scene_loop_seconds = perf_counter() - scene_loop_started
         join_started = perf_counter()
-        _join(parts, silent, scratch, max_frames=timeline.total_frames)
+        join_segments(parts, silent, scratch, max_frames=timeline.total_frames)
         join_seconds = perf_counter() - join_started
         audio_started = perf_counter()
         audio_result = _mux(project, silent, staged, timeline.duration)

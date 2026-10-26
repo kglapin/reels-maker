@@ -18,9 +18,13 @@ The studio commands build on the same JSON-first CLI without changing the
 legacy renderer. `studio-inspect` resolves tokens, frame timing, layouts and
 motion. `studio-qa --strict` returns a nonzero exit code on blocking QA errors.
 `studio-render` writes to `renders/<brand>/` unless `--output` is supplied.
-An opt-in `--cache-dir PATH` stores per-scene encoded segments; unchanged
-scenes stream-copy from the cache on the next run (any scene, token, font or
-encoder change invalidates the signature).
+Studio commands cache encoded scene segments by default under
+`.cache/reels-maker/studio/` in the selected repository root. `--cache-dir PATH`
+chooses another location; `--no-cache` disables reuse. Each segment key includes
+the render settings, its scene data, resolved visual assets and their size and
+modification time. Editing one scene re-renders that scene; a changed global
+setting (profile, tokens, fonts or encoder) invalidates all segments. If a scene
+has an outgoing transition, its cached segment also depends on the next scene.
 ## Pixabay audio (music / sound-effects)
 
 MP3 files are served by the content CDN without a Cloudflare challenge
@@ -212,8 +216,10 @@ normalized to the same frame format and size; segments are hashed by source
 metadata and settings, cached, and assembled by stream-copy. FFmpeg only encodes
 cache misses. Audio is encoded separately and multiplexed without re-encoding
 video. Scene frame counts are computed from cumulative cut points.
-Use `--jobs 1..8` based on available CPU and memory. `--no-cache` forces
-rebuilds; `--cache-dir` selects another cache location.
+Use `--jobs 1..8` based on available CPU and memory for classic video
+renders. Studio rendering uses `.cache/reels-maker/studio/` by default;
+`--cache-dir` selects another location and `--no-cache` forces a full rebuild.
+Studio cache entries are scene-local and include resolved visual asset metadata.
 
 Do not assume `brand.json` font-family guidance automatically installs or
 embeds a font. The renderer resolves `branding.font_family` /

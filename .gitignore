@@ -10,6 +10,7 @@ dist/
 # Local render artifacts (existing tracked media are deliberately not removed)
 output/
 .cache/
+.benchmark-results/
 .tmp/
 engine/work/
 renders/

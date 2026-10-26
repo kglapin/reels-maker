@@ -24,6 +24,7 @@ jobs:
           sparse-checkout: |
             /src/
             /tests/
+            /tools/
             /brands/*/brand.json
             /brands/*/media/asset-reviews.json
             /brands/*/projects/
@@ -33,7 +34,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile modules and tests without importing media dependencies
-        run: python -m compileall -q src/reels_maker tests
+        run: python -m compileall -q src/reels_maker tests tools
       - name: Validate every project JSON parses
         run: |
           python - <<'PY'
@@ -57,6 +58,7 @@ jobs:
             /.github/
             /src/
             /tests/
+            /tools/
             /brands/*/brand.json
             /brands/*/media/asset-reviews.json
             /brands/*/assets/logo.png
@@ -102,7 +104,16 @@ jobs:
           # FFmpeg binary and source version must remain visible in the logs.
           ffmpeg -version | head -n 1
           ffprobe -version | head -n 1
-      - run: .venv/bin/python -m unittest discover -s tests -v
+      - name: Run full test suite
+        run: .venv/bin/python -m unittest discover -s tests -v
+      - name: Benchmark synthetic renderer routes
+        run: .venv/bin/python tools/benchmark_renderers.py --runs 2 --output .benchmark-results/renderers.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-renderer-benchmark
+          path: .benchmark-results/renderers.json
+          if-no-files-found: error
+          retention-days: 14
 
 
   brandbook:

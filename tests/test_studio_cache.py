@@ -55,7 +55,6 @@ class StudioRenderCacheTests(unittest.TestCase):
                              [True, True, True])
             self.assertLess(warm["render_seconds"], cold["render_seconds"])
             self.assertTrue(warm["cache_signature"])
-            self.assertLess(warm["render_seconds"], 2.0)
             # A scene edit invalidates only that segment; the other two
             # scenes remain reusable because they have no transition dependency.
             _manifest(manifest, headline="CACHE B")

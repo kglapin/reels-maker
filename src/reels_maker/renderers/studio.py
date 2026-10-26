@@ -6,6 +6,7 @@ without copying their cached files; edited scenes are re-encoded independently.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -165,6 +166,7 @@ def _cache_settings_signature(project: StudioProject, profile: str | None,
     """Settings shared by every scene cache entry."""
     return _hash_payload({
         "cache_schema": STUDIO_CACHE_SCHEMA,
+        "transition_engine_version": 1,
         "width": project.width, "height": project.height, "fps": project.fps,
         "profile": profile, "codec": codec, "crf": crf, "preset": preset,
         "supersample": supersample, "style": project.style,
@@ -232,6 +234,29 @@ def _asset_fingerprints(project: StudioProject, scene: dict, built) -> list[dict
             "mtime_ns": stat.st_mtime_ns,
         })
     return signatures
+
+
+def _publish_cache_segment(part: Path, cached: Path) -> None:
+    """Publish atomically even when output and cache are on different volumes."""
+    try:
+        os.replace(part, cached)
+        return
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+
+    staged = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                prefix=f".{cached.name}.", suffix=".tmp",
+                dir=str(cached.parent), delete=False) as handle:
+            staged = Path(handle.name)
+        shutil.copyfile(part, staged)
+        os.replace(staged, cached)
+        part.unlink()
+    finally:
+        if staged is not None:
+            staged.unlink(missing_ok=True)
 
 
 def _scene_cache_key(settings_signature: str, project: StudioProject,
@@ -389,8 +414,9 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     cache_signature = None
     settings_signature = None
     if cache:
-        cache_root = (Path(cache_dir).resolve() if cache_dir is not None else
-                      project.root / ".cache" / "reels-maker" / "studio")
+        cache_root = (
+            Path(cache_dir).resolve() if cache_dir is not None else
+            (project.root / ".cache" / "reels-maker" / "studio").resolve())
         cache_root.mkdir(parents=True, exist_ok=True)
         font_signature = _font_signature(project.fonts)
         cache_signature = _cache_signature(
@@ -436,7 +462,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                         f"{timing.frames} frames")
                 if cached is not None:
                     # Atomic publication avoids half-written cache objects.
-                    os.replace(part, cached)
+                    _publish_cache_segment(part, cached)
                     part = cached
             frames_done += timing.frames
             parts.append(part)

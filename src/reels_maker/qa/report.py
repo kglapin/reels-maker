@@ -11,6 +11,7 @@ import json
 import math
 import re
 import subprocess
+from copy import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from PIL import Image, ImageDraw
 from ..core.scene_graph import collect_qa_elements, Node
 from ..core.timeline import Timeline
 from ..design.color import contrast_ratio, relative_luminance
-from ..design.tokens import DesignTokens
+from ..design.tokens import DesignTokens, is_vertical_reels_canvas
 from ..design.typography_policy import (
     audit_typography_blocks, audit_typography_spacing, audit_typography_tokens,
 )
@@ -174,6 +175,9 @@ def audit(project, built_scenes, timeline: Timeline, *,
 
     for built, timing in zip(built_scenes, timeline.scenes):
         scene_issues = []
+        vertical_reels = is_vertical_reels_canvas(
+            built.context.width, built.context.height)
+        scene_issues.extend(_vertical_reels_content_zone(built))
         elements_seen: dict[str, dict] = {}
         compositions.append(built.layout.recipe)
         # ---------------------------------------------------------- geometry
@@ -188,9 +192,10 @@ def audit(project, built_scenes, timeline: Timeline, *,
             sampled_frames += 1
             scene_issues.extend(_collisions(elements, allowed, built, time,
                                             local_frame))
-            scene_issues.extend(_safe_area(elements, built, time, local_frame))
-            scene_issues.extend(_text_ink_safe_area(
-                nodes, built, time, local_frame))
+            if not vertical_reels:
+                scene_issues.extend(_safe_area(elements, built, time, local_frame))
+                scene_issues.extend(_text_ink_safe_area(
+                    nodes, built, time, local_frame))
             for element in elements:
                 elements_seen.setdefault(element["role"], element)
         for element in elements_seen.values():
@@ -431,6 +436,106 @@ def _safe_area(elements: list[dict], built, time: float,
                 local_frame))
     return issues
 
+
+def _vertical_reels_content_zone(built) -> list[Issue]:
+    """Check authored copy/art placement in the 9:16 content zone.
+
+    Geometry comes from the scene's authored layout transforms, before motion
+    tracks are sampled. Background plates and the paths elements travel through
+    therefore remain outside this placement rule.
+    """
+    from ..core.scene_graph import build_transform_hierarchy
+    from ..core.transforms import Affine2D, Bounds, LocalSpace, Space
+    from ..design.tokens import (
+        is_vertical_reels_canvas, vertical_reels_content_polygon,
+    )
+    from ..textkit.typesetter import TextBlock
+
+    width, height = built.context.width, built.context.height
+    if not is_vertical_reels_canvas(width, height):
+        return []
+    zone = vertical_reels_content_polygon(width, height)
+
+    def static_copy(node: Node) -> Node:
+        """Flatten virtual journey page offsets; camera travel is motion."""
+        result = copy(node)
+        result.children = [static_copy(child) for child in node.children]
+        if node.role.startswith("journey-step-"):
+            result.dx = result.dy = 0.0
+        return result
+
+    roots = [static_copy(node) for node in built.nodes]
+    root = Node(kind="group", role="reels-content-root", children=roots)
+    hierarchy, transform_ids = build_transform_hierarchy(root)
+    issues: list[Issue] = []
+
+    def visit(node: Node, path: tuple[int, ...], ancestors: tuple[Node, ...],
+              parent_path: tuple[str, ...]) -> None:
+        role_path = parent_path + ((node.role,) if node.role != "decor" else ())
+        label = "/".join(role_path) or node.role
+        block = node.props.get("block")
+        if isinstance(block, TextBlock) and not block.truncated:
+            try:
+                if "x" in node.props and "y" in node.props:
+                    origin_x, origin_y = float(node.props["x"]), float(node.props["y"])
+                else:
+                    origin = node.meta.get("bounds")
+                    if origin and len(origin) == 4:
+                        origin_x, origin_y = float(origin[0]), float(origin[1])
+                    else:
+                        raise ValueError("missing text block scene origin")
+                transform = Affine2D(e=origin_x, f=origin_y,
+                                     source=Space.LOCAL, target=Space.LOCAL)
+                for current in (node,) + tuple(reversed(ancestors)):
+                    edge = current.local_to_parent_transform()
+                    local_edge = Affine2D(
+                        edge.a, edge.b, edge.c, edge.d, edge.e, edge.f,
+                        Space.LOCAL, Space.LOCAL)
+                    transform = transform.then(local_edge)
+                report = check_text_block(
+                    block, built.context.fonts, (zone,), transform=transform)
+                if report.failures:
+                    words = ", ".join(repr(item.text) for item in report.failures)
+                    issues.append(Issue(
+                        "reels_content_safe_zone", "error",
+                        f"Text {label!r} extends into the vertical-Reels margin: {words}.",
+                        built.index + 1, None, [label],
+                        "Keep the authored text inside the content zone; animated travel is exempt."))
+            except Exception as exc:
+                issues.append(Issue(
+                    "reels_content_safe_zone", "error",
+                    f"Text {label!r} could not be checked against the vertical-Reels content zone: {exc}.",
+                    built.index + 1, None, [label],
+                    "Restore valid text metrics and keep the authored text inside the content zone."))
+
+        asset_role = str(node.meta.get("asset_role", ""))
+        is_asset_illustration = (
+            node.kind in ("image", "video", "icon")
+            and asset_role not in ("background", "marquee-photo")
+            and not node.meta.get("background")
+            and not any(token in node.role.lower()
+                        for token in ("background", "backdrop"))
+        )
+        is_content_container = node.qa_class in ("control", "visual")
+        if is_asset_illustration or is_content_container:
+            box = node.base_bounds()
+            if box is not None:
+                mapped = hierarchy.world_transform(
+                    transform_ids[path]).map_bounds(Bounds[LocalSpace](*box))
+                bounds = (mapped.left, mapped.top, mapped.right, mapped.bottom)
+                if not _inside_polygon(bounds, zone):
+                    issues.append(Issue(
+                        "reels_content_safe_zone", "error",
+                        f"Visual element {label!r} extends into the vertical-Reels margin.",
+                        built.index + 1, None, [label],
+                        "Keep the authored illustration inside the content zone; animated travel is exempt."))
+
+        for index, child in enumerate(node.children):
+            visit(child, path + (index,), ancestors + (node,), role_path)
+
+    for index, child in enumerate(root.children):
+        visit(child, (index,), (root,), ())
+    return issues
 
 def _text_ink_safe_area(roots: list[Node], built, time: float,
                         local_frame: int) -> list[Issue]:
@@ -759,7 +864,11 @@ def audit_camera_canvas(
 ) -> dict:
     """Timeline-sampled QA for Camera Canvas path, hierarchy and subject retention (MD-204/206)."""
     from ..renderers.camera_canvas import (
+        _LAYOUT_PHOTO_BOXES, _LAYOUT_TEXT_ORIGINS,
         build_camera_canvas_hierarchy, camera_world_to_viewport, plan_camera_path,
+    )
+    from ..design.tokens import (
+        is_vertical_reels_canvas, vertical_reels_content_polygon,
     )
 
     path_report = plan_camera_path(
@@ -768,6 +877,8 @@ def audit_camera_canvas(
         min_subject_retention=min_subject_retention,
     )
     hierarchy, local_bounds = build_camera_canvas_hierarchy(scenes, width, height)
+    reels_zone = (vertical_reels_content_polygon(width, height)
+                  if is_vertical_reels_canvas(width, height) else None)
     issues: list[Issue] = []
     for item in path_report["violations"]:
         issues.append(Issue(
@@ -782,6 +893,27 @@ def audit_camera_canvas(
     sampled_frames = 0
     for idx, scene in enumerate(scenes):
         cfg = scene["camera_canvas"]
+        if reels_zone is not None:
+            layout = cfg.get("layout", "photo-above")
+            px, py, pw, ph = _LAYOUT_PHOTO_BOXES[layout]
+            tx_rel, ty_rel = _LAYOUT_TEXT_ORIGINS[layout]
+            authored_boxes = (
+                ("photo", (px * width, py * height,
+                           (px + pw) * width, (py + ph) * height)),
+                ("typography", (tx_rel * width, ty_rel * height,
+                                (tx_rel + .83) * width,
+                                ty_rel * height + min(
+                                    height * .18,
+                                    height * (1.0 - ty_rel - .04)))),
+            )
+            for role, bounds in authored_boxes:
+                if not _inside_polygon(bounds, reels_zone):
+                    issues.append(Issue(
+                        "reels_content_safe_zone", "error",
+                        (f"Camera Canvas {role} in scene {idx + 1} extends "
+                         "into the vertical-Reels margin."),
+                        idx + 1, None, [f"shot-{idx}/{role}"],
+                        "Keep the authored photo and text inside the content zone; camera travel is exempt."))
         duration = float(scene.get("duration", 3.0))
         move = 0.0 if idx == 0 else float(cfg.get("move_duration", .8))
         delay = float(cfg.get("reveal_delay", .18))
@@ -830,7 +962,9 @@ def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6
     frames = max(2, round(float(built.duration) * fps))
     timing = SimpleNamespace(frames=frames)
     samples = sample_geometry_frames(built, timing, fps, samples_per_scene=samples_per_scene)
-    issues: list[Issue] = []
+    vertical_reels = is_vertical_reels_canvas(
+        built.context.width, built.context.height)
+    issues: list[Issue] = _vertical_reels_content_zone(built)
     seen: set[tuple] = set()
     for local_frame in samples:
         t = local_frame / fps
@@ -839,9 +973,11 @@ def _evaluate_built_scene_qa(built, *, fps: int = 30, samples_per_scene: int = 6
         for node in nodes:
             elems.extend(collect_qa_elements(node))
         for issue in (
-            _safe_area(elems, built, t, local_frame)
+            ([] if vertical_reels else _safe_area(
+                elems, built, t, local_frame))
             + _collisions(elems, set(), built, t, local_frame)
-            + _text_ink_safe_area(nodes, built, t, local_frame)
+            + ([] if vertical_reels else _text_ink_safe_area(
+                nodes, built, t, local_frame))
         ):
             sig = (issue.code, tuple(issue.elements))
             if sig not in seen:

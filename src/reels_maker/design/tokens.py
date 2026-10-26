@@ -136,6 +136,37 @@ class DesignTokens:
         }
 
 
+# Shared purple content zone for every standard 9:16 vertical Reel.
+# Authored copy and illustrations stay inside; backgrounds and motion travel
+# are handled separately.
+VERTICAL_REELS_SAFE_INSETS = {
+    "horizontal": .075,
+    "top": .09,
+    "bottom": .16,
+}
+
+
+def is_vertical_reels_canvas(width: int, height: int) -> bool:
+    """Whether a canvas uses the standard 9:16 vertical Reels format."""
+    if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
+        return False
+    return abs(width / height - 9 / 16) <= .01
+
+
+def vertical_reels_content_polygon(width: int, height: int):
+    """Return the rectangular content zone; the surrounding area is margin."""
+    from ..textkit.safe_geometry import SafePolygon
+
+    if not is_vertical_reels_canvas(width, height):
+        raise ValueError("Vertical Reels safe zones require a 9:16 canvas")
+    left = width * VERTICAL_REELS_SAFE_INSETS["horizontal"]
+    right = width * (1.0 - VERTICAL_REELS_SAFE_INSETS["horizontal"])
+    top = height * VERTICAL_REELS_SAFE_INSETS["top"]
+    bottom = height * (1.0 - VERTICAL_REELS_SAFE_INSETS["bottom"])
+    return SafePolygon(((left, top), (right, top), (right, bottom), (left, bottom)),
+                       "vertical-reels-content")
+
+
 NEUTRAL = {
     "background": "#0E1A13",
     "surface": "#FFFFFF",
@@ -200,6 +231,11 @@ def resolve_tokens(style: str, brand: Mapping | None = None,
                         if key in MotionTokens.__dataclass_fields__})
     radii = {**system.radii, **overrides.get("radii", {})}
     safe = {**system.safe, **overrides.get("safe", {})}
+    if is_vertical_reels_canvas(width, height):
+        # Brand and style overrides may add breathing room, but cannot shrink
+        # the shared vertical-Reels content zone.
+        for key, minimum in VERTICAL_REELS_SAFE_INSETS.items():
+            safe[key] = max(float(safe.get(key, minimum)), minimum)
     return DesignTokens(
         style=style, palette=palette, typography=typography, spacing=spacing,
         motion=motion, radii=radii, safe=safe,

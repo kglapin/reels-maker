@@ -245,9 +245,9 @@ _LAYOUT_PHOTO_BOXES = {
 
 _LAYOUT_TEXT_ORIGINS = {
     "photo-above": (.09, .65),
-    "photo-left": (.09, .76),
-    "offset": (.10, .61),
-    "diagonal": (.10, .67),
+    "photo-left": (.09, .63),
+    "offset": (.09, .61),
+    "diagonal": (.10, .64),
 }
 
 

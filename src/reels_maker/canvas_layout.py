@@ -7,6 +7,7 @@ in that project's output resolution, NEVER multiplied by a reference format.
 from __future__ import annotations
 
 from .ffmpeg import RenderError
+from .design.tokens import VERTICAL_REELS_SAFE_INSETS, is_vertical_reels_canvas
 
 
 def design_scale(width: int, height: int) -> float:
@@ -40,6 +41,16 @@ def resolve_safe_areas(width: int, height: int, safe: dict | None):
         if type(value) is not int or value < 0:
             raise RenderError(f"branding.safe_areas.{name} must be nonnegative integer pixels")
         results[name] = value
+    if is_vertical_reels_canvas(width, height):
+        minimums = {
+            "horizontal_pixels": round(
+                width * VERTICAL_REELS_SAFE_INSETS["horizontal"]),
+            "top_pixels": round(height * VERTICAL_REELS_SAFE_INSETS["top"]),
+            "bottom_pixels": round(height * VERTICAL_REELS_SAFE_INSETS["bottom"]),
+        }
+        # Explicit values may add margin, but cannot place Reels copy in it.
+        for name, minimum in minimums.items():
+            results[name] = max(results[name], minimum)
     margin, top, bottom = (results["horizontal_pixels"],
                            results["top_pixels"], results["bottom_pixels"])
     if (margin >= width / 3 or top >= height / 2 or

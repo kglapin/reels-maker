@@ -317,6 +317,12 @@ not stored in the brand preset. Missing values default to proportional margins
 (8.5% horizontal/top; 13% bottom) for the project's own canvas; publishing
 platform overlays should be checked before release.
 
+For every standard 9:16 vertical Reels project, authored text and illustrations
+must stay inside a shared content zone: 7.5% side margins, 9% at the top and
+16% at the bottom. Full-bleed backgrounds and positions reached only while an
+element is moving are exempt. Studio QA checks authored geometry before motion
+tracks are sampled; Camera Canvas uses the same zone for its photo and text.
+
 Font and accent spacing use the shorter canvas side as their reference,
 so a 1920×1080 composition does not grow titles to 177% of the portrait size.
 Changing format still requires creative review of line breaks, text placement,

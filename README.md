@@ -136,7 +136,10 @@ Verify commercial usage rights and current facts before publishing media.
 
 The brand sets **identity**, not output dimensions or a platform preset. Width,
 height, aspect ratio and FPS are configured independently in each project
-manifest; optional safe areas are also selected per project. A single brand can
+manifest; optional safe areas are also selected per project. Every standard 9:16 vertical
+Reels project keeps authored text and illustrations within a shared content zone
+(7.5% side margins, 9% top margin and 16% bottom margin). Full-bleed backgrounds
+and positions reached only during animation are exempt. A single brand can
 render portrait, landscape and square animations without changing brand.json.
 
 ```sh

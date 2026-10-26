@@ -179,6 +179,10 @@ sampling is approximate on complex imagery, aesthetic quality is not scored,
 music ducking and pumping require listening, and brand/legal facts need an owner
 check. Review the real MP4 and contact sheet at phone size before approval.
 
+For standard 9:16 vertical Reels, authored copy and illustrations stay inside
+the shared content zone (7.5% side, 9% top and 16% bottom margins). Full-bleed
+backgrounds and positions reached only during animation are exempt.
+
 The included `asta-motion-system-demo.json` is an implementation sample, not a
 claim-approved flagship. Its plotted numbers and process labels are marked as
 illustrative. Rights for supplied music were not confirmed, so that demo is

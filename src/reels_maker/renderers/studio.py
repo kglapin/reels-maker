@@ -298,7 +298,7 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
     """Encode one scene's frames into a standalone stream-copyable MP4."""
     command = [
         require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y",
-        "-f", "rawvideo", -pix_fmt", "rgb24",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
         "-s", f"{project.width}x{project.height}", "-r", str(project.fps),
         "-i", "-", "-an", "-c:v", codec, "-preset", preset,
         "-crf", str(crf), "-pix_fmt", "yuv420p", str(dest),

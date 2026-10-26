@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import unittest
+from collections import OrderedDict
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -13,6 +14,7 @@ from PIL import Image, ImageDraw
 from reels_maker.core.scene_graph import Node
 from reels_maker.design.tokens import resolve_tokens
 from reels_maker.motionkit.keyframes import Keyframe, Track
+from reels_maker.renderers.camera_canvas import CameraCanvasRenderer
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.textkit.typesetter import FontBook
 from reels_maker.renderers.studio import _encode_studio_scene
@@ -131,6 +133,68 @@ class FramedImageCacheTests(unittest.TestCase):
 
 
 
+class CameraCanvasSettledFrameTests(unittest.TestCase):
+    def _renderer(self, *, video=False):
+        renderer = object.__new__(CameraCanvasRenderer)
+        renderer.scenes = [{
+            **({"video": "moving.mp4"} if video else {}),
+            "camera_canvas": {
+                "reveal_delay": .1,
+                "reveal_duration": .5,
+                "typography_motion": "fade",
+            },
+        }]
+        renderer.w = 8
+        renderer.h = 8
+        renderer.stops = [(8.0, 8.0, 0.0, 1.0)]
+        renderer.stages = [Image.new("RGBA", (16, 16), (20, 30, 40, 255))]
+        renderer.local_typography = [
+            Image.new("RGBA", (8, 8), (0, 0, 0, 0))]
+        renderer._settled_frames = OrderedDict()
+        renderer._settled_frame_bytes = 0
+        renderer._settled_frame_budget = 1024
+        return renderer
+
+    def test_static_camera_canvas_reuses_settled_pixels(self):
+        renderer = self._renderer()
+        calls = []
+
+        def frame(world, stop):
+            calls.append(stop)
+            return Image.new("RGBA", (8, 8), (12, 34, 56, 255))
+
+        renderer._frame = frame
+        built = SimpleNamespace(index=0)
+
+        first = renderer.render(built, .7)
+        repeated = renderer.render(built, .9)
+
+        self.assertIsNot(first, repeated)
+        self.assertEqual(first.tobytes(), repeated.tobytes())
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(renderer._settled_frame_bytes, 8 * 8 * 3)
+
+    def test_video_camera_canvas_is_never_marked_as_settled(self):
+        renderer = self._renderer(video=True)
+        calls = []
+
+        def frame(world, stop):
+            calls.append(stop)
+            return Image.new("RGBA", (8, 8), (12, 34, 56, 255))
+
+        renderer._frame = frame
+        renderer._tile = lambda scene, photo, playback_time=None: Image.new(
+            "RGBA", (8, 8), (0, 0, 0, 0))
+        renderer._paste = lambda world, tile, stop: None
+        built = SimpleNamespace(index=0)
+
+        renderer.render(built, .7)
+        renderer.render(built, .8)
+
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(renderer._settled_frames), 0)
+
+
 class TransitionFrameReuseTests(unittest.TestCase):
     def test_incoming_scene_frame_is_rendered_once_per_transition(self):
         class RecordingRenderer:
@@ -141,9 +205,18 @@ class TransitionFrameReuseTests(unittest.TestCase):
                 self.calls.append((scene, time))
                 return Image.new("RGB", (8, 8), scene.color)
 
+        class MemoryInput(io.BytesIO):
+            def __init__(self):
+                super().__init__()
+                self.closed_data = b""
+
+            def close(self):
+                self.closed_data = self.getvalue()
+                super().close()
+
         class MemoryProcess:
             def __init__(self):
-                self.stdin = io.BytesIO()
+                self.stdin = MemoryInput()
                 self.stderr = io.BytesIO()
 
             def wait(self):
@@ -165,7 +238,7 @@ class TransitionFrameReuseTests(unittest.TestCase):
         with patch("reels_maker.renderers.studio.require_tool",
                    return_value="ffmpeg"):
             with patch("reels_maker.renderers.studio.subprocess.Popen",
-                       return_value=process):
+                       return_value=process) as popen:
                 written = _encode_studio_scene(
                     project, renderer, outgoing, timing, Path("unused.mp4"),
                     codec="libx264", crf=17, preset="slow", frames_done=0,
@@ -177,6 +250,16 @@ class TransitionFrameReuseTests(unittest.TestCase):
                           if call[0] is incoming]
         self.assertEqual(written, timing.frames)
         self.assertEqual(len(incoming_calls), 1)
+        self.assertEqual(
+            len(process.stdin.closed_data),
+            project.width * project.height * 3 * timing.frames,
+        )
+        self.assertEqual(
+            process.stdin.closed_data[:project.width * project.height * 3],
+            bytes((0x15, 0x20, 0x23)) * (project.width * project.height),
+        )
+        command = popen.call_args.args[0]
+        self.assertEqual(command[command.index("-pix_fmt") + 1], "rgb24")
 
 
 if __name__ == "__main__":

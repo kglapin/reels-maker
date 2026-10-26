@@ -293,7 +293,8 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                          dest: Path, *, codec: str, crf: int, preset: str,
                          frames_done: int, total_frames: int,
                          progress: Callable[[dict], None] | None,
-                         next_scene=None, transition: dict | None = None) -> int:
+                         next_scene=None, transition: dict | None = None,
+                         metrics: dict | None = None) -> int:
     """Encode one scene's frames into a standalone stream-copyable MP4."""
     command = [
         require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y",
@@ -306,10 +307,13 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                                stdout=subprocess.DEVNULL,
                                stderr=subprocess.PIPE)
     written = 0
+    render_seconds = 0.0
+    frame_write_seconds = 0.0
     try:
         try:
             for frame in range(timing.frames):
                 time = frame / project.fps
+                render_started = perf_counter()
                 image = renderer.render(built, min(time, built.duration))
                 if next_scene is not None and transition is not None:
                     from .transition_engine import transition_frame
@@ -328,6 +332,8 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                             color=transition.get("color", "#47A013"),
                             anchor=tuple(transition.get("anchor", (.5, .5))),
                             direction=transition.get("direction", "left"))
+                render_seconds += perf_counter() - render_started
+                write_started = perf_counter()
                 try:
                     process.stdin.write(
                         image.convert("RGBA").tobytes("raw", "BGRA"))
@@ -337,6 +343,7 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                     raise RenderError(
                         f"FFmpeg stopped while writing frame "
                         f"{frames_done + written}: {stderr[-2000:]}") from exc
+                frame_write_seconds += perf_counter() - write_started
                 written += 1
                 if progress and (written % max(1, project.fps) == 0
                                  or frames_done + written == total_frames):
@@ -363,6 +370,10 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
     finally:
         if process.stderr and not process.stderr.closed:
             process.stderr.close()
+    if metrics is not None:
+        metrics["frame_render_seconds"] = render_seconds
+        metrics["frame_pipe_write_seconds"] = frame_write_seconds
+        metrics["frames_rendered"] = written
     return written
 
 
@@ -378,6 +389,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     """
     if profile and profile not in PROFILES:
         raise RenderError(f"Unknown export profile {profile!r}")
+    overall_started = perf_counter()
     effective_profile = profile or project.export.get("profile")
     if effective_profile in PROFILES and (
             PROFILES[effective_profile]["width"] != project.width
@@ -386,8 +398,10 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         raise RenderError(
             "Manifest was loaded for a different profile. Reload it with "
             "--profile so tokens and stills match the delivery resolution.")
+    build_started = perf_counter()
     timeline = project.timeline()
     built = project.build(timeline)
+    build_seconds = perf_counter() - build_started
     if supersample is None:
         supersample = 2 if project.height >= 1600 else 1
     if any("camera_canvas" in scene for scene in project.scenes):
@@ -413,6 +427,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     cache_root = None
     cache_signature = None
     settings_signature = None
+    cache_setup_started = perf_counter()
     if cache:
         cache_root = (
             Path(cache_dir).resolve() if cache_dir is not None else
@@ -425,6 +440,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         settings_signature = _cache_settings_signature(
             project, effective_profile, supersample, codec, crf, preset,
             font_signature)
+    cache_setup_seconds = perf_counter() - cache_setup_started
     started = perf_counter()
     try:
         from ..renderer import _join
@@ -432,8 +448,17 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         frames_done = 0
         cache_hits = 0
         encodes = 0
+        scene_encoding_seconds = 0.0
+        frame_render_seconds = 0.0
+        frame_pipe_write_seconds = 0.0
+        video_decode_seconds = 0.0
+        video_decode_calls = 0
+        video_decoded_frames = 0
+        scene_timings = []
+        scene_loop_started = perf_counter()
         for index, (scene, timing, item) in enumerate(
                 zip(project.scenes, timeline.scenes, built)):
+            scene_started = perf_counter()
             part = scratch / f"scene-{item.index}.mp4"
             next_scene = built[index + 1] if index + 1 < len(built) else None
             key = (_scene_cache_key(
@@ -446,15 +471,33 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                 # copy is needed on a warm render.
                 part = cached
                 cache_hits += 1
+                scene_timings.append({
+                    "scene": item.index + 1, "cache_hit": True,
+                    "elapsed_seconds": round(perf_counter() - scene_started, 4),
+                })
             else:
-                encoded = _encode_studio_scene(
-                    project, renderer, item, timing, part,
-                    codec=codec, crf=crf, preset=preset,
-                    frames_done=frames_done,
-                    total_frames=timeline.total_frames,
-                    progress=progress,
-                    next_scene=next_scene,
-                    transition=scene.get("transition_out"))
+                scene_metrics = {}
+                from .canvas import collect_video_decode_metrics
+                encode_started = perf_counter()
+                with collect_video_decode_metrics() as video_metrics:
+                    encoded = _encode_studio_scene(
+                        project, renderer, item, timing, part,
+                        codec=codec, crf=crf, preset=preset,
+                        frames_done=frames_done,
+                        total_frames=timeline.total_frames,
+                        progress=progress,
+                        next_scene=next_scene,
+                        transition=scene.get("transition_out"),
+                        metrics=scene_metrics)
+                encode_seconds = perf_counter() - encode_started
+                scene_encoding_seconds += encode_seconds
+                frame_render_seconds += scene_metrics.get(
+                    "frame_render_seconds", 0.0)
+                frame_pipe_write_seconds += scene_metrics.get(
+                    "frame_pipe_write_seconds", 0.0)
+                video_decode_seconds += video_metrics["video_decode_seconds"]
+                video_decode_calls += video_metrics["video_decode_calls"]
+                video_decoded_frames += video_metrics["video_decoded_frames"]
                 encodes += 1
                 if encoded != timing.frames:  # defensive; encoder raises first
                     raise RenderError(
@@ -464,15 +507,35 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     # Atomic publication avoids half-written cache objects.
                     _publish_cache_segment(part, cached)
                     part = cached
+                scene_timings.append({
+                    "scene": item.index + 1, "cache_hit": False,
+                    "elapsed_seconds": round(perf_counter() - scene_started, 4),
+                    "encode_seconds": round(encode_seconds, 4),
+                    "frame_render_seconds": round(
+                        scene_metrics.get("frame_render_seconds", 0.0), 4),
+                    "video_decode_calls": video_metrics["video_decode_calls"],
+                    "video_decoded_frames": video_metrics["video_decoded_frames"],
+                    "video_decode_seconds": round(
+                        video_metrics["video_decode_seconds"], 4),
+                    "frames": scene_metrics.get("frames_rendered", 0),
+                })
             frames_done += timing.frames
             parts.append(part)
+        scene_loop_seconds = perf_counter() - scene_loop_started
+        join_started = perf_counter()
         _join(parts, silent, scratch, max_frames=timeline.total_frames)
+        join_seconds = perf_counter() - join_started
+        audio_started = perf_counter()
         audio_result = _mux(project, silent, staged, timeline.duration)
+        audio_mux_seconds = perf_counter() - audio_started
+        verify_started = perf_counter()
         export_quality = _verify_studio_output(staged, project, timeline)
+        verification_seconds = perf_counter() - verify_started
         os.replace(staged, destination)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     elapsed = perf_counter() - started
+    total_elapsed = perf_counter() - overall_started
     return {
         "schema_version": 1,
         "status": "ok",
@@ -492,6 +555,23 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         "codec": codec,
         "bytes": destination.stat().st_size,
         "render_seconds": round(elapsed, 2),
+        "timings_seconds": {
+            "scene_build": round(build_seconds, 4),
+            "cache_setup": round(cache_setup_seconds, 4),
+            "scene_encoding": round(scene_encoding_seconds, 4),
+            "scene_loop": round(scene_loop_seconds, 4),
+            "frame_render": round(frame_render_seconds, 4),
+            "frame_pipe_write": round(frame_pipe_write_seconds, 4),
+            "video_decode": round(video_decode_seconds, 4),
+            "video_decode_calls": video_decode_calls,
+            "video_decoded_frames": video_decoded_frames,
+            "concat": round(join_seconds, 4),
+            "audio_mux": round(audio_mux_seconds, 4),
+            "verification": round(verification_seconds, 4),
+            "render_pipeline": round(elapsed, 4),
+            "total": round(total_elapsed, 4),
+        },
+        "scene_timings": scene_timings,
         "fps_rendered": round(timeline.total_frames / elapsed, 2),
         "audio": audio_result,
         "export_quality": export_quality,

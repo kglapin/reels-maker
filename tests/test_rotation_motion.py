@@ -159,7 +159,9 @@ class RotationalTypographyTests(unittest.TestCase):
         )
         from reels_maker.layout.engine import Rect
         from reels_maker.renderers.canvas import (
-            apply_shape_mask, crop_region, load_video_frame, morph_polyline,
+            apply_shape_mask, clear_video_frame_cache,
+            collect_video_decode_metrics, crop_region, load_video_frame,
+            morph_polyline,
         )
         from reels_maker.textkit.typesetter import FontBook, TextStyle
 
@@ -183,8 +185,25 @@ class RotationalTypographyTests(unittest.TestCase):
             sampled_late = vnode.sample(1.3)
             self.assertAlmostEqual(sampled_early.props["playback_time"], 0.2)
             self.assertAlmostEqual(sampled_late.props["playback_time"], 1.3)
-            frame_early = load_video_frame(vid_path, 0.2, trim_start=0.0, trim_end=1.9)
-            frame_late = load_video_frame(vid_path, 1.3, trim_start=0.0, trim_end=1.9)
+            clear_video_frame_cache()
+            stat = vid_path.stat()
+            from reels_maker.renderers import canvas as canvas_renderer
+            reference_early = canvas_renderer._load_video_frame_cached(
+                str(vid_path.resolve()), stat.st_mtime, 0.2)
+            reference_late = canvas_renderer._load_video_frame_cached(
+                str(vid_path.resolve()), stat.st_mtime, 1.3)
+            clear_video_frame_cache()
+            with collect_video_decode_metrics() as decode_metrics:
+                frame_early = load_video_frame(
+                    vid_path, 0.2, trim_start=0.0, trim_end=1.9)
+                frame_late = load_video_frame(
+                    vid_path, 1.3, trim_start=0.0, trim_end=1.9)
+            self.assertEqual(decode_metrics["video_decode_calls"], 1)
+            self.assertEqual(decode_metrics["video_decoder_processes"], 1)
+            self.assertGreaterEqual(decode_metrics["video_decoded_frames"], 12)
+            self.assertGreater(decode_metrics["video_decode_seconds"], 0)
+            self.assertEqual(frame_early.tobytes(), reference_early.tobytes())
+            self.assertEqual(frame_late.tobytes(), reference_late.tobytes())
             r_early, _, b_early, _ = frame_early.getpixel((80, 80))
             r_late, _, b_late, _ = frame_late.getpixel((80, 80))
             self.assertGreater(r_early, b_early + 80)

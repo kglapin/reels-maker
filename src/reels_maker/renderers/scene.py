@@ -7,6 +7,7 @@ rounded shapes, rings and small type crisp in final output.
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +36,7 @@ def _rgb(value) -> tuple[int, int, int]:
 class RenderOptions:
     supersample: int = 1
     background_blur: float = 0.0
+    reuse_settled_frames: bool = True
 
 
 class SceneRenderer:
@@ -52,6 +54,10 @@ class SceneRenderer:
         self.W, self.H = width * self.ss, height * self.ss
         self._backgrounds: dict[tuple, Image.Image] = {}
         self._sources: dict[str, Image.Image] = {}
+        self._settled_frame_times: dict[int, float | None] = {}
+        self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
+        self._settled_frame_bytes = 0
+        self._settled_frame_budget = 128 * 1024 * 1024
 
     # ------------------------------------------------------------------ public
     def render(self, scene: BuiltScene, time: float) -> Image.Image:
@@ -59,6 +65,14 @@ class SceneRenderer:
             raise ValueError("Render time must be finite")
         if time < 0 or time > scene.duration + 1e-6:
             raise ValueError("Render time is outside the scene")
+        scene_key = id(scene)
+        settled_at = self._settled_frame_time(scene)
+        if (self.options.reuse_settled_frames and settled_at is not None
+                and time >= settled_at):
+            cached = self._settled_frames.get(scene_key)
+            if cached is not None:
+                self._settled_frames.move_to_end(scene_key)
+                return cached.copy()
         image = self._background(scene, time)
         for node in scene.at(time):
             self._draw_node(image, node)
@@ -69,7 +83,57 @@ class SceneRenderer:
         if self.ss > 1:
             image = image.resize((self.width, self.height),
                                  Image.Resampling.LANCZOS)
-        return image.convert("RGB")
+        image = image.convert("RGB")
+        if (self.options.reuse_settled_frames and settled_at is not None
+                and time >= settled_at):
+            self._remember_settled_frame(scene_key, image)
+        return image
+
+    def _settled_frame_time(self, scene: BuiltScene) -> float | None:
+        """Find when a scene becomes time-invariant, or return None if it never does."""
+        key = id(scene)
+        if key in self._settled_frame_times:
+            return self._settled_frame_times[key]
+        if scene.background.get("kind", "solid") not in ("solid", "gradient"):
+            self._settled_frame_times[key] = None
+            return None
+        pending = list(scene.nodes)
+        seen: set[int] = set()
+        settled_at = 0.0
+        while pending:
+            node = pending.pop()
+            if id(node) in seen:
+                continue
+            seen.add(id(node))
+            if node.kind in ("video", "mesh3d"):
+                self._settled_frame_times[key] = None
+                return None
+            pending.extend(node.children or [])
+            if node.tracks:
+                settled_at = max(settled_at, *(track.end
+                                               for track in node.tracks.values()))
+        transition = scene.meta.get("transition_in")
+        if transition and transition != "cut":
+            settled_at = max(
+                settled_at, float(scene.meta.get("transition_duration", .30)))
+        self._settled_frame_times[key] = settled_at
+        return settled_at
+
+    def _remember_settled_frame(self, key: int, image: Image.Image) -> None:
+        size = image.width * image.height * len(image.getbands())
+        if size > self._settled_frame_budget:
+            return
+        previous = self._settled_frames.pop(key, None)
+        if previous is not None:
+            self._settled_frame_bytes -= (
+                previous.width * previous.height * len(previous.getbands()))
+        cached = image.copy()
+        self._settled_frames[key] = cached
+        self._settled_frame_bytes += size
+        while self._settled_frame_bytes > self._settled_frame_budget:
+            _, evicted = self._settled_frames.popitem(last=False)
+            self._settled_frame_bytes -= (
+                evicted.width * evicted.height * len(evicted.getbands()))
 
     def render_overlay(self, scene: BuiltScene, time: float) -> Image.Image:
         """Render scene nodes onto transparent RGBA for video composition."""

@@ -1,0 +1,21 @@
+{
+  "id": "paper-studio",
+  "name": "Paper Studio Demo",
+  "identity": {
+    "palette": {
+      "primary": "#A66F37",
+      "background": "#FFFFFF",
+      "text": "#101416",
+      "neutral": "#5A6368"
+    }
+  },
+  "branding": {
+    "accent": "#A66F37",
+    "logo": false
+  },
+  "version": 1,
+  "scaffold": {
+    "status": "placeholder identity — verify fonts, logo rights and claims before any delivery",
+    "created": "2026-10-23"
+  }
+}

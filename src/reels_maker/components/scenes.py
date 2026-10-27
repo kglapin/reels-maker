@@ -28,6 +28,7 @@ from .editorial_scenes import (
 from .table_scenes import build_table
 from .media_scenes import build_polaroid_burst, build_product_3d
 from .custom_scenes import _build_full_bleed, _build_split, _build_stack
+from .paper_reveal import build_paper_reveal
 
 
 TYPE_COMPOSITION = {
@@ -166,6 +167,7 @@ BUILDERS = {
     "table": build_table,
     "energy": build_energy,
     "quote": build_quote,
+    "paper_reveal": build_paper_reveal,
 }
 
 

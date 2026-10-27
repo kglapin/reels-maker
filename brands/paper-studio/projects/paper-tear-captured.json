@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "Paper Tear Reveal — Captured Footage",
+  "brand": "paper-studio",
+  "style": "editorial-premium",
+  "video": {"width": 1080, "height": 1920, "fps": 30},
+  "export": {"profile": "review", "codec": "libx264", "crf": 18, "preset": "medium"},
+  "design_overrides": {
+    "palette": {
+      "background": "#141C17",
+      "surface": "#1C2620",
+      "ink": "#F4F1E8",
+      "muted": "#A9B3AA",
+      "accent": "#C98B4B"
+    }
+  },
+  "scenes": [
+    {
+      "id": "captured-paper-tear",
+      "type": "paper_reveal",
+      "duration": 4.2,
+      "background": {"kind": "solid", "color": "#141C17"},
+      "kicker": "POD SPODEM",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.32,
+      "tear_hold_frame": 18,
+      "tear_zoom": 1.0,
+      "tear_source_note": "Torn-paper green-screen capture, chroma-keyed to RGBA frames; rights confirmed by owner for this demo."
+    }
+  ]
+}

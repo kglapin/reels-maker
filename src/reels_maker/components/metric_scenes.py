@@ -421,8 +421,9 @@ def build_heat(ctx: SceneContext, scene: dict) -> BuiltScene:
     layout = ctx.layout.layout("hero-number", measurements, has_visual=True)
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
-                              layout.region("kicker"), ctx.fonts,
-                              align="center", valign="bottom"),
+                               layout.region("kicker"), ctx.fonts,
+                              align="center", valign="bottom",
+                              meta={"typography_role": "kicker"}),
     }
     amount_region = layout.region("headline")
     elements["amount"] = number_node(
@@ -471,8 +472,9 @@ def build_europe(ctx: SceneContext, scene: dict) -> BuiltScene:
     layout = ctx.layout.layout("hero-number", measurements, has_visual=True)
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
-                              layout.region("kicker"), ctx.fonts,
-                              align="center", valign="bottom"),
+                               layout.region("kicker"), ctx.fonts,
+                              align="center", valign="bottom",
+                              meta={"typography_role": "kicker"}),
         "amount": number_node("amount", value, layout.region("headline"),
                               ctx.tokens, fmt=fmt, size_role="hero",
                               color=theme["accent"], align="center"),

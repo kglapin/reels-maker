@@ -16,7 +16,7 @@ class OpenverseAudioTests(unittest.TestCase):
             "url": "https://cdn.example/audio-123.ogg",
             "license": "cc-by", "license_url": "https://creativecommons.org/licenses/by/4.0/",
             "attribution": "Soft wind by A. Maker",
-            "duration": 18.25, "filetype": "ogg", "sha256": "abc123",
+            "duration": 18250, "filetype": "ogg", "sha256": "abc123",
         }]}
         client = ProviderClient(cache=SearchCache(), transport=lambda url, headers: (
             seen.append((url, headers)) or payload))

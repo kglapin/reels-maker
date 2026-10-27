@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import unittest
+import copy
 from collections import OrderedDict
 from unittest.mock import patch
 from pathlib import Path
@@ -17,6 +18,7 @@ from reels_maker.motionkit.keyframes import Keyframe, Track
 from reels_maker.renderers.camera_canvas import CameraCanvasRenderer
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.textkit.typesetter import FontBook
+from reels_maker.textkit.typesetter import TextStyle, typeset
 from reels_maker.renderers.studio import _encode_studio_scene
 
 
@@ -132,6 +134,75 @@ class FramedImageCacheTests(unittest.TestCase):
             self.assertEqual(len(cached._framed_images), 1)
 
 
+class SourceImageCacheTests(unittest.TestCase):
+    def test_source_cache_is_lru_bounded_by_decoded_bytes(self):
+        width, height = 8, 8
+        renderer = object.__new__(SceneRenderer)
+        renderer._sources = OrderedDict()
+        renderer._source_bytes = 0
+        renderer._source_byte_budget = width * height * 4 * 2
+        first = Image.new("RGBA", (width, height), (10, 20, 30, 255))
+        second = Image.new("RGBA", (width, height), (40, 50, 60, 255))
+        calls = []
+
+        def load(image):
+            def inner():
+                calls.append(image)
+                return image
+            return inner
+
+        self.assertIs(renderer._source("first", load(first)), first)
+        self.assertIs(renderer._source("second", load(second)), second)
+        # Touch second so the first entry is the least-recently-used one.
+        self.assertIs(renderer._source("second", load(first)), second)
+        third = Image.new("RGBA", (width, height), (70, 80, 90, 255))
+        self.assertIs(renderer._source("third", load(third)), third)
+        self.assertNotIn("first", renderer._sources)
+        self.assertIn("second", renderer._sources)
+        self.assertIn("third", renderer._sources)
+        self.assertEqual(renderer._source_bytes, width * height * 4 * 2)
+        self.assertEqual(len(calls), 3)
+
+
+class LocalLayerParityTests(unittest.TestCase):
+    def test_local_transformed_layers_match_full_canvas_rasterization(self):
+        width, height = 220, 176
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        fonts = FontBook()
+        renderer = SceneRenderer(
+            width, height, tokens, fonts,
+            options=RenderOptions(supersample=2, reuse_settled_frames=False),
+        )
+        block = typeset("RUCH I CZYTELNOSC", TextStyle(size=24), 104, fonts)
+        nodes = [
+            Node(kind="rect", role="scaled-rect",
+                 props={"x": 22, "y": 32, "w": 70, "h": 34,
+                        "fill": "#47A013"},
+                 dx=5.25, dy=-2.5, scale=.83, rotation=11, opacity=.62),
+            Node(kind="text", role="scaled-text",
+                 props={"x": 12, "y": 92, "w": 104, "h": block.height,
+                        "block": block, "color": (255, 255, 255),
+                        "tracking_offset": 0.0},
+                 dx=-2.25, dy=1.5, scale=.91, rotation=-6, opacity=.73),
+        ]
+        background = Image.new("RGBA", (renderer.W, renderer.H),
+                               (12, 24, 36, 255))
+        for source_node in nodes:
+            sampled = source_node.sample(.5)
+            expected = background.copy()
+            isolated = Image.new("RGBA", (renderer.W, renderer.H), (0, 0, 0, 0))
+            draw_node = copy.copy(sampled)
+            draw_node.opacity = 1.0
+            renderer._content(isolated, draw_node)
+            isolated = renderer._apply_node_state(
+                isolated, sampled, 0.0, 0.0, 1.0, sampled.rotation)
+            expected.alpha_composite(isolated)
+
+            actual = background.copy()
+            renderer._draw_node(actual, sampled)
+            self.assertEqual(expected.tobytes(), actual.tobytes(), sampled.role)
+
+
 
 class CameraCanvasSettledFrameTests(unittest.TestCase):
     def _renderer(self, *, video=False):
@@ -147,7 +218,9 @@ class CameraCanvasSettledFrameTests(unittest.TestCase):
         renderer.w = 8
         renderer.h = 8
         renderer.stops = [(8.0, 8.0, 0.0, 1.0)]
-        renderer.stages = [Image.new("RGBA", (16, 16), (20, 30, 40, 255))]
+        renderer._base_world = Image.new("RGBA", (16, 16), (20, 30, 40, 255))
+        renderer._active_stage_index = -1
+        renderer._active_stage = None
         renderer.local_typography = [
             Image.new("RGBA", (8, 8), (0, 0, 0, 0))]
         renderer._settled_frames = OrderedDict()

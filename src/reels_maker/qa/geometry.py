@@ -44,7 +44,11 @@ def _text_blocks(root: Node) -> list[tuple[str, TextBlock]]:
     for node in root.flatten():
         block = node.props.get("block")
         if isinstance(block, TextBlock):
-            result.append((node.role, block))
+            # Some metric compositions store their small semantic kicker in
+            # the public `headline` element slot. Audit the declared typographic
+            # role rather than misclassifying it as a display headline.
+            role = str(node.meta.get("typography_role") or node.role)
+            result.append((role, block))
     return result
 
 
@@ -239,7 +243,13 @@ def _vertical_reels_content_zone(built) -> list[Issue]:
             and not any(token in node.role.lower()
                         for token in ("background", "backdrop"))
         )
-        is_content_container = node.qa_class in ("control", "visual")
+        # Group bounds are only the union of their children; a wide chart or
+        # marquee may deliberately include layout/loop padding. The actual
+        # visible leaves and all text are checked below, so do not report the
+        # non-rendering group envelope as an out-of-zone graphic.
+        is_content_container = (
+            node.qa_class in ("control", "visual")
+            and node.kind not in ("group", "scene"))
         if is_asset_illustration or is_content_container:
             box = node.base_bounds()
             if box is not None:

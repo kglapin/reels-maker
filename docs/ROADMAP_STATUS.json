@@ -1,14 +1,15 @@
 {
-  "current_milestone": "All 64 Plan 2.0 packages (F0..F6) have code-level implementation & synthetic/unit test coverage on main; human viewing (MD-002), repository privacy (SEC-06) and phone/legal sign-off (REL-07/REL-09) remain owner gates",
-  "status": "All 64 packages in MASTER_PLAN.md (44 MD-* and 20 DM-*) now have implemented code paths and automated test coverage integrated on main. Automated tests verify technical contracts and geometry/data conservation; human creative approval, 24-shot reference viewing and private repository configuration remain open owner gates.",
+  "current_milestone": "Plan 2.0 code paths and tests exist across F0..F6, but package acceptance is not complete or globally verified. Use each package status below and docs/MASTER_PLAN.md; human viewing (MD-002), repository privacy (SEC-06) and phone/legal sign-off (REL-07/REL-09) remain owner gates.",
+  "status": "This file is a status snapshot, not proof that all 64 packages are complete. Package-level progress includes partial and unverified work; automated tests establish technical contracts only. Human creative approval, 24-shot reference viewing and private repository configuration remain open owner gates.",
   "next_action": "Owner review gates: (1) set repository visibility to PRIVATE before importing confidential client assets (SEC-06), (2) record human-viewed timecodes for the 24-shot reference board (MD-002), (3) conduct human phone playback and legal sign-off on candidate flagship reels (REL-07/REL-09).",
-  "current_branch": "main",
-  "latest_commit": "HEAD on main (see git log -1; all 64 Plan 2.0 code slices integrated)",
-  "branch_up_to_date": true,
-  "worktree_clean": true,
-  "draft_pr_state": "PR #1 is MERGED; all F0..F6 code slices are integrated on main",
-  "ci_status": "GitHub Actions 5/5 workflows green on main (Python tests, Creative Engine MP4, Advanced Transitions, Editorial Rotation, Camera Canvas).",
-  "local_tests": "418 tests run locally: 411 passed, 7 skipped (unavailable LFS/media fixtures and opt-in live-provider tests). Existing ResourceWarnings/Pillow deprecations are non-fatal.",
+  "current_branch": "origin/main snapshot; verify the live branch before relying on this field",
+  "latest_commit": "70043620ee7bacc8d06e2fde84381d6544caaa09 (origin/main as fetched on 2026-10-26)",
+  "branch_up_to_date": null,
+  "worktree_clean": null,
+  "repository_state_note": "Branch freshness and worktree cleanliness are live Git facts and are intentionally not asserted by this documentation snapshot.",
+  "draft_pr_state": "PR #1 is MERGED; this historical record does not describe the status of later pull requests.",
+  "ci_status": "Not re-verified for this snapshot. The previously recorded 5/5 workflow result is historical, not a current CI claim.",
+  "local_tests": "Verified locally on 2026-10-27 with PYTHONPATH=src:tests python3 -m unittest discover -s tests -v: 487 tests run, 480 passed, 7 skipped, 0 failures. Skips require opt-in live-provider access or unavailable LFS performance fixtures; this is technical verification only.",
   "completed_gates": {
     "G0": "Prior SEC-01/03/05/07 review found no secrets and verified collaborators; privacy confirmation is stale because live GitHub visibility is PUBLIC (owner action required)",
     "G1": "Historical v1 record is superseded: current catalog has 15 finished_promo ASTA footage, 11 unreviewed, 2 unknown and 2 separate clean_source stock items. No ASTA footage is established as clean overlay source.",
@@ -123,7 +124,7 @@
   ],
   "experimental_motion_system": {
     "branch": "feat/motion-design-system-20261023",
-    "status": "Local commits 18f73d9, 66e64ac and 76ebbae; not pushed; separate from v1.0 gates",
+    "status": "Integrated into origin/main (the branch tip is an ancestor of origin/main); remains experimental and separate from release/creative approval gates",
     "manifest": "brands/asta-energy/projects/asta-motion-system-demo.json",
     "render": "renders/asta-energy/asta-motion-system-demo-final.mp4",
     "contact_sheet": "renders/asta-energy/qa/asta-motion-system-demo-final.png",
@@ -218,14 +219,14 @@
       "task": "Owner authorized code push to GitHub main on 2026-10-23; per-delivery media rights, claims and phone/rubric review remain owner gates"
     }
   ],
-  "test_count": 418,
+  "test_count": 487,
   "files_added": 20,
-  "current_date": "2026-10-24",
+  "current_date": "2026-10-26",
   "version": "1.0",
   "canonical_master_plan": "docs/MASTER_PLAN.md",
   "integrated_roadmap": {
     "version": "2.0",
-    "updated_on": "2026-10-24",
+      "updated_on": "2026-10-24",
     "source_of_truth": "docs/MASTER_PLAN.md",
     "source_roadmaps_retired": [
       "docs/PRO_MOTION_ROADMAP_2026.md",
@@ -269,5 +270,5 @@
     "status_rule": "Existing code or green CI alone does not mean a package is creatively approved.",
     "priority": "P0 foundation before P1 advanced motion and P2 optional 3D"
   },
-  "historical_status_notice": "Existing completed_gates, pending_g11, flagship_deliveries, local_tests, experimental_motion_system and motion_design_backlog refer to earlier v1 history; they are not the canonical current MD/DM task board."
+  "historical_status_notice": "Existing completed_gates, pending_g11, flagship_deliveries and motion_design_backlog refer to earlier v1 history; files_added is an unrecomputed historical metric. They are not the canonical current MD/DM task board. Per-package Plan 2.0 progress is recorded separately above and has not been audited against every consolidated acceptance criterion."
 }

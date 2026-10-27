@@ -316,6 +316,12 @@ Workflow per scene:
 
 Asset manifest minimum: ID, type, original/source page, provider, creator, license ID/link/version, usage context, allowed platforms, attribution text, download date, expiry/revocation, model/property release uncertainty, content ID status, checksum, exact local derivative paths, transform recipe.
 
+LottieFiles: see [LOTTIEFILES_INTEGRATION.md](LOTTIEFILES_INTEGRATION.md) for
+the manually reviewed public-asset workflow and current renderer limitation.
+Do not scrape/enumerate the catalog or claim native Lottie/dotLottie playback:
+the asset-library validator intentionally rejects those formats until a
+licence-reviewed, deterministic renderer is implemented.
+
 #### 5.3 Image/video intelligence
 
 Vision embeddings for semantic fit, duplicate filtering and ranking; object/face/saliency masks; color harmony; empty-space estimation for text; object retention over a clip; reference-aware framing; 3–5 crop candidates; reject clipping/low resolution. Store subject masks and focal coordinates with provenance; user may override.

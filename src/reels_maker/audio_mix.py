@@ -7,6 +7,7 @@ No beat guesses, synthesis, automatic transcript alignment or forced loudnorm.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from .ffmpeg import RenderError, execute
@@ -74,14 +75,23 @@ def mux_audio(project: Project, silent_video: Path, destination: Path,
     for effect in sfx_tracks:
         path = Path(effect.get("file") or effect.get("path") or "")
         start = float(effect.get("time", effect.get("start", 0)))
-        if start < 0 or start >= duration:
+        if not math.isfinite(start) or start < 0 or start >= duration:
             raise RenderError(f"SFX start {start:.3f}s falls outside the video")
+        clip_duration = float(effect.get("duration", duration - start))
+        if (not math.isfinite(clip_duration) or clip_duration <= 0
+                or clip_duration > duration - start + 1e-9):
+            raise RenderError(
+                "SFX duration must be positive and fit after its timeline start")
+        fade_out = float(effect.get("fade_out", 0.0))
+        if (not math.isfinite(fade_out) or fade_out < 0
+                or fade_out > clip_duration):
+            raise RenderError("SFX fade_out must be between zero and its duration")
         if "volume" in effect:
             volume = float(effect["volume"])
         else:
             gain_db = float(effect.get("gain_db", -18))
             volume = 10 ** (gain_db / 20)
-        if not 0 <= volume <= 4:
+        if not math.isfinite(volume) or not 0 <= volume <= 4:
             raise RenderError("SFX volume must be between 0 and 4")
         if not path.is_file():
             raise RenderError(f"SFX file does not exist: {path}")
@@ -91,7 +101,11 @@ def mux_audio(project: Project, silent_video: Path, destination: Path,
         chain = (f"[{idx}:a]aresample=48000,"
                  "aformat=channel_layouts=stereo,"
                  "asetpts=PTS-STARTPTS,"
-                 f"volume={volume:.6f}")
+                 f"volume={volume:.6f},"
+                 f"atrim=duration={clip_duration:.8f},asetpts=PTS-STARTPTS")
+        if fade_out > 0:
+            chain += (f",afade=t=out:st={clip_duration-fade_out:.8f}:"
+                      f"d={fade_out:.8f}")
         if delay_ms:
             chain += f",adelay={delay_ms}:all=1"
         chain += (f",apad,atrim=duration={duration:.8f},"

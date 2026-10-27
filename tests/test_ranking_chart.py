@@ -4,6 +4,7 @@ import unittest
 from reels_maker.components.base import SceneContext
 from reels_maker.components.scenes import build_scene
 from reels_maker.design.tokens import resolve_tokens
+from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.textkit.typesetter import FontBook
 
 
@@ -44,6 +45,19 @@ class RankingChartTests(unittest.TestCase):
                                     {"label": "B", "value": 2}])
         with self.assertRaisesRegex(ValueError, "non-negative"):
             build_scene(context(), negative)
+
+    def test_ranking_uses_shared_card_tracks_and_direct_values(self):
+        ctx = context()
+        built = build_scene(ctx, self.scene())
+        roles = {node.role for root in built.nodes for node in root.flatten()}
+        self.assertIn("bar-chart-card", roles)
+        self.assertEqual(len([role for role in roles if role.startswith("bar-track-")]), 4)
+        self.assertEqual(len([role for role in roles if role.startswith("bar-value-")]), 4)
+        renderer = SceneRenderer(ctx.width, ctx.height, ctx.tokens, ctx.fonts,
+                                 options=RenderOptions(supersample=1))
+        frame = renderer.render(built, 2.5)
+        self.assertEqual(frame.size, (ctx.width, ctx.height))
+        self.assertGreater(len(frame.getcolors(ctx.width * ctx.height) or []), 20)
 
 
 if __name__ == "__main__":

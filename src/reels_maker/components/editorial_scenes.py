@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..core.scene_graph import Node
-from ..design.color import mix
+from ..design.color import ensure_contrast, mix
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle, typeset
@@ -272,7 +272,8 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
                                         align="center", balance=True)
-    phone_style = TextStyle(ctx.tokens.px(72), theme["surface"], "bold",
+    button_text = ensure_contrast(theme["surface"], theme["accent"], 4.5)
+    phone_style = TextStyle(ctx.tokens.px(72), button_text, "bold",
                             align="center")
     body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
                                     align="center")
@@ -300,7 +301,7 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
         "size": phone_style.size, "weight": "bold",
         "tracking_offset": 0.0},
         qa_class="text", meta={"text": phone})
-    tag_style = TextStyle(ctx.tokens.px(26), theme["surface"], "bold",
+    tag_style = TextStyle(ctx.tokens.px(26), button_text, "bold",
                           align="center", uppercase=True, tracking=1.5)
     tag = text_node("cta-tag", line_one, tag_style,
                     Rect(card_region.x + ctx.tokens.space("md"),
@@ -419,9 +420,15 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
                                         balance=True)
     measurements = {"headline": _measure(headline, headline_style, width, ctx)}
     layout = ctx.layout.layout("checklist", measurements)
+    headline_region = layout.region("headline")
+    # Font ink can extend slightly above its line box. Keep the checklist title
+    # a few pixels inside the authored Reels content boundary instead of
+    # positioning the glyph outline directly against the platform-safe edge.
+    headline_region = Rect(headline_region.x, headline_region.y + 2,
+                           headline_region.w, max(1, headline_region.h - 2))
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
-                              layout.region("headline"), ctx.fonts,
+                              headline_region, ctx.fonts,
                               valign="center")}
     specs = [_spec("headline", 8)]
     list_region = layout.region("list")

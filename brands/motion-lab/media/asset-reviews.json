@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "updated": "2026-10-26",
+  "assets": {
+    "media/stock/solar-field-synthetic.png": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; stylized synthetic illustration, no third-party image or baked-in copy."
+    },
+    "media/stock/battery-room-synthetic.png": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; stylized synthetic illustration, no third-party image or baked-in copy."
+    },
+    "media/stock/wind-farm-synthetic.png": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; stylized synthetic illustration, no third-party image or baked-in copy."
+    },
+    "media/stock/city-grid-synthetic.png": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; stylized synthetic illustration, no third-party image or baked-in copy."
+    },
+    "media/stock/energy-orbit-synthetic.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; no third-party footage, logos, captions or claims. Synthetic motion background only."
+    },
+    "media/stock/grid-flow-synthetic.mp4": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by tools/generate_motion_demo_assets.py; no third-party footage, logos, captions or claims. Synthetic motion background only."
+    }
+  }
+}

@@ -35,7 +35,7 @@ class Camera:
 
 
 @lru_cache(maxsize=128)
-def _load(path: str, mtime: float) -> Image.Image:
+def _load(path: str, mtime_ns: int, size_bytes: int) -> Image.Image:
     image = Image.open(path)
     image.load()
     return image.convert("RGBA")
@@ -44,7 +44,7 @@ def _load(path: str, mtime: float) -> Image.Image:
 def load_image(path: str | Path) -> Image.Image:
     path = str(Path(path).resolve())
     stat = os.stat(path)
-    return _load(path, stat.st_mtime)
+    return _load(path, stat.st_mtime_ns, stat.st_size)
 
 
 def _cached_video_frame(key: tuple[str, float, float]) -> Image.Image | None:

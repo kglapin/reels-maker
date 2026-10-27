@@ -5,8 +5,9 @@ and any noninteractive terminal harness.
 
 **Refactor status:** `refactor/modular-render-engine` was merged through
 [PR #1](https://github.com/kglapin/reels-maker/pull/1) on 2026-10-23. The
-separate native motion-studio prototype is on local branch
-`feat/motion-design-system-20261023`; it has not been pushed or merged.
+native motion-studio implementation from `feat/motion-design-system-20261023`
+is also integrated into `main`. It remains experimental: integration and
+automated tests do not constitute creative, rights or release approval.
 
 ## Canonical 1.0 completion plan
 
@@ -32,6 +33,14 @@ include corresponding typographic preflight checks (long headlines, actual
 font size, leading, letter spacing, line counts and weak text hierarchy).
 Layout-safe-zone and contrast checks remain active; consult the document for
 video-specific adaptations vs published UI/web source sizes.
+
+To render the synthetic five-minute engine showcase, see
+[`docs/MOTION_LAB_DEMO.md`](docs/MOTION_LAB_DEMO.md). It uses locally generated
+illustrations and video only and is not a publication-approved deliverable.
+Studio chart styling and reuse guidance is documented in
+[`docs/CHART_STYLE.md`](docs/CHART_STYLE.md).
+Reusable note-entry, text-selection and search typing interactions are described
+in [`docs/MOBILE_TEXT_INTERACTIONS.md`](docs/MOBILE_TEXT_INTERACTIONS.md).
 
 ```python
 from reels_maker.design.typography_policy import suggested_typography

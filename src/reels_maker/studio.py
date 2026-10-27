@@ -8,18 +8,16 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Mapping
 
 from .assets.manager import AssetManager
-from .audiokit.cues import CuePlan, apply_cue_plan, load_transcript, plan_cues
-from .components.base import BuiltScene, SceneContext
-from .components.scenes import build_scene
-from .core.timeline import Timeline, build_timeline
+from .audiokit.cues import apply_cue_plan, load_transcript, plan_cues
+from .core.timeline import build_timeline
 from .design.styles import canonical_style
-from .design.tokens import DesignTokens, resolve_tokens
+from .design.tokens import resolve_tokens
 from .textkit.typesetter import FontBook
+from .studio_project import StudioProject
 
 
 PROFILES = {
@@ -36,86 +34,6 @@ PROFILES = {
 
 class StudioError(ValueError):
     pass
-
-
-@dataclass
-class StudioProject:
-    path: Path
-    root: Path
-    name: str
-    width: int
-    height: int
-    fps: int
-    style: str
-    scenes: list[dict]
-    brand: str | None
-    brand_data: dict
-    audio: dict
-    export: dict
-    tokens: DesignTokens
-    fonts: FontBook
-    asset_manager: AssetManager | None
-    cue_plan: CuePlan | None = None
-    warnings: list[dict] = field(default_factory=list)
-
-    @property
-    def duration(self) -> float:
-        return sum(float(scene["duration"]) for scene in self.scenes)
-
-    def timeline(self) -> Timeline:
-        return build_timeline(self.scenes, self.fps)
-
-    def build(self, timeline: Timeline | None = None) -> list[BuiltScene]:
-        timeline = timeline or self.timeline()
-        built = []
-        for index, (scene, timing) in enumerate(zip(self.scenes, timeline.scenes)):
-            context = SceneContext(
-                width=self.width, height=self.height, fps=self.fps,
-                duration=timing.duration, tokens=self.tokens, style=self.style,
-                fonts=self.fonts, scene_index=index, seed=index * 17 + 3,
-                assets=self.asset_manager, scene=scene)
-            item = build_scene(context, scene)
-            search_config = scene.get("search_field")
-            if search_config is not None:
-                from .components.search_field import build_search_field
-                search_nodes = build_search_field(context, search_config)
-                search_roles = {node.role for node in search_nodes}
-                duplicates = search_roles & set(item.elements)
-                if duplicates:
-                    raise ValueError("search_field role conflicts with scene elements: "
-                                     + ", ".join(sorted(duplicates)))
-                item.nodes.extend(search_nodes)
-                item.elements.update({node.role: node for node in search_nodes})
-                item.meta["search_field"] = {
-                    "query": str(search_config.get("query", "")),
-                    "typed": bool(search_config.get("query", "")),
-                }
-            transition = scene.get("transition_in")
-            transition_type = (transition.get("type", "cut")
-                               if isinstance(transition, dict) else transition)
-            # The reference clip uses crisp scene cuts and smooth, staged
-            # entrances within each shot. Effects are opt-in per scene.
-            item.meta["transition_in"] = (
-                transition if transition_type not in (None, "cut") else None)
-            item.meta["transition_duration"] = (
-                float(scene.get("transition_seconds", .30))
-                if transition_type not in (None, "cut") else 0.0)
-            built.append(item)
-        return built
-
-    def to_dict(self) -> dict:
-        return {
-            "name": self.name,
-            "brand": self.brand,
-            "style": self.style,
-            "video": {"width": self.width, "height": self.height,
-                      "fps": self.fps, "duration": round(self.duration, 4)},
-            "scene_count": len(self.scenes),
-            "tokens": self.tokens.to_dict(),
-            "audio": {"configured": bool(self.audio)},
-            "cues": self.cue_plan.to_dict() if self.cue_plan else None,
-            "warnings": list(self.warnings),
-        }
 
 
 def _brand_slug(path: Path, data: dict, root: Path) -> str | None:
@@ -351,6 +269,32 @@ def _load_studio_data(path: Path, data: dict, *,
                 item["image"] = str(source)
                 resolved_items.append(item)
             scene["carousel"] = {**carousel, "items": resolved_items}
+        video_layer = scene.get("video_layer")
+        if video_layer is not None:
+            if not isinstance(video_layer, dict) or not video_layer.get("path"):
+                raise StudioError(
+                    f"Scene {index + 1}: video_layer must be an object with a path")
+            video_layer = dict(video_layer)
+            source = _resolve_asset(str(video_layer["path"]), brand_root, root)
+            if source.suffix.lower() not in (".mp4", ".mov", ".mkv", ".webm",
+                                             ".avi", ".m4v"):
+                raise StudioError(
+                    f"Scene {index + 1}: video_layer requires a supported video file")
+            video_layer["path"] = str(source)
+            scene["video_layer"] = video_layer
+        camera_canvas = scene.get("camera_canvas")
+        if camera_canvas is not None:
+            if not isinstance(camera_canvas, dict):
+                raise StudioError(
+                    f"Scene {index + 1}: camera_canvas must be an object")
+            camera_video = scene.get("video")
+            if camera_video:
+                source = _resolve_asset(str(camera_video), brand_root, root)
+                if source.suffix.lower() not in (".mp4", ".mov", ".mkv", ".webm",
+                                                 ".avi", ".m4v"):
+                    raise StudioError(
+                        f"Scene {index + 1}: camera_canvas video requires a supported video file")
+                scene["video"] = str(source)
         for media in scene.get("editorial_media") or []:
             if not isinstance(media, dict) or not media.get("asset"):
                 raise StudioError("editorial_media items require asset paths")

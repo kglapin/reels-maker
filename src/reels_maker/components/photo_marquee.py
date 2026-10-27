@@ -154,7 +154,8 @@ def build_photo_marquee(ctx: SceneContext, scene: dict):
             photo = image_node(
                 f"marquee-photo-r{row_index}-c{card_index}",
                 image_path, rect, qa_class="decor",
-                meta={"marquee_row": row_index, "image_index": item_index})
+                meta={"asset_role": "marquee-photo",
+                      "marquee_row": row_index, "image_index": item_index})
             photo.props["radius"] = radius
             cards.append(Node(
                 kind="group",

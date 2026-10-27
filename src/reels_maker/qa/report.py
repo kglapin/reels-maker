@@ -44,13 +44,32 @@ def audit(project, built_scenes, timeline: Timeline, *,
     frames_dir = []
     allowed = _allowed_overlaps(project)
 
+    # Camera Canvas is a separate renderer path; its travel, subject-retention
+    # and camera-safe geometry checks must be part of the same QA gate rather
+    # than living only behind a directly imported helper.
+    camera_canvas_mode = any("camera_canvas" in scene for scene in project.scenes)
+    if camera_canvas_mode:
+        from .camera_canvas import audit_camera_canvas
+        camera_report = audit_camera_canvas(
+            project.scenes, project.width, project.height, fps=timeline.fps)
+        issues.extend(Issue(**item) for item in camera_report["issues"])
+
     for built, timing in zip(built_scenes, timeline.scenes):
         scene_issues = []
+        camera_cfg = built.scene.get("camera_canvas")
+        canvas_component = built.meta.get("component")
+        if isinstance(camera_cfg, dict):
+            composition_name = (
+                f"camera-canvas:{camera_cfg.get('layout', 'photo-above')}")
+        elif canvas_component in ("note_canvas", "search_canvas"):
+            composition_name = canvas_component
+        else:
+            composition_name = built.layout.recipe
         vertical_reels = is_vertical_reels_canvas(
             built.context.width, built.context.height)
         scene_issues.extend(_vertical_reels_content_zone(built))
         elements_seen: dict[str, dict] = {}
-        compositions.append(built.layout.recipe)
+        compositions.append(composition_name)
         # ---------------------------------------------------------- geometry
         samples = sample_geometry_frames(built, timing, timeline.fps,
                                          samples_per_scene)
@@ -133,7 +152,7 @@ def audit(project, built_scenes, timeline: Timeline, *,
                     built.index + 1, round(entry.onset, 3), [role],
                     "Fix the narration transcript or scene duration."))
         # ------------------------------------------------------------- contrast
-        if renderer is not None:
+        if renderer is not None and not camera_canvas_mode:
             probe_times = [round((timing.frames - 1) * part /
                                  max(1, samples_per_scene - 1)) / timeline.fps
                            for part in (1, samples_per_scene - 2,
@@ -154,7 +173,7 @@ def audit(project, built_scenes, timeline: Timeline, *,
         if scene_issues:
             scenes_report.append({
                 "scene": built.index + 1,
-                "composition": built.layout.recipe,
+                "composition": composition_name,
                 "type": built.meta.get("type"),
                 "issues": [issue.to_dict() for issue in scene_issues],
             })
@@ -237,6 +256,8 @@ def audit(project, built_scenes, timeline: Timeline, *,
         "limitations": [
             "Collision, safe-area, contrast and timing checks are deterministic.",
             "Aesthetic quality and brand fit require human review on a phone.",
+            *(["Camera Canvas uses its own raster layout; frame-level contrast must be reviewed in its storyboard/MP4, not inferred from the regular scene graph." ]
+              if camera_canvas_mode else []),
             "Music ducking and sidechain pumping are not measured here.",
             "Negative glyph fills are image-dependent and require manual contrast review.",
             "Auto contrast samples a border ring around each text block; extreme "

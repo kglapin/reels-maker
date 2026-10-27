@@ -31,7 +31,8 @@ def _run(command: list[str], *, text: bool = False) -> subprocess.CompletedProce
     return subprocess.run(command, check=True, capture_output=True, text=text)
 
 
-def _create_fixtures(root: Path) -> tuple[Path, Path, Path]:
+def _create_fixtures(root: Path, *, width: int, height: int,
+                     fps: int, profile: str) -> tuple[Path, Path, Path]:
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise RuntimeError("FFmpeg is required for renderer benchmarks")
@@ -39,7 +40,7 @@ def _create_fixtures(root: Path) -> tuple[Path, Path, Path]:
     tone = root / "synthetic-tone.wav"
     _run([
         ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-        "-f", "lavfi", "-i", "testsrc2=size=360x640:rate=20",
+        "-f", "lavfi", "-i", f"testsrc2=size={width}x{height}:rate={fps}",
         "-t", "3", "-an", "-c:v", "libx264", "-preset", "ultrafast",
         "-crf", "22", "-pix_fmt", "yuv420p", str(source),
     ])
@@ -52,7 +53,7 @@ def _create_fixtures(root: Path) -> tuple[Path, Path, Path]:
     legacy_manifest = root / "legacy-project.json"
     legacy_manifest.write_text(json.dumps({
         "name": "Synthetic renderer benchmark",
-        "video": {"width": 360, "height": 640, "fps": 20},
+        "video": {"width": width, "height": height, "fps": fps},
         "scenes": [
             {"file": source.name, "duration": 1.5,
              "title": {"kicker": "BENCH", "headline": "ENERGIA",
@@ -67,13 +68,17 @@ def _create_fixtures(root: Path) -> tuple[Path, Path, Path]:
     studio_manifest = root / "studio-project.json"
     studio_manifest.write_text(json.dumps({
         "name": "Synthetic Studio benchmark",
-        "video": {"width": 360, "height": 640, "fps": 20},
-        "export": {"codec": "libx264", "crf": 26, "preset": "ultrafast"},
+        "video": {"width": width, "height": height, "fps": fps},
+        "export": {"profile": profile, "codec": "libx264", "crf": 26,
+                   "preset": "ultrafast"},
         "audio": {"music": {"file": tone.name, "volume": 0.1,
                               "fade_out": 0.25, "ducking": "off"}},
         "scenes": [
             {"type": "statement", "duration": 1.0,
-             "headline": "SYNTHETIC MOTION", "subtitle": "Studio render"},
+             "headline": "SYNTHETIC MOTION", "subtitle": "Studio render",
+             "video_layer": {"path": str(source), "x": 24, "y": 280,
+                             "w": width - 48, "h": height * 0.22,
+                             "mask": "rounded", "radius": 14}},
             {"type": "amount", "duration": 1.0, "value": 15600,
              "visual": "none", "kicker": "TEST", "subtitle": "SCENE GRAPH"},
             {"type": "line_chart", "duration": 1.0,
@@ -115,7 +120,8 @@ def _decoded_frame_hashes(path: Path) -> list[str]:
 
 
 def _validate_output(report: dict[str, Any], path: Path,
-                     expected_frames: int) -> dict[str, Any]:
+                     expected_frames: int, *, width: int, height: int,
+                     fps: int) -> dict[str, Any]:
     if not report.get("ok"):
         raise RuntimeError(f"Renderer reported failure: {report}")
     quality = report.get("export_quality", {})
@@ -129,9 +135,9 @@ def _validate_output(report: dict[str, Any], path: Path,
                   if stream.get("codec_type") == "audio"), None)
     if video is None:
         raise RuntimeError("Benchmark output has no video stream")
-    if (video.get("width"), video.get("height")) != (360, 640):
+    if (video.get("width"), video.get("height")) != (width, height):
         raise RuntimeError(f"Unexpected output dimensions: {video}")
-    if video.get("r_frame_rate") != "20/1":
+    if video.get("r_frame_rate") != f"{fps}/1":
         raise RuntimeError(f"Unexpected output frame rate: {video}")
     frame_hashes = _decoded_frame_hashes(path)
     if len(frame_hashes) != expected_frames:
@@ -152,7 +158,8 @@ def _median(samples: list[float]) -> float:
 
 def _benchmark_case(name: str, backend: str, project: Any, *,
                     cache_dir: Path, output: Path, runs: int,
-                    backend_options: dict[str, Any], expected_frames: int) -> dict:
+                    backend_options: dict[str, Any], expected_frames: int,
+                    width: int, height: int, fps: int) -> dict:
     cold_samples = []
     cold_reports = []
     stable_hashes = None
@@ -166,7 +173,8 @@ def _benchmark_case(name: str, backend: str, project: Any, *,
             BackendOptions(output=output, cache_dir=cache_dir,
                            **backend_options))
         elapsed = time.perf_counter() - started
-        quality = _validate_output(report, output, expected_frames)
+        quality = _validate_output(report, output, expected_frames,
+                                   width=width, height=height, fps=fps)
         if quality["decoded_frame_hashes"] != stable_hashes and stable_hashes is not None:
             raise RuntimeError(f"Cold output for {name} changed decoded pixels")
         stable_hashes = quality["decoded_frame_hashes"]
@@ -186,7 +194,8 @@ def _benchmark_case(name: str, backend: str, project: Any, *,
             BackendOptions(output=output, cache_dir=cache_dir,
                            **backend_options))
         elapsed = time.perf_counter() - started
-        quality = _validate_output(report, output, expected_frames)
+        quality = _validate_output(report, output, expected_frames,
+                                   width=width, height=height, fps=fps)
         if quality["decoded_frame_hashes"] != stable_hashes:
             raise RuntimeError(f"Warm output for {name} changed decoded pixels")
         if report.get("cache_misses") != 0:
@@ -214,26 +223,34 @@ def _benchmark_case(name: str, backend: str, project: Any, *,
         "cold_stage_timings_seconds": cold_reports[-1].get("timings_seconds", {}),
         "warm_stage_timings_seconds": warm_reports[-1].get("timings_seconds", {}),
         "output": {key: value for key, value in _validate_output(
-            warm_reports[-1], output, expected_frames).items()
+            warm_reports[-1], output, expected_frames, width=width,
+            height=height, fps=fps).items()
             if key != "decoded_frame_hashes"},
         "cold_warm_frame_parity": "exact decoded-frame hash match",
     }
 
 
-def run_benchmarks(runs: int = 3) -> dict[str, Any]:
+def run_benchmarks(runs: int = 3, profile: str = "preview") -> dict[str, Any]:
     if not 1 <= runs <= 10:
         raise ValueError("--runs must be between 1 and 10")
+    profiles = {"preview": (360, 640, 20), "final": (1080, 1920, 30)}
+    if profile not in profiles:
+        raise ValueError("--profile must be preview or final")
+    width, height, fps = profiles[profile]
+    expected_frames = 3 * fps
     with tempfile.TemporaryDirectory(prefix="reels-maker-benchmark-") as temp:
         root = Path(temp)
-        legacy_manifest, studio_manifest, _ = _create_fixtures(root)
+        legacy_manifest, studio_manifest, _ = _create_fixtures(
+            root, width=width, height=height, fps=fps, profile=profile)
         legacy_project = load_project(legacy_manifest)
-        studio_project = load_studio(studio_manifest, root=root, profile="preview")
+        studio_project = load_studio(studio_manifest, root=root, profile=profile)
         cases = [
             ("classic-legacy-titles", "legacy", legacy_project,
-             {"root": root, "title_engine": "legacy"}, 60),
+             {"root": root, "title_engine": "legacy"}, expected_frames),
             ("classic-studio-title-overlay", "legacy", legacy_project,
-             {"root": root, "title_engine": "studio"}, 60),
-            ("studio-scenes-and-chart", "studio", studio_project, {}, 60),
+             {"root": root, "title_engine": "studio"}, expected_frames),
+            ("studio-scenes-and-chart", "studio", studio_project, {},
+             expected_frames),
         ]
         results = []
         for name, backend, project, options, expected_frames in cases:
@@ -242,7 +259,8 @@ def run_benchmarks(runs: int = 3) -> dict[str, Any]:
                 cache_dir=root / "cache" / name,
                 output=root / "outputs" / f"{name}.mp4",
                 runs=runs, backend_options=options,
-                expected_frames=expected_frames))
+                expected_frames=expected_frames, width=width,
+                height=height, fps=fps))
         ffmpeg = subprocess.run(["ffmpeg", "-version"], check=True,
                                 capture_output=True, text=True).stdout.splitlines()[0]
         return {
@@ -252,8 +270,10 @@ def run_benchmarks(runs: int = 3) -> dict[str, Any]:
                             "platform": platform.platform(),
                             "ffmpeg": ffmpeg},
             "fixture": {"source": "FFmpeg testsrc2 + generated sine tone",
-                        "dimensions": "360x640", "fps": 20,
-                        "frames_per_case": 60, "duration_seconds": 3.0},
+                        "profile": profile,
+                        "dimensions": f"{width}x{height}", "fps": fps,
+                        "frames_per_case": expected_frames,
+                        "duration_seconds": 3.0},
             "cases": results,
             "interpretation": (
                 "Use timing values only to compare runs on the same machine "
@@ -266,11 +286,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=int, default=3,
                         help="Independent cold renders and subsequent warm renders (1..10)")
+    parser.add_argument("--profile", choices=("preview", "final"),
+                        default="preview",
+                        help="Synthetic profile; final uses 1080x1920 at 30 fps")
     parser.add_argument("--output", type=Path,
                         help="Optional JSON report path")
     args = parser.parse_args(argv)
     try:
-        report = run_benchmarks(args.runs)
+        report = run_benchmarks(args.runs, args.profile)
         rendered = json.dumps(report, ensure_ascii=False, indent=2)
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 from ..core.scene_graph import Node
 from ..layout.engine import Rect
@@ -96,13 +97,13 @@ def _word_opacity_track(index: int, onsets: list[float],
                         base_lefts: list[float], widths: list[float],
                         camera: Track,
                         transitions: list[tuple[float, float, float, float]],
-                        safe: Rect, scene_duration: float,
+                        viewport: Rect, scene_duration: float,
                         *, fade_in: float, edge_fade: float,
                         edge_pad: float) -> Track:
     onset = onsets[index]
     left, width = base_lefts[index], widths[index]
-    right_safe = safe.right - edge_pad
-    left_safe = safe.x + edge_pad
+    right_edge = viewport.right - edge_pad
+    left_edge = viewport.x + edge_pad
 
     def opacity(time: float) -> float:
         if time <= onset:
@@ -110,8 +111,8 @@ def _word_opacity_track(index: int, onsets: list[float],
         camera_x = float(camera.value(time))
         screen_left = left - camera_x
         screen_right = screen_left + width
-        left_margin = screen_left - left_safe
-        right_margin = right_safe - screen_right
+        left_margin = screen_left - left_edge
+        right_margin = right_edge - screen_right
         if left_margin < 0 or right_margin < 0:
             return 0.0
         edge_alpha = max(0.0, min(1.0,
@@ -120,11 +121,11 @@ def _word_opacity_track(index: int, onsets: list[float],
         return min(edge_alpha, entrance_alpha)
 
     times = {0.0, onset, min(scene_duration, onset + fade_in), scene_duration}
-    # Add exact points where the word enters and leaves the safe zone, with a
-    # few intermediate fade samples for a clean edge fade over a smooth pan.
+    # Fade only at the actual video-frame edges, keeping each trailing word
+    # fully visible right up to the edge instead of fading at the UI-safe inset.
     margins = [edge_fade * part / 4 for part in range(5)]
-    targets = [right_safe - (left + width) + margin for margin in margins]
-    targets.extend(left - left_safe - margin for margin in margins)
+    targets = [right_edge - (left + width) + margin for margin in margins]
+    targets.extend(left - left_edge - margin for margin in margins)
     for target in targets:
         crossing = _crossing_time(target, transitions)
         if crossing is not None and onset <= crossing <= scene_duration:
@@ -137,7 +138,8 @@ def _word_opacity_track(index: int, onsets: list[float],
 def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
                 stagger: float, settle_window: float, drop_distance: float,
                 restitution: float, min_rebound: float, pan_duration: float,
-                safe: Rect, scene_duration: float) -> tuple[Node, float]:
+                viewport: Rect,
+                scene_duration: float) -> tuple[Node, float]:
     """Split a measured long line into words and follow each landing."""
     if len(block.lines) != 1:
         raise ValueError("gravity_words requires a single measured line")
@@ -151,8 +153,8 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
                for word in line.words]
     onsets = [onset + index * stagger for index in range(len(line.words))]
     camera, transitions = _camera_track(onsets, centers, pan_duration)
-    # Authored text stays within the safe area; word motion lives in the
-    # animated transform so static layout QA sees a valid centered placement.
+    # Authored text stays centered within the safe area; horizontal travel is
+    # carried by transforms and may continue to the physical frame edges.
     base_lefts = [rect.center_x - word.width / 2 + centers[index]
                   for index, word in enumerate(line.words)]
     widths = [word.width for word in line.words]
@@ -181,12 +183,13 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
                    "align": "left", "color": word.color,
                    "size": word.size, "weight": word.weight,
                    "tracking_offset": 0.0},
-            clip=safe.bbox,
+            clip=viewport.bbox,
             qa_class="text",
             meta={"text": word.text,
                   "motion_family": "ballistic-gravity-word-drop",
                   "word_index": index,
-                  "camera_follow": "latest-word"},
+                  "camera_follow": "latest-word",
+                  "allow_horizontal_edge_travel": True},
         )
         node.track("dy", word_fall)
         node.track("dx", Track([
@@ -196,7 +199,7 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
             for key in camera.keys
         ]))
         node.track("opacity", _word_opacity_track(
-            index, onsets, base_lefts, widths, camera, transitions, safe,
+            index, onsets, base_lefts, widths, camera, transitions, viewport,
             scene_duration, fade_in=.16, edge_fade=ctx_edge_fade(block),
             edge_pad=4.0))
         children.append(node)
@@ -217,8 +220,8 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
 
 
 def ctx_edge_fade(block: TextBlock) -> float:
-    """Keep the fade width modest relative to the measured type size."""
-    return max(28.0, min(56.0, block.style.size * .62))
+    """Use only a short fade at the physical edge of the video frame."""
+    return max(8.0, min(14.0, block.style.size * .25))
 
 
 def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
@@ -244,8 +247,11 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
     base_style = resolve_text_style(
         ctx.tokens, "title", theme["ink"], align="left",
         line_height=1.0, balance=False)
+    base_style = replace(base_style, size=max(
+        ctx.tokens.type_size("subtitle"), round(base_style.size * .80)))
     # Typeset the whole copy on one virtual line. Each individual word is
-    # checked against the real safe width and is clipped/faded at its edges.
+    # checked against the real safe width; the trailing sequence may travel
+    # through the platform margins but fades at the actual frame boundary.
     block = typeset(text, base_style, 1_000_000.0, ctx.fonts)
     if len(block.lines) != 1 or len(block.lines[0].words) < 2:
         raise ValueError("gravity_words needs at least two words")
@@ -284,20 +290,12 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
         restitution=restitution,
         min_rebound=max(1.0, ctx.tokens.px(1.5)),
         pan_duration=pan_duration,
-        safe=layout.safe, scene_duration=ctx.duration)
-    floor_y = line_y + block.height + ctx.tokens.px(8)
-    floor = Node(
-        kind="line", role="gravity-floor",
-        props={"x1": layout.safe.x, "y1": floor_y,
-               "x2": layout.safe.right, "y2": floor_y,
-               "color": theme["accent"],
-               "width": max(1, ctx.tokens.px(2)), "cap": "round"},
-        opacity=.30, qa_class="decor",
-        meta={"purpose": "fixed floor for ballistic word impacts"})
+        viewport=Rect(0, 0, ctx.width, ctx.height),
+        scene_duration=ctx.duration)
 
     return _finish(
         ctx, scene, layout, _background(ctx, scene, theme),
-        {"headline": headline}, [], decor=[floor],
+        {"headline": headline}, [],
         meta={"component": "gravity_words",
               "typography_family": "ballistic-word-drop-camera-follow",
               "animation_intent": (

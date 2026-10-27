@@ -152,8 +152,20 @@ def _safe_area(elements: list[dict], built, time: float,
     tolerance = SAFE_AREA_TOLERANCE
     for element in elements:
         box = element["bounds"]
-        if (box[0] < safe[0] - tolerance or box[1] < safe[1] - tolerance
-                or box[2] > safe[2] + tolerance or box[3] > safe[3] + tolerance):
+        meta = element.get("meta") or {}
+        if meta.get("allow_horizontal_edge_travel"):
+            outside = (
+                box[0] < -tolerance
+                or box[1] < safe[1] - tolerance
+                or box[2] > built.context.width + tolerance
+                or box[3] > safe[3] + tolerance
+            )
+        else:
+            outside = (
+                box[0] < safe[0] - tolerance or box[1] < safe[1] - tolerance
+                or box[2] > safe[2] + tolerance or box[3] > safe[3] + tolerance
+            )
+        if outside:
             issues.append(Issue(
                 "safe_area_violation", "error",
                 f"Element {element.get('path', element['role'])!r} leaves the safe rectangle.",
@@ -284,6 +296,13 @@ def _text_ink_safe_area(roots: list[Node], built, time: float,
                                 (safe_rect.right + tolerance, safe_rect.bottom + tolerance),
                                 (safe_rect.x - tolerance, safe_rect.bottom + tolerance)),
                                "layout-safe")
+    edge_travel_polygon = SafePolygon(((-tolerance, safe_rect.y - tolerance),
+                                      (built.context.width + tolerance,
+                                       safe_rect.y - tolerance),
+                                      (built.context.width + tolerance,
+                                       safe_rect.bottom + tolerance),
+                                      (-tolerance, safe_rect.bottom + tolerance)),
+                                     "horizontal-edge-travel")
     issues = []
     seen = set()
 
@@ -318,7 +337,10 @@ def _text_ink_safe_area(roots: list[Node], built, time: float,
                                           edge.e, edge.f,
                                           Space.LOCAL, Space.LOCAL)
                     transform = transform.then(edge_local)
-                report = check_text_block(block, FontBook(), (safe_polygon,),
+                allowed_zone = (edge_travel_polygon
+                                if node.meta.get("allow_horizontal_edge_travel")
+                                else safe_polygon)
+                report = check_text_block(block, FontBook(), (allowed_zone,),
                                            transform=transform)
                 failures = tuple((failure.line_index, failure.word_index,
                                   failure.text, failure.reason)

@@ -86,6 +86,9 @@ acceleration, then rebounds from the floor with a configurable coefficient of
 restitution. Each rebound loses energy, so the word makes several progressively
 smaller ballistic hops before resting. As the next word enters, a smooth
 rightward camera pan centers it while the earlier words move left.
+The baseline remains implicit: the scene draws no floor rule. Trailing words
+remain fully visible until they reach the physical frame edge, and QA permits
+only this explicitly tagged horizontal travel outside the platform-safe inset.
 
 ```json
 {
@@ -110,8 +113,9 @@ appears. `distance_units` scales with the canvas short side (1080 reference
 units), and `restitution` must be between 0.30 and 0.68. Schedule the next word
 after the current word's rebounds finish.
 Long copy can contain many words, provided each individual word fits the safe
-content width. The camera keeps the newest word centered; old words fade as
-they leave the safe viewport. Leave a readable hold after the final landing.
+content width. The camera keeps the newest word centered; old words remain
+visible to the video edges and fade only as they reach them. Leave a readable
+hold after the final landing.
 For phone review, inspect multiple impact frames and the final hold in the
 actual MP4.
 

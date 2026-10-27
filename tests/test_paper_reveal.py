@@ -9,6 +9,7 @@ from pathlib import Path
 from PIL import Image
 
 from reels_maker.components.paper_reveal import sequence_frames
+from reels_maker.qa.contrast import _ring_coverage
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
 from reels_maker.studio import StudioError, load_studio
 
@@ -64,6 +65,30 @@ class PaperRevealTests(unittest.TestCase):
             manifest = self._project(Path(directory), tear_hold_frame=2)
             self.assertEqual(self._corner(manifest, 1.0), FRAME_COLOURS[1])
             self.assertEqual(self._corner(manifest, 3.0), FRAME_COLOURS[1])
+
+    def test_copy_is_typeset_under_the_sheet_without_an_entrance_fade(self):
+        # The copy must exist behind the sheet from the first frame; the tear
+        # reveals it instead of fading it in afterwards.
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = self._project(Path(directory))
+            project = load_studio(manifest, root=manifest.parents[3])
+            built = project.build()[0]
+            for time in (0.0, 0.5, 1.0):
+                nodes = {node.role: node for node in built.at(time)}
+                for role in ("kicker", "headline", "subtitle"):
+                    self.assertEqual(nodes[role].opacity, 1.0, role)
+                    self.assertEqual(nodes[role].dy, 0.0, role)
+                self.assertGreater(nodes["headline"].props["y"], 0)
+
+    def test_contrast_ignores_copy_hidden_by_an_opaque_sequence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = self._project(Path(directory))
+            project = load_studio(manifest, root=manifest.parents[3])
+            built = project.build()[0]
+            headline = built.element("headline")
+            covered = _ring_coverage(built, 0.0, headline.meta["bounds"],
+                                     "headline")
+            self.assertAlmostEqual(covered, 1.0, places=2)
 
     def test_sequence_directory_must_stay_inside_the_brand(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..core.scene_graph import Node
-from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle
 from .base import BuiltScene, SceneContext, resolve_text_style, text_node
 from .scene_support import _background, _finish, _theme
@@ -86,18 +85,8 @@ def build_paper_reveal(ctx: SceneContext, scene: dict) -> BuiltScene:
               "source": scene.get("tear_source_note", "")})
 
     layout = ctx.layout.layout("stack-center", {}, has_visual=False)
-    # A slow rise behind the sheet gives the reveal life without animating the
-    # copy into view on top of the tear itself. The copy also stays invisible
-    # while the sheet still covers it, so contrast QA never scores hidden text.
-    for copy_node in ("kicker", "headline", "subtitle"):
-        if copy_node in elements:
-            elements[copy_node].track("dy", Track([
-                Keyframe(.15, 26.0, "smooth"),
-                Keyframe(1.35, 0.0, "smooth")]))
-            elements[copy_node].track("opacity", Track([
-                Keyframe(0.0, 0.0, "smooth"),
-                Keyframe(float(scene.get("copy_in", 1.45)), 0.0, "smooth"),
-                Keyframe(float(scene.get("copy_settled", 2.45)), 1.0, "smooth")]))
+    # The copy is fully typeset from frame one and never animated into view:
+    # it exists underneath the sheet and is revealed purely by the tear.
     return _finish(ctx, scene, layout,
                    _background(ctx, scene, theme),
                    elements, [],

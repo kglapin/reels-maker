@@ -32,6 +32,26 @@ def _rgb(value) -> tuple[int, int, int]:
     return parse_hex(value)
 
 
+def sequence_frame_path(props: dict, time: float) -> Path | None:
+    """Resolve the frame a sequence node shows at a given scene time.
+
+    Shared by the renderer and QA so occlusion checks judge exactly the frame
+    that is composited.
+    """
+    frames = props.get("frames") or []
+    if not frames:
+        return None
+    fps = max(1e-6, float(props.get("fps", 25.0)))
+    start = float(props.get("start", 0.0))
+    speed = max(1e-6, float(props.get("speed", 1.0)))
+    index = int(math.floor((float(time) - start) * speed * fps))
+    index = max(0, min(len(frames) - 1, index))
+    hold = props.get("hold_frame")
+    if hold is not None:
+        index = min(index, max(1, int(hold)) - 1)
+    return Path(frames[index])
+
+
 @dataclass(frozen=True)
 class RenderOptions:
     supersample: int = 1
@@ -527,19 +547,9 @@ class SceneRenderer:
         30/60 fps output without decoding the whole clip up front.
         """
         props = node.props
-        frames = props.get("frames") or []
-        if not frames:
+        path = sequence_frame_path(props, props.get("playback_time", 0.0))
+        if path is None:
             return
-        fps = max(1e-6, float(props.get("fps", 25.0)))
-        start = float(props.get("start", 0.0))
-        speed = max(1e-6, float(props.get("speed", 1.0)))
-        playing = (float(props.get("playback_time", 0.0)) - start) * speed
-        index = int(math.floor(playing * fps))
-        index = max(0, min(len(frames) - 1, index))
-        hold = props.get("hold_frame")
-        if hold is not None:
-            index = min(index, max(1, int(hold)) - 1)
-        path = Path(frames[index])
         if not path.is_file():
             raise ValueError(f"Missing sequence frame: {path}")
         stat = path.stat()

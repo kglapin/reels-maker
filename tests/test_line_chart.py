@@ -54,6 +54,10 @@ class LineChartTests(unittest.TestCase):
         child_roles = {node.role for node in group.children}
         self.assertIn("x-axis-title", child_roles)
         self.assertIn("y-axis-title", child_roles)
+        self.assertIn("line-chart-surface", child_roles)
+        self.assertIn("latest-value", child_roles)
+        self.assertEqual(len([role for role in child_roles
+                              if role.startswith("series-core-")]), 3)
         self.assertLess(segments[0].props["x1"], segments[0].props["x2"])
         # Day 2 is absent; day 3 is two thirds across the date scale, not at a
         # categorical equal spacing inferred from the number of records.

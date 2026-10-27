@@ -8,6 +8,9 @@ from ..design.color import mix
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle
+from .chart_style import (
+    axis_style, chart_card, chart_colors, grid_width, mark_width, value_style,
+)
 from .base import (
     BuiltScene, SceneContext, animate_progress, format_value, number_node,
     resolve_text_style, safe_number, text_node,
@@ -59,37 +62,43 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center")}
     chart = layout.region("chart")
-    row_gap = ctx.tokens.space("md")
-    row_h = (chart.h - row_gap * (len(parsed) - 1)) / len(parsed)
+    colors = chart_colors(theme)
+    row_gap = max(ctx.tokens.px(18), chart.h * .035)
+    inset_x = ctx.tokens.px(20)
+    plot = Rect(chart.x + inset_x, chart.y + ctx.tokens.px(14),
+                chart.w - 2 * inset_x, chart.h - ctx.tokens.px(28))
+    row_h = (plot.h - row_gap * (len(parsed) - 1)) / len(parsed)
+    track_h = max(8.0, min(ctx.tokens.px(14), row_h * .17))
     for index, item in enumerate(parsed):
-        y = chart.y + index * (row_h + row_gap)
-        label_style = TextStyle(ctx.tokens.px(26), theme["ink"], "bold",
-                                uppercase=True, tracking=1)
+        y = plot.y + index * (row_h + row_gap)
+        label_style = TextStyle(ctx.tokens.px(22), colors["axis"], "bold",
+                                uppercase=True, tracking=.35, line_height=1.0)
         label = text_node(f"bar-label-{index}", item["label"], label_style,
-                          Rect(chart.x, y, chart.w, row_h * .34), ctx.fonts,
+                          Rect(plot.x, y, plot.w * .70, row_h * .40), ctx.fonts,
                           valign="center")
-        base = Node(kind="round", role="bar-base",
-                    props={"x": chart.x, "y": y + row_h * .50,
-                           "w": chart.w, "h": ctx.tokens.px(22),
-                           "r": ctx.tokens.px(11),
-                           "fill": mix(theme["base"], theme["ink"], .13)},
-                    opacity=.55)
-        bar = Node(kind="round", role=f"bar-{index}",
-                   props={"x": chart.x, "y": y + row_h * .50,
-                          "w": chart.w * item["value"] / max_value,
-                          "h": ctx.tokens.px(22), "r": ctx.tokens.px(11),
-                          "fill": theme["accent"], "progress": 1.0},
-                   qa_class="decor")
-        value_style = TextStyle(ctx.tokens.px(28), theme["accent"], "bold",
-                                align="right")
+        value_color = colors["accent"] if index == 0 else colors["axis"]
+        value_style_ = value_style(ctx.tokens, colors, color=value_color)
+        value_text = format_value(item["value"], {
+            "suffix": item.get("suffix", ""),
+            "prefix": item.get("prefix", ""), "thousands": " "})
         value = text_node(
-            f"bar-value-{index}",
-            format_value(item["value"], {
-                "suffix": item.get("suffix", ""),
-                "prefix": item.get("prefix", ""), "thousands": " "}),
-                          value_style, Rect(chart.x, y + row_h * .62,
-                                            chart.w, row_h * .28),
-                          ctx.fonts, align="right", valign="top")
+            f"bar-value-{index}", value_text, value_style_,
+            Rect(plot.x + plot.w * .70, y, plot.w * .30, row_h * .40),
+            ctx.fonts, align="right", valign="center")
+        track_y = y + row_h * .57
+        base = Node(kind="round", role=f"bar-track-{index}",
+                    props={"x": plot.x, "y": track_y,
+                           "w": plot.w, "h": track_h,
+                           "r": track_h / 2, "fill": colors["grid"]},
+                    qa_class="decor")
+        bar = Node(kind="round", role=f"bar-{index}",
+                   props={"x": plot.x, "y": track_y,
+                          "w": plot.w * item["value"] / max_value,
+                          "h": track_h, "r": track_h / 2,
+                          "fill": value_color, "progress": 1.0},
+                   qa_class="decor")
+        if index > 0:
+            bar.opacity = .72
         group = Node(kind="group", role=f"bar-row-{index}",
                      children=[child for child in (label, base, bar, value)
                                if child], qa_class="control",
@@ -106,7 +115,9 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
     if "body" in elements:
         specs.append(_spec("body", 3))
     plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
-                   elements, specs, decor=_decor(ctx, scene, theme),
+                   elements, specs,
+                   decor=[chart_card("bar-chart-card", chart, ctx.tokens, theme),
+                          *_decor(ctx, scene, theme)],
                    meta={"component": "bars", "data": parsed,
                          "data_order": data_order,
                          "row_ids": [item["id"] for item in parsed],
@@ -194,14 +205,15 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
         "body": _measure(subtitle, body_style, width, ctx),
     })
     chart = layout.region("chart")
+    chart_theme = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .23, chart.y + chart.h * .15,
                 chart.w * .75, chart.h * .62)
     row_height = plot.h / len(parsed_categories)
-    colors = [theme["accent"], theme["ink"],
-              mix(theme["accent"], theme["base"], .48),
-              mix(theme["ink"], theme["base"], .55)]
-    children: list[Node] = []
-    category_style = TextStyle(max(12, ctx.tokens.px(18)), theme["ink"], "bold")
+    colors = list(chart_theme["series"][:len(segment_specs)])
+    children: list[Node] = [chart_card("stacked-chart-surface", chart,
+                                       ctx.tokens, theme)]
+    category_style = TextStyle(max(12, ctx.tokens.px(18)),
+                               chart_theme["axis"], "bold")
     for row_index, category in enumerate(parsed_categories):
         y = plot.y + row_index * row_height
         category_node = text_node(
@@ -233,11 +245,10 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
                              props={"x1": x, "y1": plot.y,
                                     "x2": x, "y2": plot.bottom,
                                     "width": 1,
-                                    "color": mix(theme["base"], theme["ink"], .18)},
+                                     "color": chart_theme["grid"]},
                              qa_class="decor"))
         tick = text_node(f"stack-tick-{index}", f"{index * 25}%",
-                         TextStyle(max(12, ctx.tokens.px(15)), theme["muted"],
-                                   "regular", align="center"),
+                          axis_style(ctx.tokens, chart_theme, align="center"),
                          Rect(x - plot.w * .08, plot.bottom + ctx.tokens.px(5),
                               plot.w * .16, ctx.tokens.px(24)), ctx.fonts,
                          align="center", valign="center")
@@ -254,7 +265,7 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
                              qa_class="decor"))
         legend = text_node(
             f"stack-legend-{segment_id}", label,
-            TextStyle(max(11, ctx.tokens.px(14)), theme["muted"], "regular"),
+             axis_style(ctx.tokens, chart_theme),
             Rect(x + ctx.tokens.px(20), legend_y,
                  legend_width - ctx.tokens.px(22), ctx.tokens.px(26)),
             ctx.fonts, valign="center", fit=True)
@@ -350,25 +361,27 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
         "body": _measure(subtitle, body_style, width, ctx),
     })
     chart = layout.region("chart")
-    plot = Rect(chart.x + chart.w * .20, chart.y + chart.h * .13,
-                chart.w * .77, chart.h * .63)
+    colors = chart_colors(theme)
+    plot = Rect(chart.x + chart.w * .21, chart.y + chart.h * .15,
+                chart.w * .74, chart.h * .59)
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center")
     }
-    children: list[Node] = []
+    children: list[Node] = [chart_card("line-chart-surface", chart,
+                                        ctx.tokens, theme)]
     tick_values = [low + (high - low) * index / 4 for index in range(5)]
     step = (high - low) / 4
     decimals = 0 if float(step).is_integer() else min(4, max(1, math.ceil(-math.log10(step)) + 1))
-    tick_style = TextStyle(max(12, ctx.tokens.px(15)), theme["muted"], "regular",
-                           align="right")
-    grid_color = mix(theme["base"], theme["ink"], .18)
+    tick_style = axis_style(ctx.tokens, colors, align="right")
+    grid_color = colors["grid"]
     for index, tick in enumerate(tick_values):
         y = plot.bottom - plot.h * index / 4
         children.append(Node(kind="line", role=f"y-grid-{index}",
                              props={"x1": plot.x, "y1": y, "x2": plot.right,
-                                    "y2": y, "width": 1, "color": grid_color},
+                                     "y2": y, "width": grid_width(ctx.tokens),
+                                     "color": grid_color},
                              qa_class="decor"))
         label = text_node(
             f"y-tick-{index}", format_value(tick, {"decimals": decimals,
@@ -382,7 +395,8 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     children.append(Node(kind="line", role="x-axis",
                          props={"x1": plot.x, "y1": plot.bottom,
                                 "x2": plot.right, "y2": plot.bottom,
-                                "width": 2, "color": theme["ink"]},
+                                 "width": max(1.0, ctx.tokens.px(1.5)),
+                                 "color": colors["axis"]},
                          qa_class="decor"))
     y_points = [plot.bottom - (item["value"] - low) / (high - low) * plot.h
                 for item in parsed]
@@ -391,11 +405,10 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(kind="line", role=f"series-segment-{index}",
                              props={"x1": x_points[index], "y1": y_points[index],
                                     "x2": x_points[index + 1], "y2": y_points[index + 1],
-                                    "width": max(2, ctx.tokens.px(4)),
-                                    "color": theme["accent"]}, qa_class="decor"))
-    point_radius = max(3, ctx.tokens.px(7))
-    label_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "regular",
-                            align="center")
+                                     "width": mark_width(ctx.tokens),
+                                     "color": colors["accent"]}, qa_class="decor"))
+    point_radius = max(4, ctx.tokens.px(8))
+    label_style = axis_style(ctx.tokens, colors, align="center")
     x_label_y = plot.bottom + ctx.tokens.px(12)
     x_boundaries = [plot.x]
     x_boundaries.extend((x_points[index - 1] + x_points[index]) / 2
@@ -404,7 +417,14 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     for index, item in enumerate(parsed):
         children.append(Node(kind="circle", role=f"series-point-{index}",
                              props={"cx": x_points[index], "cy": y_points[index],
-                                    "r": point_radius, "fill": theme["accent"]},
+                                    "r": point_radius, "fill": colors["plot"],
+                                    "border": colors["accent"],
+                                    "border_width": max(2, ctx.tokens.px(2))},
+                             qa_class="decor"))
+        children.append(Node(kind="circle", role=f"series-core-{index}",
+                             props={"cx": x_points[index], "cy": y_points[index],
+                                    "r": max(2.0, point_radius * .42),
+                                    "fill": colors["accent"]},
                              qa_class="decor"))
         point_label = text_node(
             f"x-label-{index}", item["label"], label_style,
@@ -414,13 +434,25 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
             ctx.fonts, align="center", valign="top")
         if point_label:
             children.append(point_label)
-    axis_style = TextStyle(max(13, ctx.tokens.px(18)), theme["ink"], "bold",
-                           align="center")
-    x_title = text_node("x-axis-title", x_axis_label.strip(), axis_style,
+    latest_label = text_node(
+        "latest-value",
+        format_value(parsed[-1]["value"], {"decimals": decimals,
+                                           "thousands": " "}),
+        TextStyle(max(14, ctx.tokens.px(19)), colors["accent"], "bold",
+                  align="right", line_height=1.0),
+        Rect(plot.right - ctx.tokens.px(138),
+             max(plot.y + ctx.tokens.px(2), y_points[-1] - ctx.tokens.px(38)),
+             ctx.tokens.px(128), ctx.tokens.px(30)),
+        ctx.fonts, align="right", valign="center")
+    if latest_label:
+        children.append(latest_label)
+    title_style = TextStyle(max(13, ctx.tokens.px(17)), colors["axis"], "bold",
+                            align="center")
+    x_title = text_node("x-axis-title", x_axis_label.strip(), title_style,
                         Rect(plot.x, chart.bottom - ctx.tokens.px(34),
                              plot.w, ctx.tokens.px(28)), ctx.fonts,
                         align="center", valign="center")
-    y_title = text_node("y-axis-title", y_axis_label.strip(), axis_style,
+    y_title = text_node("y-axis-title", y_axis_label.strip(), title_style,
                         Rect(chart.x, chart.y + ctx.tokens.px(2),
                              chart.w, ctx.tokens.px(28)), ctx.fonts,
                         align="center", valign="center")

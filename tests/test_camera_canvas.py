@@ -47,10 +47,53 @@ class CameraCanvasTests(unittest.TestCase):
         self.assertEqual(frame.size,(360,640))
         self.assertEqual(final.size,(360,640))
         self.assertNotEqual(frame.tobytes(),final.tobytes())
-    def test_existing_stages_preserve_images(self):
+    def test_lazy_stage_matches_full_cumulative_composition(self):
         renderer=CameraCanvasRenderer(self.project())
-        self.assertEqual(len(renderer.stages),3)
-        self.assertEqual(renderer.stages[0].size,renderer.stages[1].size)
+        self.assertEqual(renderer._active_stage_index,-1)
+        for index in range(len(renderer.scenes)):
+            expected=renderer._base_world.copy()
+            for previous in range(index):
+                renderer._paste(expected,renderer.local_typography[previous],
+                                renderer.stops[previous])
+            actual=renderer._stage_for(index)
+            self.assertEqual(expected.size,actual.size)
+            self.assertEqual(expected.tobytes(),actual.tobytes())
+            # Only one cumulative world is retained, regardless of shot count.
+            self.assertIs(actual,renderer._active_stage)
+            self.assertEqual(index,renderer._active_stage_index)
+
+        # The pre-refactor renderer selected this materialized stage before
+        # camera sampling. Verify that the lazy path reaches identical pixels.
+        frame_time=0.0
+        old_stage=renderer._base_world.copy()
+        renderer._paste(old_stage,renderer.local_typography[0],
+                        renderer.stops[0])
+        expected=renderer._frame(old_stage,renderer.camera(1,frame_time)).convert("RGB")
+        actual=renderer.render(SimpleNamespace(index=1),frame_time)
+        self.assertEqual(expected.tobytes(),actual.tobytes())
+
+    def test_lazy_stages_can_seek_back_without_pixel_drift(self):
+        renderer=CameraCanvasRenderer(self.project())
+        final=renderer._stage_for(1).copy()
+        first=renderer._stage_for(0)
+        self.assertEqual(renderer._base_world.tobytes(),first.tobytes())
+        self.assertEqual(final.tobytes(),renderer._stage_for(1).tobytes())
+
+    def test_stage_storage_does_not_grow_with_shot_count(self):
+        scenes=[]
+        for index in range(8):
+            scenes.append({
+                "photo": self.path, "headline": f"SHOT {index}",
+                "camera_canvas": {"x": 550 + index * 300, "y": 590,
+                                  "layout": "photo-above"},
+            })
+        renderer=CameraCanvasRenderer(
+            SimpleNamespace(width=360,height=640,scenes=scenes))
+        for index in range(len(scenes)):
+            renderer._stage_for(index)
+            self.assertEqual(renderer._active_stage_index,index)
+            self.assertIsNotNone(renderer._active_stage)
+            self.assertFalse(hasattr(renderer,"stages"))
 
     def test_camera_sampling_uses_shared_viewport_to_world_affine(self):
         transform = camera_viewport_to_world(550, 590, -13, 1.2, 360, 640)

@@ -79,11 +79,17 @@ def search_openverse_audio(query: str, *, per_page: int = 12,
     )
     results = []
     for item in payload.get("results", []):
-        duration = item.get("duration")
+        # Openverse's API reports audio.duration in milliseconds; normalize to
+        # seconds at the adapter boundary so search, QA and ffprobe reports
+        # share one unit (verified in the official API model docs).
+        duration_ms = item.get("duration")
         try:
-            duration = float(duration) if duration is not None else None
+            duration_ms = float(duration_ms) if duration_ms is not None else None
         except (TypeError, ValueError):
-            duration = None
+            duration_ms = None
+        duration_seconds = (duration_ms / 1000.0
+                            if duration_ms is not None and duration_ms >= 0
+                            else None)
         results.append(OpenverseAudioResult(
             provider="openverse",
             asset_id=str(item.get("id", "")),
@@ -94,7 +100,7 @@ def search_openverse_audio(query: str, *, per_page: int = 12,
             license=str(item.get("license") or ""),
             license_url=str(item.get("license_url") or ""),
             attribution=_plain_text(item.get("attribution") or ""),
-            duration_seconds=duration,
+            duration_seconds=duration_seconds,
             file_type=str(item.get("filetype") or item.get("file_type") or ""),
             checksum=str(item.get("sha256") or item.get("checksum") or ""),
         ))

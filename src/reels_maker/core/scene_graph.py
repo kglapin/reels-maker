@@ -40,6 +40,8 @@ class Node:
     def track(self, name: str, track: "Track") -> "Node":
         if not name:
             raise ValueError("Track name cannot be empty")
+        if not track.keys:
+            raise ValueError(f"Track {name!r} cannot be empty")
         self.tracks[name] = track
         return self
 
@@ -64,7 +66,10 @@ class Node:
             if name == "opacity":
                 node.opacity = max(0.0, min(1.0, float(value)))
             elif name == "scale":
-                node.scale = float(value)
+                scale = float(value)
+                if not math.isfinite(scale) or scale <= 0:
+                    raise ValueError("Animated node scale must remain finite and positive")
+                node.scale = scale
             elif name == "rotation":
                 node.rotation = float(value)
             elif name == "dx":
@@ -107,6 +112,8 @@ class Node:
         if not all(math.isfinite(value) for value in
                    (self.scale, self.rotation, self.dx, self.dy, *anchor)):
             raise ValueError("Node transform values must be finite")
+        if self.scale <= 0:
+            raise ValueError("Node scale must be positive")
         angle = math.radians(self.rotation)
         cosine, sine = math.cos(angle), math.sin(angle)
         a, b = self.scale * cosine, self.scale * sine

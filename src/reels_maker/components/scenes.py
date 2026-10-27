@@ -123,6 +123,16 @@ def _lazy_data_builder(name: str):
     return build
 
 
+def build_note_canvas(ctx, scene):
+    from .note_editor import build_note_canvas as build
+    return build(ctx, scene)
+
+
+def build_search_canvas(ctx, scene):
+    from .search_field import build_search_canvas as build
+    return build(ctx, scene)
+
+
 build_bars = _lazy_data_builder("bars")
 build_line_chart = _lazy_data_builder("line_chart")
 build_stacked_bars_100 = _lazy_data_builder("stacked_bars_100")
@@ -168,6 +178,8 @@ BUILDERS = {
     "energy": build_energy,
     "quote": build_quote,
     "paper_reveal": build_paper_reveal,
+    "note_canvas": build_note_canvas,
+    "search_canvas": build_search_canvas,
 }
 
 

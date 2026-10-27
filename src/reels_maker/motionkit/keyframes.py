@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from .easing import ease
+from .easing import EASINGS, ease
 
 
 Number = float
@@ -34,15 +34,54 @@ class Keyframe:
     params: tuple[tuple[str, float], ...] = ()
 
     def __post_init__(self) -> None:
-        if not math.isfinite(self.time) or self.time < 0:
+        if (isinstance(self.time, bool) or not isinstance(self.time, (int, float))
+                or not math.isfinite(float(self.time)) or self.time < 0):
             raise ValueError("Keyframe time must be finite and nonnegative")
         if isinstance(self.value, bool):
             raise ValueError("Boolean keyframe values are not interpolated")
         if isinstance(self.value, (int, float)):
             if not math.isfinite(float(self.value)):
                 raise ValueError("Keyframe value must be finite")
-        elif not isinstance(self.value, tuple):
+        elif isinstance(self.value, tuple):
+            if not self.value:
+                raise ValueError("Keyframe tuple values cannot be empty")
+            if any(isinstance(value, bool)
+                   or not isinstance(value, (int, float))
+                   or not math.isfinite(float(value)) for value in self.value):
+                raise ValueError("Keyframe tuple values must be finite numbers")
+        else:
             raise ValueError("Keyframe value must be a number or tuple")
+        if not isinstance(self.easing, str) or not self.easing.strip():
+            raise ValueError("Keyframe easing must be a non-empty string")
+        if not isinstance(self.params, (tuple, list)):
+            raise ValueError("Keyframe easing params must be key/value pairs")
+        normalized = []
+        for item in self.params:
+            if (not isinstance(item, (tuple, list)) or len(item) != 2
+                    or not isinstance(item[0], str) or not item[0]):
+                raise ValueError("Keyframe easing params must be key/value pairs")
+            value = item[1]
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))):
+                raise ValueError("Keyframe easing params must be finite numbers")
+            normalized.append((item[0], float(value)))
+        names = [name for name, _ in normalized]
+        if len(names) != len(set(names)):
+            raise ValueError("Keyframe easing params cannot repeat a name")
+        object.__setattr__(self, "params", tuple(normalized))
+        easing_name = self.easing.strip().lower().replace("_", "-")
+        if easing_name not in EASINGS:
+            raise ValueError(f"Unknown easing {self.easing!r}")
+        allowed_params = ({"back": {"overshoot"},
+                           "spring": {"damping"}}.get(easing_name, set()))
+        unsupported = set(names) - allowed_params
+        if unsupported:
+            raise ValueError(
+                f"Unsupported {self.easing!r} easing params: "
+                + ", ".join(sorted(unsupported)))
+        # Validate the curve and parameter names at construction, so a bad
+        # easing in a late keyframe fails before a potentially long render.
+        ease(self.easing, .5, **dict(self.params))
 
     def evaluated_amount(self, amount: float) -> float:
         return ease(self.easing, amount, **dict(self.params))
@@ -55,7 +94,22 @@ class Track:
     clamp_after: bool = True
 
     def __post_init__(self) -> None:
+        if not isinstance(self.keys, (tuple, list)):
+            raise ValueError("Track keys must be a sequence of Keyframes")
+        if any(not isinstance(key, Keyframe) for key in self.keys):
+            raise ValueError("Track keys must contain only Keyframes")
         self.keys = sorted(self.keys, key=lambda key: key.time)
+        shape = ("scalar" if not isinstance(self.keys[0].value, tuple)
+                 else len(self.keys[0].value)) if self.keys else None
+        for key in self.keys:
+            key_shape = ("scalar" if not isinstance(key.value, tuple)
+                         else len(key.value))
+            if key_shape != shape:
+                raise ValueError("Track keyframe values must have matching shapes")
+        for left, right in zip(self.keys, self.keys[1:]):
+            if left.time == right.time and left.value != right.value:
+                raise ValueError(
+                    "Track cannot have different values at the same keyframe time")
 
     @classmethod
     def from_pairs(cls, pairs: Iterable[tuple[float, Value]],
@@ -63,8 +117,10 @@ class Track:
         return cls([Keyframe(time, value, easing) for time, value in pairs])
 
     def add(self, time: float, value: Value, easing: str = "out-cubic") -> "Track":
-        self.keys.append(Keyframe(time, value, easing))
-        self.keys.sort(key=lambda key: key.time)
+        updated = Track([*self.keys, Keyframe(time, value, easing)],
+                        clamp_before=self.clamp_before,
+                        clamp_after=self.clamp_after)
+        self.keys = updated.keys
         return self
 
     @property

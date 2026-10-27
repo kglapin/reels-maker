@@ -11,9 +11,7 @@ import math
 from typing import Iterable
 
 from ..core.scene_graph import Node
-from ..design.color import (
-    darken, ensure_contrast, lighten, mix, parse_hex, relative_luminance,
-)
+from ..design.color import lighten, mix
 from ..design.tokens import DesignTokens
 from ..layout.engine import Rect
 from ..motionkit.choreography import ElementSpec
@@ -22,6 +20,11 @@ from ..textkit.typesetter import Run, TextStyle
 from .base import (
     BuiltScene, SceneContext, measure_text, resolve_text_style,
     panel_node, rich_text_node, text_node, video_node,
+)
+from .scene_theme import (
+    background_for_scene as _background,
+    is_light_scene as _is_light,
+    theme_for_scene as _theme,
 )
 
 def _headline(scene: dict) -> str:
@@ -61,84 +64,6 @@ def _fmt(scene: dict, suffix: str = " zł",
             "prefix": scene.get("prefix", ""),
             "decimals": scene.get("decimals", decimals),
             "thousands": " "}
-
-
-def _theme(ctx: SceneContext, scene: dict) -> dict:
-    palette = ctx.tokens.palette
-    background = scene.get("background") or {}
-    kind = background.get("kind") if isinstance(background, dict) else None
-    if kind == "solid":
-        base = parse_hex(background.get("color", "#101A14"))
-    elif kind == "gradient":
-        base = parse_hex(background.get("from", background.get("color", "#101A14")))
-    elif scene.get("photo") or (isinstance(background, dict)
-                                and background.get("asset")):
-        # Photography is treated as a dark editorial surface unless the scene
-        # explicitly opts into a light treatment. The brand's page background
-        # is not the luminance of the actual footage.
-        base = (14, 22, 17)
-    else:
-        base = palette.background
-    light = relative_luminance(base) > .46
-    if scene.get("theme") == "light":
-        light = True
-    elif scene.get("theme") == "dark":
-        light = False
-    photo = bool(scene.get("photo") or (isinstance(background, dict)
-                                        and background.get("asset")))
-    if light:
-        ink = darken(base, .88) if relative_luminance(base) > .25 else (18, 30, 22)
-        muted = mix(ink, base, .38)
-        accent = ensure_contrast(palette.accent, base, 4.5)
-        surface = palette.surface if relative_luminance(palette.surface) > .7 else (255, 255, 255)
-        kicker = accent
-        scrim = 0.0
-    else:
-        ink = (255, 255, 255)
-        muted = lighten(ink, .22)
-        accent = ensure_contrast(palette.accent, base, 4.5)
-        surface = palette.surface
-        # Accent green cannot be guaranteed against arbitrary photography.
-        # A white kicker plus a real scrim keeps the label legible.
-        kicker = ink if photo else accent
-        scrim = .62 if photo else (.55 if ctx.tokens.backdrop != "none" else .15)
-    return {"light": light, "base": base, "ink": ink, "muted": muted,
-            "accent": accent, "kicker": kicker, "surface": surface,
-            "scrim": scrim, "photo": photo}
-
-
-def _background(ctx: SceneContext, scene: dict, theme: dict) -> dict:
-    palette = ctx.tokens.palette
-    config = scene.get("background")
-    if not isinstance(config, dict):
-        config = {}
-    photo = scene.get("photo") or config.get("asset") or config.get("photo")
-    if photo:
-        camera = config.get("camera") or scene.get("camera") or {}
-        if isinstance(camera, str):
-            camera = {"direction": camera}
-        return {
-            "kind": "photo",
-            "asset": photo,
-            "video_source": scene.get("photo_source") or config.get("video_source"),
-            "time": scene.get("photo_time", config.get("time", 0)),
-            "camera": {
-                "direction": camera.get("direction", "push-in"),
-                "intensity": camera.get("intensity", ctx.tokens.motion.camera_drift),
-            },
-            "scrim": config.get("scrim", theme["scrim"]),
-            "tint": config.get("tint"),
-            "blur": config.get("blur", 0),
-        }
-    kind = config.get("kind", "gradient" if not theme["light"] else "solid")
-    if kind == "solid":
-        return {"kind": "solid", "color": config.get(
-            "color", theme["base"])}
-    start = config.get("from", theme["base"])
-    end = config.get("to", mix(theme["base"], theme["accent"],
-                              .10 if not theme["light"] else .04))
-    return {"kind": "gradient", "from": start, "to": end,
-            "angle": config.get("angle", 90)}
 
 
 def _decor(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
@@ -383,9 +308,11 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     requested_type_motion = scene.get("typography_motion")
     if requested_type_motion:
         from ..motionkit.choreography import ElementSpec
+        from ..motionkit.presets import select_text_mechanism
+        resolved_motion = select_text_mechanism(str(requested_type_motion))
         specs = [ElementSpec(role=spec.role, weight=spec.weight,
                              kind=spec.kind, order=spec.order,
-                             hint=requested_type_motion if spec.role == "headline"
+                             hint=resolved_motion if spec.role == "headline"
                              else spec.hint) for spec in specs]
     raw_cues = scene.get("cues") or {}
     cues = {role: value for role, value in raw_cues.items() if role in roles}
@@ -448,10 +375,6 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             "headline": _headline(scene), "body": _subtitle(scene),
             "theme": "light" if _is_light(ctx, scene) else "dark",
             **(meta or {})})
-
-
-def _is_light(ctx: SceneContext, scene: dict) -> bool:
-    return _theme(ctx, scene)["light"]
 
 
 def _data_panel_scaffold(ctx: SceneContext, scene: dict, default_headline: str):

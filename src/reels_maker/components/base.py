@@ -2,88 +2,19 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
 from typing import Callable, Iterable, Mapping
 
 from ..core.scene_graph import Node
 from ..design.format import format_value
 from ..design.tokens import DesignTokens
-from ..layout.engine import LayoutEngine, LayoutPlan, Rect
+from ..layout.engine import Rect
 from ..motionkit.choreography import Choreography, ElementSpec, plan_choreography
 from ..motionkit.keyframes import Keyframe, Track
 from ..motionkit.presets import number_track, progress_track
 from ..textkit.typesetter import (
     FontBook, Run, TextBlock, TextStyle, fit_text, typeset, typeset_runs,
 )
-
-
-@dataclass
-class SceneContext:
-    width: int
-    height: int
-    fps: int
-    duration: float
-    tokens: DesignTokens
-    style: str
-    fonts: FontBook
-    scene_index: int = 0
-    seed: int = 0
-    assets: object | None = None
-    scene: dict = field(default_factory=dict)
-
-    @property
-    def layout(self) -> LayoutEngine:
-        return LayoutEngine(self.width, self.height, self.tokens)
-
-    @property
-    def palette(self):
-        return self.tokens.palette
-
-
-@dataclass
-class BuiltScene:
-    index: int
-    scene: dict
-    context: SceneContext
-    layout: LayoutPlan
-    background: dict
-    nodes: list[Node]
-    elements: dict[str, Node]
-    choreography: Choreography
-    meta: dict = field(default_factory=dict)
-
-    @property
-    def duration(self) -> float:
-        return self.context.duration
-
-    @property
-    def fps(self) -> int:
-        return self.context.fps
-
-    def at(self, time: float) -> list[Node]:
-        sampled = [node.sample(time) for node in self.nodes]
-        # Some compositions animate their stacking order (e.g. cards moving
-        # through a carousel). Python's stable sort preserves authored order
-        # for nodes without an explicit z_index.
-        return sorted(sampled,
-                      key=lambda node: float(node.props.get("z_index", 0.0)))
-
-    def element(self, role: str) -> Node:
-        if role not in self.elements:
-            raise KeyError(f"Scene {self.index + 1} has no element {role!r}")
-        return self.elements[role]
-
-    def to_dict(self) -> dict:
-        return {
-            "scene": self.index + 1,
-            "type": self.scene.get("type", self.scene.get("composition", "custom")),
-            "composition": self.layout.recipe,
-            "duration": round(self.duration, 4),
-            "background": self.background.get("kind", "solid"),
-            "layout": self.layout.describe(),
-            "choreography": self.choreography.to_dict(),
-            **self.meta,
-        }
+from .model import BuiltScene, SceneContext
 
 
 def resolve_text_style(tokens: DesignTokens, role: str,

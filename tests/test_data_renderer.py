@@ -408,6 +408,15 @@ class DataRendererTests(unittest.TestCase):
         for s in families_scenes:
             built = build_scene(ctx, s)
             self.assertEqual(audit_data_scene(built), [])
+        heatmap_built = build_scene(ctx, families_scenes[3])
+        heatmap_roles = {node.role for node in heatmap_built.elements["chart"].children}
+        self.assertIn("heatmap-chart-surface", heatmap_roles)
+        self.assertEqual(len([role for role in heatmap_roles
+                              if role.startswith("heatmap-value-")]), 9)
+        scatter_built = build_scene(ctx, families_scenes[4])
+        scatter_roles = {node.role for node in scatter_built.elements["chart"].children}
+        self.assertEqual(len([role for role in scatter_roles
+                              if role.startswith("scatter-x-tick-")]), 5)
 
         # DM-008: 4 credible story packages build and pass QA
         stories = credible_data_story_examples()

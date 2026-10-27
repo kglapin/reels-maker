@@ -1,0 +1,99 @@
+{
+  "brand": "motion-lab",
+  "style": "editorial-premium",
+  "design_overrides": {
+    "body": 38
+  },
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 20,
+    "preset": "medium"
+  },
+  "name": "motion-lab-camera-canvas-showcase",
+  "scenes": [
+    {
+      "type": "statement",
+      "duration": 5.0,
+      "headline": "CAMERA",
+      "subtitle": "SHARED WORLD · SYNTHETIC STILL",
+      "photo": "media/stock/solar-field-synthetic.png",
+      "camera_canvas": {
+        "x": 520,
+        "y": 620,
+        "angle": -4,
+        "zoom": 1.0,
+        "layout": "photo-above",
+        "move_duration": 0.8,
+        "reveal_delay": 0.15,
+        "reveal_duration": 0.65,
+        "typography_motion": "mask-rise"
+      }
+    },
+    {
+      "type": "statement",
+      "duration": 5.0,
+      "headline": "STOPS",
+      "subtitle": "GENERATED VIDEO SOURCE",
+      "video": "media/stock/energy-orbit-synthetic.mp4",
+      "camera_canvas": {
+        "x": 1480,
+        "y": 850,
+        "angle": 7,
+        "zoom": 1.0,
+        "layout": "photo-left",
+        "move_duration": 1.0,
+        "reveal_delay": 0.1,
+        "reveal_duration": 0.7,
+        "trim_start": 0.5,
+        "mask": "rounded",
+        "typography_motion": "slide-up"
+      }
+    },
+    {
+      "type": "statement",
+      "duration": 5.0,
+      "headline": "TYPE",
+      "subtitle": "ROTATION AND SETTLED REVEAL",
+      "photo": "media/stock/battery-room-synthetic.png",
+      "camera_canvas": {
+        "x": 2340,
+        "y": 1540,
+        "angle": -5,
+        "zoom": 1.08,
+        "layout": "offset",
+        "move_duration": 0.9,
+        "reveal_delay": 0.2,
+        "reveal_duration": 0.6,
+        "typography_motion": "scale-focus"
+      }
+    },
+    {
+      "type": "statement",
+      "duration": 5.0,
+      "headline": "TOUR",
+      "subtitle": "FOURTH SHOT · FINAL CAMERA STOP",
+      "photo": "media/stock/city-grid-synthetic.png",
+      "camera_canvas": {
+        "x": 3200,
+        "y": 1100,
+        "angle": 3,
+        "zoom": 1.0,
+        "layout": "photo-left",
+        "move_duration": 0.85,
+        "reveal_delay": 0.12,
+        "reveal_duration": 0.7
+      }
+    }
+  ],
+  "metadata": {
+    "synthetic_demo": true,
+    "duration_seconds": 20,
+    "notice": "Illustrative engine demo; not an advertisement."
+  }
+}

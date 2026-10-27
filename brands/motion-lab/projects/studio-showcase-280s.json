@@ -1,0 +1,914 @@
+{
+  "brand": "motion-lab",
+  "style": "editorial-premium",
+  "design_overrides": {
+    "body": 38
+  },
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 20,
+    "preset": "medium"
+  },
+  "name": "motion-lab-studio-showcase",
+  "scenes": [
+    {
+      "type": "statement",
+      "duration": 8.0,
+      "headline": "MOTION",
+      "subtitle": "SYNTHETIC ENGINE SHOWCASE",
+      "decor": false,
+      "theme": "dark",
+      "typography_motion": "vertical-drift"
+    },
+    {
+      "type": "spotlight",
+      "duration": 8.0,
+      "headline": "IMAGE + VIDEO LAYERS",
+      "subtitle": "GENERATED DEMO MEDIA",
+      "decor": false,
+      "theme": "dark",
+      "photo": "media/stock/solar-field-synthetic.png",
+      "photo_time": 0.0,
+      "video_layer": {
+        "path": "media/stock/energy-orbit-synthetic.mp4",
+        "x": 60,
+        "y": 740,
+        "w": 600,
+        "h": 300,
+        "mask": "rounded",
+        "radius": 20
+      },
+      "typography_motion": "curtain-mask"
+    },
+    {
+      "type": "announcement",
+      "duration": 8.0,
+      "headline": "CALENDAR",
+      "subtitle": "SCENE COMPOSITION",
+      "decor": false,
+      "theme": "dark",
+      "kicker": "DEMO",
+      "day": "08",
+      "calendar_label": "SCENE GRAPH",
+      "typography_motion": "horizontal-wipe",
+      "transition_out": {
+        "type": "color-takeover",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "deadline",
+      "duration": 8.0,
+      "headline": "TEMPORAL DESIGN",
+      "subtitle": "DEADLINE / TIMELINE",
+      "decor": false,
+      "theme": "dark",
+      "kicker": "",
+      "date": "08.10.2026",
+      "milestones": [
+        "START",
+        "BUILD",
+        "HOLD"
+      ],
+      "typography_motion": "lateral-slide"
+    },
+    {
+      "type": "urgency",
+      "duration": 8.0,
+      "headline": "PACE WITH PURPOSE",
+      "subtitle": "URGENCY WITHOUT CHAOS",
+      "decor": false,
+      "theme": "dark",
+      "typography_motion": "elastic-scale",
+      "transition_out": {
+        "type": "radial-reveal",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "quote",
+      "duration": 8.0,
+      "headline": "ONE IDEA PER SHOT",
+      "subtitle": "MOTION LAB · SYNTHETIC BRAND",
+      "decor": false,
+      "theme": "dark",
+      "typography_motion": "optical-tracking"
+    },
+    {
+      "type": "amount",
+      "duration": 8.0,
+      "headline": "COUNTERS + UNITS",
+      "subtitle": "ILLUSTRATIVE VALUE",
+      "decor": false,
+      "theme": "dark",
+      "value": 12800,
+      "kicker": "SYNTHETIC DATA",
+      "visual": "battery",
+      "format": {
+        "suffix": " kWh",
+        "decimals": 0
+      },
+      "typography_motion": "stagger-cascade",
+      "transition_out": {
+        "type": "whip-pan",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "breakdown",
+      "duration": 8.0,
+      "headline": "COMPOSITION",
+      "subtitle": "MULTI-ROW VALUE BREAKDOWN",
+      "decor": false,
+      "theme": "dark",
+      "items": [
+        {
+          "label": "STORAGE",
+          "value": 5200
+        },
+        {
+          "label": "CONTROL",
+          "value": 3100
+        },
+        {
+          "label": "GENERATION",
+          "value": 4500
+        }
+      ],
+      "total": 12800,
+      "typography_motion": "depth-focus"
+    },
+    {
+      "type": "comparison",
+      "duration": 8.0,
+      "headline": "BEFORE / AFTER",
+      "subtitle": "COMPARISON CARDS",
+      "decor": false,
+      "theme": "dark",
+      "columns": [
+        {
+          "label": "BASELINE",
+          "value": 5400,
+          "suffix": " kWh"
+        },
+        {
+          "label": "OPTIMIZED",
+          "value": 9200,
+          "suffix": " kWh"
+        }
+      ],
+      "transition_out": {
+        "type": "zoom-through",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "donut",
+      "duration": 8.0,
+      "headline": "PROPORTION",
+      "subtitle": "SYNTHETIC SHARE",
+      "decor": false,
+      "theme": "dark",
+      "value": 68,
+      "suffix": "%",
+      "allowed_overlaps": [
+        [
+          "visual/chart",
+          "visual/percent"
+        ],
+        [
+          "visual/chart",
+          "visual/chart-label"
+        ]
+      ]
+    },
+    {
+      "type": "heat",
+      "duration": 8.0,
+      "headline": "HERO METRIC",
+      "subtitle": "ACCENTED VALUE DISPLAY",
+      "decor": false,
+      "theme": "dark",
+      "value": 7420,
+      "kicker": "ILLUSTRATIVE",
+      "suffix": " kWh",
+      "transition_out": {
+        "type": "diagonal-wipe",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "europe",
+      "duration": 8.0,
+      "headline": "REGIONAL VIEW",
+      "subtitle": "DATA-DRIVEN HIGHLIGHT",
+      "decor": false,
+      "theme": "dark",
+      "value": 47,
+      "kicker": "SYNTHETIC INDEX",
+      "suffix": "%"
+    },
+    {
+      "type": "stats",
+      "duration": 8.0,
+      "headline": "MULTI-METRIC GRID",
+      "subtitle": "SYNTHETIC SAMPLE VALUES",
+      "decor": false,
+      "theme": "dark",
+      "stats": [
+        {
+          "label": "OUTPUT",
+          "value": 128,
+          "suffix": " kWh"
+        },
+        {
+          "label": "STORAGE",
+          "value": 64,
+          "suffix": " kWh"
+        },
+        {
+          "label": "HOURS",
+          "value": 18,
+          "suffix": " h"
+        },
+        {
+          "label": "SITES",
+          "value": 12,
+          "suffix": ""
+        }
+      ],
+      "transition_out": {
+        "type": "iris-close-open",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "checklist",
+      "duration": 8.0,
+      "headline": "STAGED REVEAL",
+      "subtitle": "CHECKLIST CHOREOGRAPHY",
+      "decor": false,
+      "theme": "dark",
+      "items": [
+        "SOURCE",
+        "MEASURE",
+        "OPTIMIZE",
+        "VERIFY"
+      ]
+    },
+    {
+      "type": "cta",
+      "duration": 8.0,
+      "headline": "END CARD",
+      "subtitle": "SYNTHETIC DEMO — NOT AN ADVERTISEMENT",
+      "decor": false,
+      "theme": "dark",
+      "phone": "DEMO ONLY",
+      "website": "motion-lab.example",
+      "line_one": "RENDER SYSTEM",
+      "line_two": "LOCAL DEMONSTRATION",
+      "transition_out": {
+        "type": "stripe-reveal",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "energy",
+      "duration": 8.0,
+      "headline": "ENERGY FLOW",
+      "subtitle": "BUILT-IN VECTOR ICONS",
+      "decor": false,
+      "theme": "dark"
+    },
+    {
+      "type": "photo_carousel",
+      "duration": 8.0,
+      "headline": "MEDIA CAROUSEL",
+      "subtitle": "GENERATED STILL IMAGES",
+      "decor": false,
+      "theme": "dark",
+      "carousel": {
+        "direction": "horizontal",
+        "advance_seconds": 1.4,
+        "items": [
+          {
+            "image": "media/stock/solar-field-synthetic.png"
+          },
+          {
+            "image": "media/stock/battery-room-synthetic.png"
+          },
+          {
+            "image": "media/stock/wind-farm-synthetic.png"
+          },
+          {
+            "image": "media/stock/city-grid-synthetic.png"
+          }
+        ]
+      },
+      "transition_out": {
+        "type": "split-slide",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "photo_marquee",
+      "duration": 8.0,
+      "headline": "PHOTO MARQUEE",
+      "subtitle": "ALTERNATING ROW CHOREOGRAPHY",
+      "decor": false,
+      "theme": "dark",
+      "carousel": {
+        "items": [
+          {
+            "image": "media/stock/solar-field-synthetic.png"
+          },
+          {
+            "image": "media/stock/battery-room-synthetic.png"
+          },
+          {
+            "image": "media/stock/wind-farm-synthetic.png"
+          },
+          {
+            "image": "media/stock/city-grid-synthetic.png"
+          }
+        ]
+      }
+    },
+    {
+      "type": "polaroid_burst",
+      "duration": 8.0,
+      "headline": "POLAROID BURST",
+      "subtitle": "FRAME-QUANTIZED ENTRIES",
+      "decor": false,
+      "theme": "dark",
+      "polaroid_burst": {
+        "photos": [
+          "media/stock/solar-field-synthetic.png",
+          "media/stock/battery-room-synthetic.png",
+          "media/stock/wind-farm-synthetic.png",
+          "media/stock/city-grid-synthetic.png"
+        ],
+        "seed": 19,
+        "interval": 0.24,
+        "entry_duration": 0.2,
+        "flash_duration": 0.1,
+        "hold_after": 0.5
+      },
+      "transition_out": {
+        "type": "spin-zoom",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "table",
+      "duration": 8.0,
+      "headline": "DATA TABLE",
+      "subtitle": "ROW IDS + REORDER + CELL CHANGES",
+      "decor": false,
+      "theme": "dark",
+      "columns": [
+        {
+          "id": "system",
+          "label": "SYSTEM",
+          "width": 0.58,
+          "align": "left"
+        },
+        {
+          "id": "value",
+          "label": "VALUE",
+          "width": 0.42,
+          "align": "right"
+        }
+      ],
+      "rows": [
+        {
+          "id": "r1",
+          "values": {
+            "system": "SOLAR",
+            "value": "42 kWh"
+          }
+        },
+        {
+          "id": "r2",
+          "values": {
+            "system": "STORAGE",
+            "value": "28 kWh"
+          }
+        },
+        {
+          "id": "r3",
+          "values": {
+            "system": "GRID",
+            "value": "14 kWh"
+          }
+        }
+      ],
+      "highlight_rows": [
+        "r2"
+      ],
+      "animate_from_row_ids": [
+        "r3",
+        "r1",
+        "r2"
+      ]
+    },
+    {
+      "type": "bars",
+      "duration": 8.0,
+      "headline": "BAR CHART",
+      "subtitle": "ANIMATED RANKING",
+      "decor": false,
+      "theme": "dark",
+      "bars": [
+        {
+          "label": "SOLAR",
+          "value": 82
+        },
+        {
+          "label": "STORAGE",
+          "value": 64
+        },
+        {
+          "label": "GRID",
+          "value": 31
+        }
+      ],
+      "data_order": "descending",
+      "transition_out": {
+        "type": "pixel-dissolve",
+        "duration": 0.4,
+        "color": "#42D6A4",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "direction": "left"
+      }
+    },
+    {
+      "type": "line_chart",
+      "duration": 8.0,
+      "headline": "LINE + AXES",
+      "subtitle": "SYNTHETIC DAILY OUTPUT",
+      "decor": false,
+      "theme": "dark",
+      "x_axis_type": "category",
+      "x_axis_label": "DAY",
+      "y_axis_label": "ENERGY (kWh)",
+      "y_domain": [
+        0,
+        100
+      ],
+      "points": [
+        {
+          "label": "MON",
+          "value": 24
+        },
+        {
+          "label": "TUE",
+          "value": 48
+        },
+        {
+          "label": "WED",
+          "value": 41
+        },
+        {
+          "label": "THU",
+          "value": 78
+        },
+        {
+          "label": "FRI",
+          "value": 68
+        }
+      ]
+    },
+    {
+      "type": "stacked_bars_100",
+      "duration": 8.0,
+      "headline": "100% STACKS",
+      "subtitle": "EXPLICIT CATEGORY TOTALS",
+      "decor": false,
+      "theme": "dark",
+      "categories": [
+        {
+          "id": "home",
+          "label": "HOME",
+          "segments": [
+            {
+              "id": "solar",
+              "label": "SOLAR",
+              "value": 68
+            },
+            {
+              "id": "grid",
+              "label": "GRID",
+              "value": 32
+            }
+          ]
+        },
+        {
+          "id": "office",
+          "label": "OFFICE",
+          "segments": [
+            {
+              "id": "solar",
+              "label": "SOLAR",
+              "value": 74
+            },
+            {
+              "id": "grid",
+              "label": "GRID",
+              "value": 26
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "waterfall",
+      "duration": 8.0,
+      "headline": "WATERFALL",
+      "subtitle": "TOTAL CONSERVATION CHECK",
+      "decor": false,
+      "theme": "dark",
+      "steps": [
+        {
+          "id": "opening",
+          "label": "START",
+          "value": 40,
+          "kind": "opening"
+        },
+        {
+          "id": "gain",
+          "label": "GAIN",
+          "value": 24,
+          "kind": "delta"
+        },
+        {
+          "id": "use",
+          "label": "USE",
+          "value": -9,
+          "kind": "delta"
+        },
+        {
+          "id": "closing",
+          "label": "END",
+          "value": 55,
+          "kind": "total"
+        }
+      ]
+    },
+    {
+      "type": "diverging_bar",
+      "duration": 8.0,
+      "headline": "DIVERGING BARS",
+      "subtitle": "BASELINE = SYNTHETIC TARGET",
+      "decor": false,
+      "theme": "dark",
+      "baseline": 50,
+      "items": [
+        {
+          "label": "A",
+          "value": 72
+        },
+        {
+          "label": "B",
+          "value": 43
+        },
+        {
+          "label": "C",
+          "value": 28
+        }
+      ]
+    },
+    {
+      "type": "bullet",
+      "duration": 8.0,
+      "headline": "TARGET TRACKING",
+      "subtitle": "BULLET CHART",
+      "decor": false,
+      "theme": "dark",
+      "metrics": [
+        {
+          "label": "OUTPUT",
+          "value": 78,
+          "target": 90,
+          "max": 100
+        },
+        {
+          "label": "STORAGE",
+          "value": 56,
+          "target": 70,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "duration": 8.0,
+      "headline": "HEATMAP",
+      "subtitle": "SYNTHETIC HOURLY PROFILE",
+      "decor": false,
+      "theme": "dark",
+      "row_labels": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU"
+      ],
+      "col_labels": [
+        "AM",
+        "NOON",
+        "PM"
+      ],
+      "values": [
+        [
+          16,
+          45,
+          28
+        ],
+        [
+          22,
+          64,
+          32
+        ],
+        [
+          30,
+          82,
+          41
+        ],
+        [
+          18,
+          58,
+          35
+        ]
+      ]
+    },
+    {
+      "type": "scatter",
+      "duration": 8.0,
+      "headline": "SCATTER PLOT",
+      "subtitle": "EXPLICIT AXIS DOMAINS",
+      "decor": false,
+      "theme": "dark",
+      "x_domain": [
+        0,
+        10
+      ],
+      "y_domain": [
+        0,
+        100
+      ],
+      "points": [
+        {
+          "id": "p1",
+          "x": 1,
+          "y": 18
+        },
+        {
+          "id": "p2",
+          "x": 3,
+          "y": 39
+        },
+        {
+          "id": "p3",
+          "x": 5,
+          "y": 48
+        },
+        {
+          "id": "p4",
+          "x": 8,
+          "y": 82
+        }
+      ]
+    },
+    {
+      "type": "funnel",
+      "duration": 8.0,
+      "headline": "FUNNEL",
+      "subtitle": "MONOTONIC STAGE VALUES",
+      "decor": false,
+      "theme": "dark",
+      "stages": [
+        {
+          "id": "s1",
+          "label": "VISITS",
+          "value": 1000
+        },
+        {
+          "id": "s2",
+          "label": "INTEREST",
+          "value": 620
+        },
+        {
+          "id": "s3",
+          "label": "REQUESTS",
+          "value": 240
+        },
+        {
+          "id": "s4",
+          "label": "CONVERTED",
+          "value": 82
+        }
+      ]
+    },
+    {
+      "type": "sankey",
+      "duration": 8.0,
+      "headline": "SANKEY FLOW",
+      "subtitle": "CONSERVATION-PRESERVING LINKS",
+      "decor": false,
+      "theme": "dark",
+      "links": [
+        {
+          "source": "SOLAR",
+          "target": "LOAD",
+          "value": 64
+        },
+        {
+          "source": "SOLAR",
+          "target": "STORE",
+          "value": 36
+        },
+        {
+          "source": "GRID",
+          "target": "LOAD",
+          "value": 28
+        },
+        {
+          "source": "STORE",
+          "target": "LOAD",
+          "value": 36
+        }
+      ]
+    },
+    {
+      "type": "chart_morph",
+      "duration": 8.0,
+      "headline": "TABLE → BAR MORPH",
+      "subtitle": "SHARED STABLE IDS",
+      "decor": false,
+      "theme": "dark",
+      "from_type": "table",
+      "transition_duration": 1.5,
+      "items": [
+        {
+          "id": "solar",
+          "label": "SOLAR",
+          "from_index": 2,
+          "to_index": 0,
+          "from_value": 30,
+          "to_value": 82
+        },
+        {
+          "id": "store",
+          "label": "STORAGE",
+          "from_index": 1,
+          "to_index": 1,
+          "from_value": 55,
+          "to_value": 64
+        },
+        {
+          "id": "grid",
+          "label": "GRID",
+          "from_index": 0,
+          "to_index": 2,
+          "from_value": 90,
+          "to_value": 31
+        }
+      ]
+    },
+    {
+      "type": "product_3d",
+      "duration": 8.0,
+      "headline": "PROCEDURAL 3D",
+      "subtitle": "SYNTHETIC PRISM + LIGHT RIG",
+      "decor": false,
+      "theme": "dark",
+      "product_3d": {
+        "mesh_path": "procedural-demo.obj",
+        "camera": {
+          "focal_length_mm": 55,
+          "distance": 3.8,
+          "yaw_deg": -22,
+          "turntable_deg_per_s": 12
+        },
+        "lighting": {
+          "key_light": {
+            "intensity": 1.0
+          },
+          "fill_light": {
+            "intensity": 0.45
+          },
+          "rim_light": {
+            "intensity": 0.7
+          }
+        },
+        "material": {
+          "color": "#42D6A4"
+        }
+      }
+    },
+    {
+      "type": "spotlight",
+      "duration": 8.0,
+      "headline": "MOTION OVER FOOTAGE",
+      "subtitle": "GENERATED CLIP — NO STOCK MEDIA",
+      "decor": false,
+      "theme": "dark",
+      "photo": "media/stock/wind-farm-synthetic.png",
+      "photo_time": 0.0,
+      "video_layer": {
+        "path": "media/stock/grid-flow-synthetic.mp4",
+        "x": 60,
+        "y": 740,
+        "w": 600,
+        "h": 300,
+        "mask": "rounded",
+        "radius": 18
+      }
+    },
+    {
+      "type": "statement",
+      "duration": 8.0,
+      "headline": "MECHANISMS",
+      "subtitle": "STAGGER · HOLD · SCALE · MASK",
+      "decor": false,
+      "theme": "dark",
+      "typography_motion": "curtain-mask"
+    },
+    {
+      "type": "statement",
+      "duration": 8.0,
+      "headline": "REVIEW",
+      "subtitle": "SYNTHETIC FIVE-MINUTE DEMO",
+      "decor": false,
+      "theme": "dark"
+    }
+  ],
+  "metadata": {
+    "synthetic_demo": true,
+    "duration_seconds": 280,
+    "notice": "Illustrative engine demo; not an advertisement."
+  }
+}

@@ -60,18 +60,44 @@ class CameraCanvasRenderer:
         if ww*hh>32000000:
             raise ValueError("camera_canvas world exceeds 32MP")
         base=Image.new("RGBA",(ww,hh),(247,245,240,255))
-        self.stages=[base]
         for i,s in enumerate(self.scenes):
             tile=self._tile(s,photo=True)
             self._paste(base,tile,self.stops[i])
-        self.stages=[base.copy()]
+        self._base_world = base
+        # Keep only the immutable photo world and the current cumulative text
+        # stage. The previous implementation retained one full RGBA world per
+        # shot, making memory grow as O(scene_count * world_pixels).
+        self._active_stage_index = -1
+        self._active_stage: Image.Image | None = None
         self.local_typography=[]
         for i,s in enumerate(self.scenes):
             tile=self._tile(s,photo=False)
             self.local_typography.append(tile)
-            new=self.stages[-1].copy()
-            self._paste(new,tile,self.stops[i])
-            self.stages.append(new)
+
+    def _stage_for(self, index: int) -> Image.Image:
+        """Get the cumulative world stage without retaining every world copy."""
+        if type(index) is not int or not 0 <= index < len(self.scenes):
+            raise ValueError("Camera Canvas stage index is outside the project")
+        if index == self._active_stage_index and self._active_stage is not None:
+            return self._active_stage
+        if (self._active_stage is not None
+                and index == self._active_stage_index + 1):
+            # Rendering proceeds in timeline order. Add the preceding shot's
+            # typography to one new stage, then release the older stage.
+            stage = self._active_stage.copy()
+            previous = index - 1
+            self._paste(stage, self.local_typography[previous],
+                        self.stops[previous])
+        else:
+            # QA/storyboard callers can seek backwards or jump between shots.
+            # Rebuild just the requested stage from the retained photo world.
+            stage = self._base_world.copy()
+            for previous in range(index):
+                self._paste(stage, self.local_typography[previous],
+                            self.stops[previous])
+        self._active_stage = stage
+        self._active_stage_index = index
+        return stage
 
     def _font(self,size,bold):
         for p in (["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"] if bold else
@@ -188,7 +214,7 @@ class CameraCanvasRenderer:
                 self._settled_frames.move_to_end(i)
                 return cached.copy()
         stop=self.camera(i,time)
-        stage_world = self.stages[i]
+        stage_world = self._stage_for(i)
         if self.scenes[i].get("video"):
             stage_world = stage_world.copy()
             live_tile = self._tile(self.scenes[i], photo=True, playback_time=time)

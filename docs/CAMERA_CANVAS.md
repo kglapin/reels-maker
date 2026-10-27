@@ -8,7 +8,9 @@ Unlike scene-by-scene transitions, this mode uses **one persistent canvas**. Eve
 
 ## Scene schema
 
-Add `camera_canvas` to **every** scene. Each scene still has its ordinary `duration`, `photo`, `headline`, and `subtitle`.
+Add `camera_canvas` to **every** scene. Each scene still has its ordinary
+`duration`, `headline`, and `subtitle`, and must provide either `photo` or
+`video`. Both paths are resolved inside the selected brand directory.
 
 ```json
 {
@@ -31,6 +33,11 @@ Add `camera_canvas` to **every** scene. Each scene still has its ordinary `durat
 }
 ```
 
+To use a reviewed local video instead of a still, use `"video":
+"media/stock/clean-source.mp4"` on every Camera Canvas scene that should show
+video. It is decoded at the sampled playback time; the source must be long
+enough for the scene's playback interval or be explicitly trimmed.
+
 The example renders to video using:
 
 ```bash
@@ -47,6 +54,8 @@ reels-maker studio-render examples/irregular-camera-canvas-demo.json --output ir
 - `move_duration`: duration of interpolation from the previous camera stop, seconds; default 0.8.
 - `reveal_delay`: pause after camera travel before typography starts; default 0.18.
 - `reveal_duration`: length of typography reveal; default 0.55.
+- `video`: optional brand-scoped video source; when present it takes precedence
+  over `photo` and is decoded during playback.
 
 For the first scene, camera travel is zero. For later scenes, travel is eased using smoothstep; position, scale and rotation interpolate together. All image assets remain fixed on the shared world; text is not permanently burned into backgrounds until its local reveal.
 
@@ -63,7 +72,15 @@ For the first scene, camera travel is zero. For later scenes, travel is eased us
 - This is an **initial integration**, not yet a full automatic shot director. Placement and rotation parameters are explicitly authored.
 - Typography reveal is a simple eased reveal of the local text layer. More varied kinetic typography should be integrated in a separate phase.
 - Photo layouts use predefined safe-ish rectangles. Subject-aware saliency cropping and a rigorous automatic camera-safe bounds optimizer are not yet implemented.
-- World size is limited to 32 million pixels to avoid runaway memory use.
+- World size is limited to 32 million pixels. The renderer retains one photo
+  world plus one active cumulative text stage instead of one full RGBA world
+  copy per scene; memory still grows with the world and the individual text
+  tiles.
+- `studio-qa --strict` includes Camera Canvas path, subject-retention,
+  typography-safe-zone and asset checks. Since Camera Canvas rasterizes its own
+  layout rather than the ordinary Studio node graph, review contrast in the
+  actual encoded storyboard/MP4 and on a phone; graph-based pixel contrast is
+  not claimed for this mode.
 - The render mode is opt-in and backward-compatible with existing Studio projects.
 - Camera motion is interpolated between two defined stops rather than following a multi-control-point Bézier trajectory.
 - Test status confirms backend operation and export validity, not final art-director-grade aesthetics.

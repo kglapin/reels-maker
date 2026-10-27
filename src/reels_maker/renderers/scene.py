@@ -7,19 +7,22 @@ rounded shapes, rings and small type crisp in final output.
 from __future__ import annotations
 
 import math
+import copy
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageOps
 
 from ..components.base import BuiltScene
 from ..core.scene_graph import Node
+from ..core.transforms import Bounds, LocalSpace
 from ..design.color import mix, parse_hex
 from ..design.tokens import DesignTokens
-from ..motionkit.easing import ease
-from ..textkit.typesetter import FontBook
+from ..textkit.typesetter import FontBook, TextBlock
 from . import canvas as cv
+from .scene_media import SceneMediaRenderer
+from .scene_transition import apply_scene_transition
 
 
 def _rgb(value) -> tuple[int, int, int]:
@@ -73,7 +76,9 @@ class SceneRenderer:
         self.ss = self.options.supersample
         self.W, self.H = width * self.ss, height * self.ss
         self._backgrounds: dict[tuple, Image.Image] = {}
-        self._sources: dict[object, Image.Image] = {}
+        self._sources: OrderedDict[object, Image.Image] = OrderedDict()
+        self._source_bytes = 0
+        self._source_byte_budget = 256 * 1024 * 1024
         self._framed_images: OrderedDict[tuple, Image.Image] = OrderedDict()
         self._framed_image_bytes = 0
         self._framed_image_budget = 128 * 1024 * 1024
@@ -81,6 +86,7 @@ class SceneRenderer:
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
         self._settled_frame_budget = 128 * 1024 * 1024
+        self._media = SceneMediaRenderer(self)
 
     # ------------------------------------------------------------------ public
     def render(self, scene: BuiltScene, time: float) -> Image.Image:
@@ -175,6 +181,27 @@ class SceneRenderer:
     def frame_bytes(self, scene: BuiltScene, time: float) -> bytes:
         return self.render(scene, time).convert("RGBA").tobytes("raw", "BGRA")
 
+    def _source(self, key: object, loader) -> Image.Image:
+        """Load a source image through a byte-bounded LRU cache."""
+        cached = self._sources.get(key)
+        if cached is not None:
+            self._sources.move_to_end(key)
+            return cached
+        image = loader()
+        size = image.width * image.height * len(image.getbands())
+        if size <= self._source_byte_budget:
+            previous = self._sources.pop(key, None)
+            if previous is not None:
+                self._source_bytes -= (
+                    previous.width * previous.height * len(previous.getbands()))
+            self._sources[key] = image
+            self._source_bytes += size
+            while self._source_bytes > self._source_byte_budget:
+                _, evicted = self._sources.popitem(last=False)
+                self._source_bytes -= (
+                    evicted.width * evicted.height * len(evicted.getbands()))
+        return image
+
     # -------------------------------------------------------------- background
     def _background(self, scene: BuiltScene, time: float) -> Image.Image:
         spec = scene.background
@@ -196,11 +223,12 @@ class SceneRenderer:
             asset = spec.get("asset")
             if not asset:
                 raise ValueError("Photo background requires an asset path")
-            source_key = str(Path(asset).resolve())
-            source = self._sources.get(source_key)
-            if source is None:
-                source = cv.load_image(asset)
-                self._sources[source_key] = source
+            source_path = Path(asset).resolve()
+            source_stat = source_path.stat()
+            source_key = (str(source_path), source_stat.st_mtime_ns,
+                          source_stat.st_size)
+            source = self._source(
+                source_key, lambda: cv.load_image(source_path))
             camera_spec = spec.get("camera") or {}
             direction = camera_spec.get("direction", "push-in")
             intensity = float(camera_spec.get("intensity", .06))
@@ -251,10 +279,127 @@ class SceneRenderer:
         if not needs_layer:
             self._content(target, node, ox, oy)
             return
+        if self._draw_local_layer(target, node, ox, oy, progress, rotation):
+            return
         layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
-        self._content(layer, node, ox, oy)
+        # Primitive painters use node.opacity while drawing. The isolated
+        # layer applies the node opacity below as a group property; clear it
+        # only on the shallow drawing copy so animated opacity is applied once
+        # rather than squared (e.g. .5 -> .25).
+        draw_node = node
+        if node.opacity < .999:
+            draw_node = copy.copy(node)
+            draw_node.opacity = 1.0
+        self._content(layer, draw_node, ox, oy)
         layer = self._apply_node_state(layer, node, ox, oy, progress, rotation)
         target.alpha_composite(layer)
+
+    def _draw_local_layer(self, target: Image.Image, node: Node,
+                          ox: float, oy: float, progress: float,
+                          rotation: float) -> bool:
+        """Composite a transformed leaf through a padded, region-local layer.
+
+        The full-frame fallback remains for clipping/reveal masks, 3D/media,
+        and shadowed panels. For ordinary typography/vector leaves this avoids
+        allocating and resampling a supersampled canvas for a small object.
+        """
+        if (node.kind not in {"rect", "block", "round", "circle", "ring",
+                              "line", "path", "text", "number"}
+                or node.clip is not None or progress < .999
+                or (node.kind == "round" and node.props.get("shadow"))):
+            return False
+        base_bounds = node.base_bounds()
+        if base_bounds is None:
+            return False
+        bounds = base_bounds
+        if node.kind == "text":
+            block = node.props.get("block")
+            if isinstance(block, TextBlock):
+                words = [word for line in block.lines for word in line.words]
+                if words:
+                    x, y = float(node.props.get("x", 0)), float(node.props.get("y", 0))
+                    bounds = (
+                        min(bounds[0], x + min(word.x for word in words)),
+                        min(bounds[1], y),
+                        max(bounds[2], x + max(word.x + word.width
+                                               for word in words)),
+                        max(bounds[3], y + block.height),
+                    )
+        mapped = node.local_to_parent_transform().map_bounds(
+            Bounds[LocalSpace](*bounds))
+        world = (mapped.left, mapped.top, mapped.right, mapped.bottom)
+
+        scale = self.ss
+        padding = 4 * scale
+        source_left = math.floor((bounds[0] + node.dx + ox) * scale) - padding
+        source_top = math.floor((bounds[1] + node.dy + oy) * scale) - padding
+        source_right = math.ceil((bounds[2] + node.dx + ox) * scale) + padding
+        source_bottom = math.ceil((bounds[3] + node.dy + oy) * scale) + padding
+        if source_right <= source_left or source_bottom <= source_top:
+            return True
+        # Avoid pathological scratch images for malformed/oversized authored
+        # geometry; the legacy clipped full-canvas path remains bounded.
+        if (source_right - source_left > self.W * 2
+                or source_bottom - source_top > self.H * 2):
+            return False
+
+        out_padding = 3 * scale
+        output_left = max(0, math.floor((world[0] + ox) * scale) - out_padding)
+        output_top = max(0, math.floor((world[1] + oy) * scale) - out_padding)
+        output_right = min(self.W, math.ceil((world[2] + ox) * scale) + out_padding)
+        output_bottom = min(self.H, math.ceil((world[3] + oy) * scale) + out_padding)
+        if output_right <= output_left or output_bottom <= output_top:
+            return True
+
+        source = Image.new(
+            "RGBA", (source_right - source_left, source_bottom - source_top),
+            (0, 0, 0, 0))
+        draw_node = node
+        if node.opacity < .999:
+            draw_node = copy.copy(node)
+            draw_node.opacity = 1.0
+        self._content(source, draw_node,
+                      ox - source_left / scale,
+                      oy - source_top / scale)
+        if node.opacity < .999:
+            source.putalpha(source.getchannel("A").point(
+                lambda value: int(value * node.opacity)))
+
+        if node.scale == 1 and abs(rotation) <= 1e-6:
+            transformed = source
+        else:
+            anchor = node.anchor
+            if anchor is None:
+                anchor = ((base_bounds[0] + base_bounds[2]) / 2,
+                          (base_bounds[1] + base_bounds[3]) / 2)
+            # dx/dy are applied after scale/rotation in the shared scene-graph
+            # transform, so the raster pivot includes the node's own offsets.
+            ax = (anchor[0] + node.dx + ox) * scale
+            ay = (anchor[1] + node.dy + oy) * scale
+            angle = math.radians(rotation)
+            cosine, sine = math.cos(angle), math.sin(angle)
+            node_scale = node.scale
+            if not math.isfinite(node_scale) or node_scale <= 0:
+                raise ValueError("Animated node scale must remain finite and positive")
+            inverse = (cosine / node_scale, sine / node_scale,
+                       -sine / node_scale, cosine / node_scale)
+            a, c, b, d = inverse
+            e = ax - a * ax - c * ay
+            f = ay - b * ax - d * ay
+            # Pillow maps output coordinates back to source coordinates. Shift
+            # that affine from full-canvas coordinates to the local source tile.
+            matrix = (
+                a, c,
+                a * output_left + c * output_top + e - source_left,
+                b, d,
+                b * output_left + d * output_top + f - source_top,
+            )
+            transformed = source.transform(
+                (output_right - output_left, output_bottom - output_top),
+                Image.Transform.AFFINE, matrix,
+                resample=Image.Resampling.BICUBIC)
+        target.alpha_composite(transformed, (output_left, output_top))
+        return True
 
     def _apply_node_state(self, layer: Image.Image, node: Node,
                           ox: float, oy: float, progress: float,
@@ -285,10 +430,13 @@ class SceneRenderer:
                 if base is None:
                     return layer
                 anchor = ((base[0] + base[2]) / 2, (base[1] + base[3]) / 2)
-            ax, ay = anchor[0] * self.ss + ox * self.ss, anchor[1] * self.ss + oy * self.ss
+            ax = (anchor[0] + node.dx + ox) * self.ss
+            ay = (anchor[1] + node.dy + oy) * self.ss
             angle = math.radians(rotation)
             cosine, sine = math.cos(angle), math.sin(angle)
-            scale = node.scale if node.scale > 0 else 1e-6
+            scale = node.scale
+            if not math.isfinite(scale) or scale <= 0:
+                raise ValueError("Animated node scale must remain finite and positive")
             matrix = (cosine / scale, sine / scale,
                       ax - (cosine / scale) * ax - (sine / scale) * ay,
                       -sine / scale, cosine / scale,
@@ -488,55 +636,7 @@ class SceneRenderer:
         target.alpha_composite(bitmap, (x, y))
 
     def _image(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
-        s = self.ss
-        props = node.props
-        path = Path(props["path"])
-        if not path.is_file():
-            raise ValueError(f"Missing image asset: {path}")
-        stat = path.stat()
-        source_key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
-        source = self._sources.get(source_key)
-        if source is None:
-            source = cv.load_image(path)
-            self._sources[source_key] = source
-        x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
-        w, h = props["w"] * s, props["h"] * s
-        if x + w <= 0 or y + h <= 0 or x >= self.W or y >= self.H:
-            return
-        zoom = float(props.get("zoom", 1.0))
-        blur = float(props.get("blur", 0.0))
-        if not math.isfinite(blur) or blur < 0:
-            raise ValueError(
-                "Image blur radius must be finite and non-negative")
-        blur_radius = min(blur, 24.0) * s if blur > 0 else 0.0
-        radius = float(props["radius"]) * s if props.get("radius") else None
-        width, height = int(max(1, w)), int(max(1, h))
-        framed_key = (source_key, width, height, zoom,
-                      float(props.get("pan_x", 0)),
-                      float(props.get("pan_y", 0)), blur_radius, radius)
-        image = self._framed_images.get(framed_key)
-        if image is not None:
-            self._framed_images.move_to_end(framed_key)
-        else:
-            image = cv.cover(
-                source, width, height,
-                cv.Camera(zoom=zoom,
-                          x=float(props.get("pan_x", 0)),
-                          y=float(props.get("pan_y", 0))))
-            if blur_radius > 0:
-                image = image.filter(
-                    ImageFilter.GaussianBlur(radius=blur_radius))
-            if radius is not None:
-                mask = Image.new("L", image.size, 0)
-                ImageDraw.Draw(mask).rounded_rectangle(
-                    (0, 0, image.width - 1, image.height - 1),
-                    radius=radius, fill=255)
-                image.putalpha(Image.composite(
-                    image.getchannel("A"),
-                    Image.new("L", image.size, 0), mask))
-            image = image.convert("RGBA")
-            self._remember_framed_image(framed_key, image)
-        target.alpha_composite(image, (int(x), int(y)))
+        self._media.image(target, node, dx, dy)
 
     def _sequence(self, target: Image.Image, node: Node,
                   dx: float, dy: float) -> None:
@@ -589,111 +689,13 @@ class SceneRenderer:
                 evicted.width * evicted.height * len(evicted.getbands()))
 
     def _video(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
-        s = self.ss
-        props = node.props
-        path = Path(props["path"])
-        if not path.is_file():
-            raise ValueError(f"Missing video asset: {path}")
-        source = cv.load_video_frame(
-            path,
-            float(props.get("playback_time", 0.0)),
-            trim_start=float(props.get("trim_start", 0.0)),
-            trim_end=props.get("trim_end"),
-        )
-        source = cv.crop_region(source, props.get("crop"))
-        x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
-        w, h = props["w"] * s, props["h"] * s
-        zoom = float(props.get("zoom", 1.0))
-        framed = cv.cover(
-            source,
-            int(max(1, w)),
-            int(max(1, h)),
-            cv.Camera(
-                zoom=zoom,
-                x=float(props.get("pan_x", 0.0)),
-                y=float(props.get("pan_y", 0.0)),
-            ),
-        )
-        masked = cv.apply_shape_mask(
-            framed,
-            props.get("mask", "rounded"),
-            radius=float(props.get("radius", 0.0)) * s,
-        )
-        target.alpha_composite(masked, (int(x), int(y)))
+        self._media.video(target, node, dx, dy)
 
     def _mesh3d(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
-        from ..creative.pipeline import render_3d_product_frame
-
-        s = self.ss
-        props = node.props
-        x, y = int(round((props["x"] + dx) * s)), int(round((props["y"] + dy) * s))
-        w, h = int(max(4, round(props["w"] * s))), int(max(4, round(props["h"] * s)))
-        rendered = render_3d_product_frame(
-            dict(props.get("spec") or {}),
-            w, h,
-            time=float(props.get("playback_time", 0.0)),
-        )
-        target.alpha_composite(rendered, (x, y))
+        self._media.mesh3d(target, node, dx, dy)
 
     # -------------------------------------------------------------- transitions
     def _transition(self, image: Image.Image, name: str, time: float,
                     duration: float) -> None:
-        if duration <= 0:
-            return
-        raw_progress = min(1.0, max(0.0, time / duration))
-        easing = "smooth"
-        if isinstance(name, dict):
-            easing = str(name.get("easing", "smooth"))
-            name = name.get("type", "cut")
-        if easing not in ("linear", "smooth", "out-cubic", "in-out-cubic"):
-            raise ValueError(
-                "Transition easing must be linear, smooth, out-cubic or "
-                "in-out-cubic")
-        progress = ease(easing, raw_progress)
-        if progress >= 1:
-            return
-        accent = self.tokens.palette.accent
-        blend = .94
-        if name == "cut" or not name:
-            return
-        if name == "dip":
-            overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
-            alpha = int(255 * (1 - progress))
-            ImageDraw.Draw(overlay).rectangle(
-                (0, 0, image.width, image.height), fill=(5, 10, 7, alpha))
-            image.alpha_composite(overlay)
-            return
-        if name not in ("wipe-left", "wipe-right", "wipe-up", "wipe-down"):
-            raise ValueError(f"Unknown transition {name!r}")
-        panel = Image.new("RGBA", image.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(panel)
-        if name in ("wipe-left", "wipe-right"):
-            width = image.width
-            offset = width * progress
-            if name == "wipe-left":
-                box = (offset, 0, width, image.height)
-            else:
-                box = (0, 0, width - offset, image.height)
-        else:
-            height = image.height
-            offset = height * progress
-            if name == "wipe-up":
-                box = (0, offset, image.width, image.height)
-            else:
-                box = (0, 0, image.width, height - offset)
-        draw.rectangle(box, fill=(*accent, int(255 * blend)))
-        # A thin bright edge gives the wipe a deliberate cut, not a glitch.
-        edge = max(2, round(image.width * .004))
-        if name == "wipe-left":
-            draw.rectangle((box[0] - edge, 0, box[0], image.height),
-                           fill=(255, 255, 255, 210))
-        elif name == "wipe-right":
-            draw.rectangle((box[2], 0, box[2] + edge, image.height),
-                           fill=(255, 255, 255, 210))
-        elif name == "wipe-up":
-            draw.rectangle((0, box[1] - edge, image.width, box[1]),
-                           fill=(255, 255, 255, 210))
-        else:
-            draw.rectangle((0, box[3], image.width, box[3] + edge),
-                           fill=(255, 255, 255, 210))
-        image.alpha_composite(panel)
+        apply_scene_transition(
+            image, name, time, duration, self.tokens.palette.accent)

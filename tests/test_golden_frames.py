@@ -56,9 +56,12 @@ class GoldenFrameTests(unittest.TestCase):
         self.assertGreater(frame.stat().st_size, 100,
                            f"Frame file too small: {frame}")
         from PIL import Image
-        img = Image.open(frame)
-        self.assertGreater(img.width, 100, f"Frame width too small: {frame}")
-        self.assertGreater(img.height, 100, f"Frame height too small: {frame}")
+        with Image.open(frame) as img:
+            img.load()
+            self.assertGreater(img.width, 100,
+                               f"Frame width too small: {frame}")
+            self.assertGreater(img.height, 100,
+                               f"Frame height too small: {frame}")
 
     def test_typography_golden_frames(self):
         """Generate golden reference frames for the typography demo."""
@@ -176,8 +179,8 @@ class GoldenFrameTests(unittest.TestCase):
         
         # Check that the image contains non-ASCII text content
         from PIL import Image
-        img = Image.open(frame)
-        self.assertEqual(img.mode, "RGB")
+        with Image.open(frame) as img:
+            self.assertEqual(img.mode, "RGB")
 
 
 if __name__ == "__main__":

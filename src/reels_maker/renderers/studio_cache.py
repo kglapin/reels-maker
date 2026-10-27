@@ -11,11 +11,13 @@ from pathlib import Path
 
 from ..studio import StudioProject
 
-STUDIO_CACHE_SCHEMA = 2
+# Bump whenever scene/frame interpretation changes; media stat keys alone do
+# not invalidate cached H.264 segments after a renderer logic fix.
+STUDIO_CACHE_SCHEMA = 4
 
 
 _ASSET_PATH_FIELDS = frozenset({
-    "asset", "file", "image", "logo", "mesh_path", "path", "photo",
+    "asset", "file", "image", "logo", "mesh_path", "path", "photo", "video",
     "photo_source", "photos", "video_source",
 })
 

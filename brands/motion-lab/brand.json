@@ -1,0 +1,19 @@
+{
+  "id": "motion-lab",
+  "branding": {
+    "accent": "#42D6A4"
+  },
+  "identity": {
+    "name": "Motion Lab",
+    "palette": {
+      "primary": "#42D6A4",
+      "background": "#0B1020",
+      "text": "#F7F8FC",
+      "neutral": "#8791A8",
+      "surface": "#182238"
+    },
+    "typography": {
+      "primary": "DejaVu Sans"
+    }
+  }
+}

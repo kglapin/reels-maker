@@ -10,6 +10,7 @@ from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle, fit_text
 from .base import SceneContext
+from .text_motion import typing_track
 
 
 def _number(config: dict, key: str, default: float, *, low: float,
@@ -60,28 +61,26 @@ def _cursor_positions(block, fonts, *, text_size: int) -> list[float]:
     return positions
 
 
-def _cursor_track(positions: list[float], start: float,
-                  duration: float) -> Track:
-    count = max(0, len(positions) - 1)
-    keys = [Keyframe(start, 0.0, "linear")]
-    if count:
-        first = positions[0]
-        for index, position in enumerate(positions[1:], start=1):
-            keys.append(Keyframe(start + duration * index / count,
-                                 position - first, "linear"))
-    return Track(keys)
+def _cursor_track(positions: list[float], text: str, start: float,
+                  duration: float, profile: str) -> Track:
+    first = positions[0]
+    return Track([Keyframe(key.time, positions[int(key.value)] - first,
+                           "linear")
+                  for key in typing_track(text, start, duration,
+                                          profile=profile).keys])
 
 
-def _blink_track(start: float, duration: float, *, blink: bool) -> Track:
+def _blink_track(start: float, duration: float, *, blink: bool,
+                 period: float = .42) -> Track:
     keys = [Keyframe(0.0, 0.0, "linear"),
             Keyframe(start, 1.0, "linear")]
     if blink:
-        time = start + .42
+        time = start + period
         visible = 0.0
         while time < duration:
             keys.append(Keyframe(time, visible, "linear"))
             visible = 1.0 - visible
-            time += .42
+            time += period
     return Track(keys)
 
 
@@ -204,13 +203,37 @@ def build_search_field(ctx: SceneContext, config: dict) -> list[Node]:
             high=remaining,
         )
         typing_duration = min(typing_duration, remaining)
-        text_node.track("prop.character_progress", Track([
-            Keyframe(typing_start, 0.0, "linear"),
-            Keyframe(typing_start + typing_duration, float(len(query)), "linear"),
-        ]))
+        typing_profile = config.get("typing_profile", "human")
+        text_node.track("prop.character_progress", typing_track(
+            query, typing_start, typing_duration, profile=typing_profile))
     else:
         typing_duration = 0.0
+        typing_profile = "steady"
     nodes.append(text_node)
+
+    focus_enabled = config.get("focus_outline", True)
+    if not isinstance(focus_enabled, bool):
+        raise ValueError("search_field.focus_outline must be boolean")
+    if query and focus_enabled:
+        focus_start = min(typing_start + .10, max(0.0, ctx.duration - 2 / ctx.fps))
+        focus_settle = min(typing_start + typing_duration + .18,
+                           ctx.duration - 1 / ctx.fps)
+        focus = Node(
+            kind="round", role="search-focus-outline",
+            props={"x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
+                   "r": rect.h / 2, "fill": None,
+                   "border": accent, "border_width": max(stroke, ctx.tokens.px(2))},
+            opacity=0.0, qa_class="decor",
+        )
+        focus_keys = [Keyframe(0.0, 0.0, "linear")]
+        if typing_start > 0:
+            focus_keys.append(Keyframe(typing_start, 0.0, "linear"))
+        if focus_start > (focus_keys[-1].time + 1e-7):
+            focus_keys.append(Keyframe(focus_start, .72, "out-cubic"))
+        if focus_settle > (focus_keys[-1].time + 1e-7):
+            focus_keys.append(Keyframe(focus_settle, .25, "out-cubic"))
+        focus.track("opacity", Track(focus_keys))
+        nodes.append(focus)
 
     cursor_setting = config.get("cursor", True)
     if not isinstance(cursor_setting, bool):
@@ -230,13 +253,29 @@ def build_search_field(ctx: SceneContext, config: dict) -> list[Node]:
                    "fill": accent},
             qa_class="decor", anchor=(cursor_x, center_y),
         )
-        cursor.track("dx", _cursor_track(positions, typing_start,
-                                          typing_duration))
+        cursor.track("dx", _cursor_track(positions, query, typing_start,
+                                          typing_duration, typing_profile))
+        blink_period = _number(config, "blink_period", .42,
+                               low=.18, high=1.2)
         cursor.track("opacity", _blink_track(
-            typing_start, ctx.duration, blink=cursor_setting))
+            min(ctx.duration, typing_start + typing_duration), ctx.duration,
+            blink=cursor_setting, period=blink_period))
         nodes.append(cursor)
 
     return nodes
 
 
-__all__ = ["build_search_field"]
+def build_search_canvas(ctx: SceneContext, scene: dict):
+    """Create a copy-free canvas dedicated to an animated search field."""
+    from .scene_support import _background, _decor, _finish, _theme
+
+    if not isinstance(scene.get("search_field"), dict):
+        raise ValueError("search_canvas requires a search_field object")
+    theme = _theme(ctx, scene)
+    layout = ctx.layout.layout("statement", {})
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   {}, [], decor=_decor(ctx, scene, theme),
+                   meta={"component": "search_canvas"})
+
+
+__all__ = ["build_search_canvas", "build_search_field"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 
 from ..core.scene_graph import Node
-from ..design.color import mix
+from ..design.color import ensure_contrast, mix
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle
@@ -102,10 +102,11 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     table_children.append(panel_node(
         "table-header", Rect(outer_x, header_y, table_width, header_height),
         ctx.tokens, fill=theme["accent"], radius="sm", shadow=False))
-    header_style = TextStyle(max(12, ctx.tokens.px(17)), theme["base"], "bold",
-                             uppercase=False, line_height=1.0)
-    cell_style = TextStyle(max(12, min(ctx.tokens.px(20), row_height * .52)),
-                           theme["ink"], "regular", line_height=1.0)
+    header_style = TextStyle(
+        max(12, ctx.tokens.px(17)),
+        ensure_contrast(theme["base"], theme["accent"], 4.5),
+        "bold", uppercase=False, line_height=1.0)
+    cell_size = max(12, min(ctx.tokens.px(20), row_height * .52))
     x = outer_x
     for column in parsed_columns:
         cell_width = table_width * column["width"]
@@ -126,11 +127,6 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     animate_from = [str(r) for r in (scene.get("animate_from_row_ids") or [])]
     prev_slot_by_id = {rid: idx for idx, rid in enumerate(animate_from)}
     cell_transitions = scene.get("cell_transitions") or {}
-    cell_highlight_style = TextStyle(
-        max(12, min(ctx.tokens.px(20), row_height * .52)),
-        theme["accent"], "bold", line_height=1.0,
-    )
-
     for row_index, row in enumerate(parsed_rows):
         y = header_y + header_height + ctx.tokens.px(8) + row_index * row_height
         is_row_hi = row["id"] in highlight_rows
@@ -141,6 +137,12 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
                 else mix(theme["surface"], theme["base"], .06)
             )
         )
+        cell_style = TextStyle(
+            cell_size, ensure_contrast(theme["ink"], row_fill, 4.5),
+            "regular", line_height=1.0)
+        cell_highlight_style = TextStyle(
+            cell_size, ensure_contrast(theme["accent"], row_fill, 4.5),
+            "bold", line_height=1.0)
         row_nodes = [panel_node(
             f"table-row-bg-{row_index}", Rect(outer_x, y, table_width, row_height),
             ctx.tokens, fill=row_fill, radius="sm", shadow=False)]

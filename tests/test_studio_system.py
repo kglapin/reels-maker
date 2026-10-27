@@ -18,7 +18,7 @@ from reels_maker.audiokit.cues import load_transcript, plan_cues
 from reels_maker.components.base import SceneContext
 from reels_maker.components.scenes import build_scene
 from reels_maker.components.title_overlay import build_title_overlay
-from reels_maker.core.scene_graph import collect_qa_elements
+from reels_maker.core.scene_graph import Node, collect_qa_elements
 from reels_maker.design.color import contrast_ratio, ensure_contrast
 from reels_maker.design.tokens import resolve_tokens
 from reels_maker.ffmpeg import RenderError
@@ -37,6 +37,52 @@ _DEMO_MEDIA_AVAILABLE = has_real_media(
 
 
 class StudioDesignTests(unittest.TestCase):
+    def test_animated_node_opacity_is_applied_once_to_isolated_layer(self):
+        width = height = 24
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        renderer = SceneRenderer(width, height, tokens, FontBook(),
+                                 options=RenderOptions(supersample=1))
+        node = Node(kind="rect", role="half-opacity",
+                    props={"x": 4, "y": 4, "w": 12, "h": 12,
+                           "fill": "#FFFFFF"}, opacity=.5)
+        target = Image.new("RGBA", (width, height), "black")
+        renderer._draw_node(target, node)
+        pixel = target.getpixel((8, 8))
+        self.assertTrue(126 <= pixel[0] <= 129, pixel)
+
+    def test_semantic_text_mechanism_family_resolves_to_supported_preset(self):
+        tokens = resolve_tokens("editorial-premium", width=360, height=640)
+        context = SceneContext(360, 640, 30, 3.0, tokens,
+                               "editorial-premium", FontBook())
+        built = build_scene(context, {
+            "type": "statement", "duration": 3.0,
+            "headline": "MECHANISM FAMILY",
+            "typography_motion": "vertical-drift",
+        })
+        self.assertEqual(built.choreography.entries["headline"].preset,
+                         "fade-up")
+
+    def test_build_rejects_a_timeline_from_another_project(self):
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "project.json"
+            manifest.write_text(json.dumps({
+                "name": "timeline-check",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [
+                    {"type": "statement", "duration": 1.0,
+                     "headline": "ONE SCENE"},
+                ],
+            }), encoding="utf-8")
+            project = load_studio(manifest, root=root)
+            timeline = project.timeline()
+            with self.assertRaisesRegex(ValueError, "FPS"):
+                project.build(replace(timeline, fps=24))
+            with self.assertRaisesRegex(ValueError, "scene count"):
+                project.build(replace(timeline, scenes=()))
+
     def test_contrast_adjustment_moves_toward_the_backdrop_opposite(self):
         deep_green = (20, 44, 30)
         accessible = ensure_contrast((71, 160, 19), deep_green, 4.5)
@@ -114,6 +160,69 @@ class StudioDesignTests(unittest.TestCase):
             }), encoding="utf-8")
             with self.assertRaisesRegex(StudioError, "escapes brand scope"):
                 load_studio(project, root=base)
+
+    def test_video_layer_path_is_brand_scoped_and_participates_in_asset_qa(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            brand = root / "brands" / "demo"
+            projects = brand / "projects"
+            media = brand / "media" / "stock"
+            projects.mkdir(parents=True)
+            media.mkdir(parents=True)
+            clip = media / "generated-demo.mp4"
+            clip.write_bytes(b"synthetic-test-placeholder")
+            manifest = projects / "demo.json"
+            data = {
+                "name": "video-layer-check",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [{
+                    "type": "statement", "duration": 1.0,
+                    "headline": "VIDEO LAYER",
+                    "video_layer": {"path": "media/stock/generated-demo.mp4"},
+                }],
+            }
+            manifest.write_text(json.dumps(data), encoding="utf-8")
+            project = load_studio(manifest, root=root)
+            built = project.build()
+            node = next(node for node in built[0].nodes[0].flatten()
+                        if node.kind == "video")
+            self.assertEqual(Path(node.props["path"]), clip.resolve())
+            report = audit(project, built, project.timeline(), samples_per_scene=2)
+            self.assertIn("asset_unreviewed",
+                          {issue["code"] for issue in report["issues"]})
+
+            data["scenes"][0]["video_layer"]["path"] = "../../outside.mp4"
+            manifest.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaisesRegex(StudioError, "escapes brand scope"):
+                load_studio(manifest, root=root)
+
+    def test_studio_qa_includes_camera_canvas_path_violations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "camera.json"
+            (root / "photo-a.png").write_bytes(b"not-decoded-by-camera-qa")
+            (root / "photo-b.png").write_bytes(b"not-decoded-by-camera-qa")
+            manifest.write_text(json.dumps({
+                "name": "camera-qa",
+                "video": {"width": 720, "height": 1280, "fps": 30},
+                "scenes": [
+                    {"type": "statement", "duration": 3.0,
+                     "headline": "FIRST",
+                     "photo": str(root / "photo-a.png"),
+                     "camera_canvas": {"x": 600, "y": 620, "angle": 0}},
+                    {"type": "statement", "duration": 3.0,
+                     "headline": "SECOND",
+                     "photo": str(root / "photo-b.png"),
+                     "camera_canvas": {"x": 1600, "y": 620, "angle": 90}},
+                ],
+            }), encoding="utf-8")
+            # Camera Canvas QA needs geometry, not decodable photo bytes.
+            project = load_studio(manifest, root=root)
+            built = project.build()
+            report = audit(project, built, project.timeline(), samples_per_scene=2)
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertIn("excessive_camera_rotation", codes)
+            self.assertFalse(report["ok"])
 
     def test_three_brand_profiles_keep_palette_and_style_isolated(self):
         brands = (
@@ -195,9 +304,10 @@ class StudioDesignTests(unittest.TestCase):
                       {issue["code"] for issue in report["issues"]})
 
         built = project.build(timeline)
-        built[0].elements["body"].meta["bounds"] = (-10, -10, 100, 30)
+        built[0].elements["body"].props["x"] = -10
         report = audit(project, built, timeline, samples_per_scene=4)
-        self.assertIn("safe_area_violation",
+        # 9:16 scenes are checked against the stricter platform content zone.
+        self.assertIn("reels_content_safe_zone",
                       {issue["code"] for issue in report["issues"]})
 
     def test_demo_layouts_report_geometry_blocks_in_three_aspects(self):

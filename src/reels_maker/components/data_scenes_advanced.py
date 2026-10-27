@@ -4,10 +4,13 @@ from __future__ import annotations
 import math
 
 from ..core.scene_graph import Node
-from ..design.color import mix
+from ..design.color import ensure_contrast, mix
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle
+from .chart_style import (
+    axis_style, chart_card, chart_colors, grid_width,
+)
 from .base import (
     BuiltScene, SceneContext, animate_progress, format_value, number_node,
     resolve_text_style, safe_number, text_node,
@@ -53,19 +56,23 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
     low, high = min(all_vals), max(all_vals)
     span = max(1e-6, high - low)
     chart = layout.region("chart")
-    plot = Rect(chart.x + chart.w * .08, chart.y + chart.h * .10,
-                chart.w * .84, chart.h * .72)
+    colors = chart_colors(theme)
+    plot = Rect(chart.x + chart.w * .09, chart.y + chart.h * .10,
+                chart.w * .82, chart.h * .68)
     slot_w = plot.w / len(parsed)
     bar_w = slot_w * .62
-    children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(15)), theme["ink"], "bold", align="center")
+    children: list[Node] = [chart_card("waterfall-chart-surface", chart,
+                                       ctx.tokens, theme)]
+    lbl_style = axis_style(ctx.tokens, colors, align="center", weight="bold")
     for idx, item in enumerate(parsed):
         x = plot.x + idx * slot_w + (slot_w - bar_w) / 2
         y_top = plot.bottom - (max(item["start"], item["end"]) - low) / span * plot.h
         y_bot = plot.bottom - (min(item["start"], item["end"]) - low) / span * plot.h
         h = max(ctx.tokens.px(4), y_bot - y_top)
-        fill = (theme["ink"] if item["kind"] in ("opening", "total")
-                else (theme["accent"] if item["value"] >= 0 else ctx.tokens.palette.danger))
+        fill = (colors["axis"] if item["kind"] in ("opening", "total")
+                else (colors["series"][3] if item["value"] >= 0
+                      else ensure_contrast(ctx.tokens.palette.danger,
+                                           colors["plot"], 3.0)))
         children.append(Node(
             kind="round", role=f"waterfall-bar-{idx}",
             props={"x": x, "y": y_top, "w": bar_w, "h": h,
@@ -74,7 +81,7 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
         ))
         lbl = text_node(f"waterfall-label-{idx}", item["label"], lbl_style,
                         Rect(plot.x + idx * slot_w, plot.bottom + ctx.tokens.px(6),
-                             slot_w, ctx.tokens.px(28)),
+                             slot_w, max(14.0, ctx.tokens.px(28))),
                         ctx.fonts, align="center", valign="top", fit=True)
         if lbl:
             children.append(lbl)
@@ -214,11 +221,13 @@ def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
     low, high = min(flat), max(flat)
     span = max(1e-6, high - low)
     chart = layout.region("chart")
+    colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .20, chart.y + chart.h * .14,
-                chart.w * .74, chart.h * .74)
+                chart.w * .74, chart.h * .66)
     cw, ch = plot.w / len(cols), plot.h / len(rows)
-    children: list[Node] = []
-    hdr_style = TextStyle(max(12, ctx.tokens.px(15)), theme["ink"], "bold", align="center")
+    children: list[Node] = [chart_card("heatmap-chart-surface", chart,
+                                       ctx.tokens, theme)]
+    hdr_style = axis_style(ctx.tokens, colors, align="center", weight="bold")
     for c_idx, col_lbl in enumerate(cols):
         node = text_node(f"heatmap-col-{c_idx}", str(col_lbl), hdr_style,
                          Rect(plot.x + c_idx * cw, chart.y, cw, plot.y - chart.y),
@@ -235,15 +244,25 @@ def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
         for c_idx, raw_val in enumerate(matrix[r_idx]):
             val = float(raw_val)
             t = (val - low) / span
-            fill = mix(theme["surface"], theme["accent"], .15 + .80 * t)
+            fill = mix(colors["plot"], colors["series"][0], .18 + .76 * t)
             cx = plot.x + c_idx * cw + ctx.tokens.px(2)
             cy = plot.y + r_idx * ch + ctx.tokens.px(2)
             children.append(Node(
                 kind="round", role=f"heatmap-cell-{r_idx}-{c_idx}",
                 props={"x": cx, "y": cy, "w": cw - ctx.tokens.px(4),
-                       "h": ch - ctx.tokens.px(4), "r": ctx.tokens.px(4), "fill": fill},
+                       "h": ch - ctx.tokens.px(5), "r": ctx.tokens.px(6), "fill": fill},
                 qa_class="decor",
             ))
+            value_text = text_node(
+                f"heatmap-value-{r_idx}-{c_idx}",
+                format_value(val, {"decimals": 0, "thousands": " "}),
+                TextStyle(max(12, ctx.tokens.px(15)),
+                          ensure_contrast(theme["ink"], fill, 4.5),
+                          "bold", align="center", line_height=1.0),
+                Rect(cx, cy, cw - ctx.tokens.px(4), ch - ctx.tokens.px(5)),
+                ctx.fonts, align="center", valign="center")
+            if value_text:
+                children.append(value_text)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
@@ -266,18 +285,52 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
     if x1 <= x0 or y1 <= y0:
         raise ValueError("scatter domains must have max > min")
     chart = layout.region("chart")
-    plot = Rect(chart.x + chart.w * .14, chart.y + chart.h * .10,
-                chart.w * .78, chart.h * .72)
-    children: list[Node] = [
+    colors = chart_colors(theme)
+    plot = Rect(chart.x + chart.w * .17, chart.y + chart.h * .12,
+                chart.w * .75, chart.h * .66)
+    children: list[Node] = [chart_card("scatter-chart-surface", chart,
+                                       ctx.tokens, theme)]
+    for tick_index in range(5):
+        fraction = tick_index / 4
+        y = plot.bottom - plot.h * fraction
+        x = plot.x + plot.w * fraction
+        children.extend((
+            Node(kind="line", role=f"scatter-y-grid-{tick_index}",
+                 props={"x1": plot.x, "y1": y, "x2": plot.right, "y2": y,
+                        "width": grid_width(ctx.tokens), "color": colors["grid"]},
+                 qa_class="decor"),
+            Node(kind="line", role=f"scatter-x-grid-{tick_index}",
+                 props={"x1": x, "y1": plot.y, "x2": x, "y2": plot.bottom,
+                        "width": grid_width(ctx.tokens), "color": colors["grid"]},
+                 qa_class="decor"),
+        ))
+        y_tick = text_node(
+            f"scatter-y-tick-{tick_index}",
+            format_value(y0 + (y1 - y0) * fraction,
+                         {"decimals": 0, "thousands": " "}),
+            axis_style(ctx.tokens, colors, align="right"),
+            Rect(chart.x, y - ctx.tokens.px(13),
+                 plot.x - chart.x - ctx.tokens.px(6), ctx.tokens.px(26)),
+            ctx.fonts, align="right", valign="center")
+        x_tick = text_node(
+            f"scatter-x-tick-{tick_index}",
+            format_value(x0 + (x1 - x0) * fraction,
+                         {"decimals": 0, "thousands": " "}),
+            axis_style(ctx.tokens, colors),
+            Rect(x - plot.w * .08, plot.bottom + ctx.tokens.px(4),
+                 plot.w * .16, ctx.tokens.px(26)),
+            ctx.fonts, align="center", valign="center")
+        children.extend(node for node in (y_tick, x_tick) if node)
+    children.extend((
         Node(kind="line", role="scatter-x-axis",
              props={"x1": plot.x, "y1": plot.bottom, "x2": plot.right, "y2": plot.bottom,
-                    "width": 2, "color": theme["ink"]}, qa_class="decor"),
+                    "width": max(1.0, ctx.tokens.px(1.5)), "color": colors["axis"]}, qa_class="decor"),
         Node(kind="line", role="scatter-y-axis",
              props={"x1": plot.x, "y1": plot.y, "x2": plot.x, "y2": plot.bottom,
-                    "width": 2, "color": theme["ink"]}, qa_class="decor"),
-    ]
+                    "width": max(1.0, ctx.tokens.px(1.5)), "color": colors["axis"]}, qa_class="decor"),
+    ))
     parsed = []
-    r = max(4, ctx.tokens.px(8))
+    r = max(5, ctx.tokens.px(9))
     for idx, pt in enumerate(pts):
         if not isinstance(pt, dict):
             raise ValueError(f"scatter point {idx} must be an object")
@@ -288,7 +341,9 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
         py = plot.bottom - (yv - y0) / (y1 - y0) * plot.h
         children.append(Node(
             kind="circle", role=f"scatter-point-{idx}",
-            props={"cx": px, "cy": py, "r": r, "fill": theme["accent"]},
+            props={"cx": px, "cy": py, "r": r, "fill": colors["accent"],
+                   "border": colors["plot"],
+                   "border_width": max(2, ctx.tokens.px(2))},
             qa_class="decor",
         ))
         parsed.append({"id": str(pt.get("id") or pt.get("label") or f"pt-{idx}"),
@@ -325,7 +380,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                 chart.w * .84, chart.h * .80)
     row_h = plot.h / len(parsed)
     children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "bold", align="center")
+    lbl_size = max(12, ctx.tokens.px(16))
     for idx, item in enumerate(parsed):
         share = item["value"] / top_val
         w_bar = max(plot.w * .18, plot.w * share)
@@ -338,6 +393,10 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                    "fill": mix(theme["accent"], theme["surface"], idx * .15)},
             qa_class="decor", meta={"stable_row_id": item["id"], "share": round(share, 4)},
         ))
+        fill = mix(theme["accent"], theme["surface"], idx * .15)
+        lbl_style = TextStyle(
+            lbl_size, ensure_contrast(theme["ink"], fill, 4.5),
+            "bold", align="center")
         lbl = text_node(
             f"funnel-label-{idx}",
             f"{item['label']} ({round(share * 100)}%)",
@@ -383,20 +442,22 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
     left_x, right_x = plot.x, plot.right - plot.w * .22
     node_w = plot.w * .22
     children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(15)), theme["ink"], "bold", align="center")
+    lbl_size = max(12, ctx.tokens.px(15))
     src_centers: dict[str, float] = {}
     dst_centers: dict[str, float] = {}
     src_h = plot.h / len(sources)
     for idx, (s_name, s_val) in enumerate(sources.items()):
         y = plot.y + idx * src_h
         src_centers[s_name] = y + src_h / 2
+        source_color = ensure_contrast(theme["ink"], theme["accent"], 4.5)
+        source_style = TextStyle(lbl_size, source_color, "bold", align="center")
         children.append(Node(
             kind="round", role=f"sankey-src-{idx}",
             props={"x": left_x, "y": y + src_h * .12, "w": node_w,
                    "h": src_h * .76, "r": ctx.tokens.px(6), "fill": theme["accent"]},
             qa_class="decor",
         ))
-        lbl = text_node(f"sankey-src-label-{idx}", s_name, lbl_style,
+        lbl = text_node(f"sankey-src-label-{idx}", s_name, source_style,
                         Rect(left_x, y + src_h * .12, node_w, src_h * .76),
                         ctx.fonts, align="center", valign="center", fit=True)
         if lbl:
@@ -411,7 +472,10 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
                    "h": dst_h * .76, "r": ctx.tokens.px(6), "fill": theme["surface"]},
             qa_class="decor",
         ))
-        lbl = text_node(f"sankey-dst-label-{idx}", t_name, lbl_style,
+        target_style = TextStyle(
+            lbl_size, ensure_contrast(theme["ink"], theme["surface"], 4.5),
+            "bold", align="center")
+        lbl = text_node(f"sankey-dst-label-{idx}", t_name, target_style,
                         Rect(right_x, y + dst_h * .12, node_w, dst_h * .76),
                         ctx.fonts, align="center", valign="center", fit=True)
         if lbl:

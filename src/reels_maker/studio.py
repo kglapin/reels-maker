@@ -120,6 +120,26 @@ def _resolve_asset(path_value: str, brand_root: Path, root: Path) -> Path:
     return resolved
 
 
+def _resolve_sequence_dir(value: str, brand_root: Path, root: Path) -> Path:
+    """Resolve a brand-relative frame-sequence directory without traversal."""
+    relative = Path(value)
+    if relative.is_absolute():
+        candidate = relative
+    elif value.startswith("brands/"):
+        candidate = root / relative
+    else:
+        candidate = brand_root / relative
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(brand_root.resolve())
+    except ValueError as exc:
+        raise StudioError(
+            f"Sequence path escapes brand scope: {value!r}") from exc
+    if not resolved.is_dir():
+        raise StudioError(f"Sequence directory does not exist: {value}")
+    return resolved
+
+
 def load_studio(path: str | Path, *, root: str | Path | None = None,
                 profile: str | None = None) -> StudioProject:
     path = Path(path).resolve()
@@ -249,6 +269,10 @@ def _load_studio_data(path: Path, data: dict, *,
     # Resolve scene media; videos become a deterministic still + camera move.
     still_cache: dict[tuple, Path] = {}
     for index, scene in enumerate(scenes):
+        if scene.get("tear_sequence"):
+            directory = _resolve_sequence_dir(
+                str(scene["tear_sequence"]), brand_root, root)
+            scene["tear_sequence"] = str(directory)
         carousel = scene.get("carousel")
         if carousel is not None:
             if not isinstance(carousel, dict):

@@ -35,6 +35,26 @@ def _rgb(value) -> tuple[int, int, int]:
     return parse_hex(value)
 
 
+def sequence_frame_path(props: dict, time: float) -> Path | None:
+    """Resolve the frame a sequence node shows at a given scene time.
+
+    Shared by the renderer and QA so occlusion checks judge exactly the frame
+    that is composited.
+    """
+    frames = props.get("frames") or []
+    if not frames:
+        return None
+    fps = max(1e-6, float(props.get("fps", 25.0)))
+    start = float(props.get("start", 0.0))
+    speed = max(1e-6, float(props.get("speed", 1.0)))
+    index = int(math.floor((float(time) - start) * speed * fps))
+    index = max(0, min(len(frames) - 1, index))
+    hold = props.get("hold_frame")
+    if hold is not None:
+        index = min(index, max(1, int(hold)) - 1)
+    return Path(frames[index])
+
+
 @dataclass(frozen=True)
 class RenderOptions:
     supersample: int = 1
@@ -114,7 +134,7 @@ class SceneRenderer:
             if id(node) in seen:
                 continue
             seen.add(id(node))
-            if node.kind in ("video", "mesh3d"):
+            if node.kind in ("video", "mesh3d", "sequence"):
                 self._settled_frame_times[key] = None
                 return None
             pending.extend(node.children or [])
@@ -562,6 +582,9 @@ class SceneRenderer:
         if kind == "image":
             self._image(target, node, dx, dy)
             return
+        if kind == "sequence":
+            self._sequence(target, node, dx, dy)
+            return
         if kind == "video":
             self._video(target, node, dx, dy)
             return
@@ -614,6 +637,41 @@ class SceneRenderer:
 
     def _image(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
         self._media.image(target, node, dx, dy)
+
+    def _sequence(self, target: Image.Image, node: Node,
+                  dx: float, dy: float) -> None:
+        """Composite a time-indexed RGBA frame sequence (e.g. keyed footage).
+
+        Frames are chosen by playback time, scaled once into the existing
+        framed-image budget and reused, so a 25 fps capture stays cheap at
+        30/60 fps output without decoding the whole clip up front.
+        """
+        props = node.props
+        path = sequence_frame_path(props, props.get("playback_time", 0.0))
+        if path is None:
+            return
+        if not path.is_file():
+            raise ValueError(f"Missing sequence frame: {path}")
+        stat = path.stat()
+        source_key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+        s = self.ss
+        x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
+        width = int(max(1, props["w"] * s))
+        height = int(max(1, props["h"] * s))
+        framed_key = ("sequence", source_key, width, height)
+        image = self._framed_images.get(framed_key)
+        if image is not None:
+            self._framed_images.move_to_end(framed_key)
+        else:
+            with Image.open(path) as handle:
+                source = handle.convert("RGBA")
+            image = cv.cover(source, width, height)
+            self._remember_framed_image(framed_key, image)
+        if node.opacity < 1.0:
+            image = image.copy()
+            image.putalpha(image.getchannel("A").point(
+                lambda value: int(value * node.opacity)))
+        target.alpha_composite(image, (int(x), int(y)))
 
     def _remember_framed_image(self, key: tuple, image: Image.Image) -> None:
         size = image.width * image.height * len(image.getbands())

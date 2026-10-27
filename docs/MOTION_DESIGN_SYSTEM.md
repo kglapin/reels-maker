@@ -177,7 +177,10 @@ declared data and unapproved finished promos. Unreviewed footage is a warning,
 not assumed clean. The JSON report also states limits: border-ring contrast
 sampling is approximate on complex imagery, aesthetic quality is not scored,
 music ducking and pumping require listening, and brand/legal facts need an owner
-check. Review the real MP4 and contact sheet at phone size before approval.
+check. When an opaque `sequence` overlay (for example a captured paper tear) is
+drawn above an element, contrast is not scored against that overlay's pixels;
+the check reads the overlay frame alpha and only judges frames where the copy is
+actually visible. Review the real MP4 and contact sheet at phone size before approval.
 
 For standard 9:16 vertical Reels, authored copy and illustrations stay inside
 the shared content zone (7.5% side, 9% top and 16% bottom margins). Full-bleed

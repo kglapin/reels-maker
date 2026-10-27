@@ -1,14 +1,14 @@
 # Paper Tear Animation Assets — reuse guide
 
 This directory documents reusable paper‑tear reveal animations in the
-`reels_maker` studio pipeline. Project manifests and code are tracked; the
-third‑party source footage and keyed frames are local-only in the git-ignored
-`imports/` quarantine, with provenance records kept beside them.
+`reels_maker` studio pipeline. The user confirmed permission to redistribute
+the source and derived frames; the approved FX asset is tracked with the
+project, and the original source video uses Git LFS.
 
 ## Folder structure (under `brands/paper-studio/`)
 
 ```
-imports/paper-tear/
+media/fx/paper-tear/
   source.webm            ← raw YouTube Short (EQNIm_LSbFo)
   provenance.json        ← source hash, key params, rights note
   keyed/
@@ -46,11 +46,11 @@ into a one-scene project manifest, keeping the corresponding
 
 | ID | `tear_sequence`                              | `tear_speed` | `tear_hold_frame` | Duration | Description                |
 |----|----------------------------------------------|--------------|-------------------|----------|----------------------------|
-| 1 – baza      | `imports/paper-tear/keyed`                  | 0.32         | 18                | 4.2 s    | centre → outward tear      |
-| 2 – rolka     | `imports/paper-tear/variants/b/keyed`      | 0.32         | 17                | 3.0 s    | sheet rolled down from top |
-| 3 – przekątna | `imports/paper-tear/variants/e/keyed`      | 0.55         | 35                | 3.5 s    | diagonal peel + curl       |
-| 4 – szczelina | `imports/paper-tear/variants/f/keyed`      | 0.32         | 17                | 3.0 s    | V‑shaped slit from top     |
-| 5 – narożnik  | `imports/paper-tear/variants/g/keyed`      | 0.32         | 11                | 2.3 s    | corner tear across height  |
+| 1 – baza      | `media/fx/paper-tear/keyed`                  | 0.32         | 18                | 4.2 s    | centre → outward tear      |
+| 2 – rolka     | `media/fx/paper-tear/variants/b/keyed`      | 0.32         | 17                | 3.0 s    | sheet rolled down from top |
+| 3 – przekątna | `media/fx/paper-tear/variants/e/keyed`      | 0.55         | 35                | 3.5 s    | diagonal peel + curl       |
+| 4 – szczelina | `media/fx/paper-tear/variants/f/keyed`      | 0.32         | 17                | 3.0 s    | V‑shaped slit from top     |
+| 5 – narożnik  | `media/fx/paper-tear/variants/g/keyed`      | 0.32         | 11                | 2.3 s    | corner tear across height  |
 
 All variants use the same copy layout (kicker / headline / subtitle) that is
 **typeset from frame one** and revealed purely by the tear — no fade‑in.
@@ -63,13 +63,15 @@ python tools/prepare_paper_tear_footage.py \
   --brand paper-studio \
   --source-youtube EQNIm_LSbFo \
   --start 3.64 --duration 1.6 \
-  --rights-note "Owner confirmed reuse for the paper‑tear demo on 2026‑10‑27."
+  --rights-note "User confirmed use and redistribution permission on 2026‑10‑27."
 # → writes keyed frames + provenance.json into imports/paper-tear/keyed/
 ```
 
-The script respects the repository policy: all output stays under
-`brands/*/imports/` (git‑ignored quarantine) and a `provenance.json` record is
-written alongside.
+The script writes candidate material under `brands/*/imports/` first
+(git‑ignored quarantine) and places its provenance record there. Once approved,
+promote the source and keyed frames into `media/fx/`, update the record paths,
+and point the manifest at the tracked sequence; do not render production
+projects from quarantine.
 
 ## QA & human gates
 
@@ -100,10 +102,12 @@ written alongside.
 ## License / rights note
 
 All footage originates from the YouTube Short
-`https://www.youtube.com/shorts/EQNIm_LSbFo`. The owner authorised reuse for
-this demo on **2026‑10‑27** (recorded in every `provenance.json`). Before any
-publication beyond the demo, replace this note with a verifiable licence or
-stock‑footage ID and resolve the repository’s privacy gate.
+`https://www.youtube.com/shorts/EQNIm_LSbFo`. On **2026‑10‑27** the user
+confirmed they have permission to use and redistribute the source and derived
+frames. This confirmation and source hash are recorded in each
+`provenance.json`; no separate licence document or licence ID was supplied.
+The confirmation is not an independent legal review and does not grant any
+rights beyond those the user holds.
 
 ---
 

@@ -1,15 +1,16 @@
 # Paper-tear capture — rights and provenance record
 
-**Status: quarantine only. Do not publish.**
+**Status: approved for inclusion in this project by user confirmation.**
 
 | Field | Value |
 |---|---|
 | Intended use | `brands/paper-studio/projects/paper-tear-captured.json` (`paper_reveal` scene) |
 | Material | Torn-paper reveal shot, green-screen capture, 1080×1920, 25 fps |
 | Source | `https://www.youtube.com/shorts/EQNIm_LSbFo` |
-| Permission | Owner stated on 2026-10-27 that the material may be used for this demo |
-| Repository state | Repository is **PUBLIC**; third-party footage is therefore kept out of git |
-| Local location | `brands/paper-studio/imports/paper-tear/` (git-ignored quarantine) |
+| Permission | On 2026-10-27, the user confirmed they have permission to use and redistribute the source and derived frames |
+| Repository state | Repository visibility was verified as **PRIVATE** on 2026-10-27; user also confirmed permission for public redistribution |
+| Tracked location | `brands/paper-studio/media/fx/paper-tear/` |
+| Source storage | `source.webm` is tracked through Git LFS |
 | Derivative | `keyed/f_0001.png` … `f_0040.png` — chroma-keyed RGBA frames |
 
 ## How the frames were produced
@@ -23,17 +24,17 @@ python tools/prepare_paper_tear_footage.py \
 ```
 
 The tool records the source SHA-256, key parameters and the rights statement in
-`imports/paper-tear/provenance.json`.
+`media/fx/paper-tear/provenance.json`. Candidate assets generated later still
+belong in ignored `imports/` until reviewed and promoted.
 
-## Before any publication
+## Rights and review limits
 
-1. Replace the spoken/owner permission with a written licence reference that a
-   reviewer can verify independently (platform licence, stock licence ID or
-   signed release).
-2. Move the reviewed asset into `brands/paper-studio/media/fx/` only after the
-   repository privacy gate (SEC-06) is resolved.
-3. Re-run `studio-qa --strict`, render the final profile, watch the MP4 with
-   sound on a phone and record the human review in `docs/REVIEW_RUBRIC.md`.
+The repository contains the user's confirmation, not a separate licence
+document or licence ID. It records the asserted permission; it is not an
+independent legal opinion and does not certify rights beyond those the user
+holds. Re-run `studio-qa --strict`, render the final profile, watch the MP4
+with sound on a phone and record human review in `docs/REVIEW_RUBRIC.md` before
+delivery of a finished animation.
 
 This file documents provenance; it is **not** a legal opinion and does not
 certify that the clip is cleared for commercial use.

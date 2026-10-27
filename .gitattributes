@@ -1,1 +1,2 @@
 brands/asta-energy/media/stock/*.webm filter=lfs diff=lfs merge=lfs -text
+brands/paper-studio/media/fx/paper-tear/source.webm filter=lfs diff=lfs merge=lfs -text

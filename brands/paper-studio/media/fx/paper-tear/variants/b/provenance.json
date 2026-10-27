@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "captured-paper-tear",
+  "brand": "paper-studio",
+  "source_url": "https://www.youtube.com/shorts/EQNIm_LSbFo",
+  "source_file": "source.webm",
+  "source_sha256": "d6e49cec497cfd5ce8016348d4b0906b37945641861172f0cf43a7b42595e580",
+  "keyed_directory": "brands/paper-studio/media/fx/paper-tear/variants/b/keyed",
+  "frames": 24,
+  "capture_window": {
+    "start": 1.0,
+    "duration": 0.95
+  },
+  "chroma_key": {
+    "color": "#3E8102",
+    "similarity": 0.22,
+    "blend": 0.08
+  },
+  "rights_note": "User confirmed permission to use and redistribute this source and its derived frames on 2026-10-27; YouTube Shorts EQNIm_LSbFo.",
+  "recorded": "2026-10-27",
+  "delivery_ready": false,
+  "review_note": "User approved repository inclusion and paper-tear demo use. Final animation delivery still requires human phone/sound review; this record is not an independent legal opinion."
+}

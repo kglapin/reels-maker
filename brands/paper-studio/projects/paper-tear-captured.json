@@ -23,7 +23,7 @@
       "kicker": "POD SPODEM",
       "headline": "JEST WIĘCEJ",
       "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
-      "tear_sequence": "imports/paper-tear/keyed",
+      "tear_sequence": "media/fx/paper-tear/keyed",
       "tear_fps": 25,
       "tear_start": 0.35,
       "tear_speed": 0.32,

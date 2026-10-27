@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "name": "Paper Tear Reveal — Captured Variants",
+  "brand": "paper-studio",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#141C17",
+      "surface": "#1C2620",
+      "ink": "#F4F1E8",
+      "muted": "#A9B3AA",
+      "accent": "#C98B4B"
+    }
+  },
+  "scenes": [
+    {
+      "id": "variant-1-base",
+      "type": "paper_reveal",
+      "duration": 4.2,
+      "background": {
+        "kind": "solid",
+        "color": "#141C17"
+      },
+      "kicker": "WARIANT 1 — BAZA",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.32,
+      "tear_hold_frame": 18,
+      "tear_source_note": "Approved baseline: centre-out tear, source 3.64-5.24s."
+    },
+    {
+      "id": "variant-2-roll",
+      "type": "paper_reveal",
+      "duration": 3.0,
+      "background": {
+        "kind": "solid",
+        "color": "#141C17"
+      },
+      "kicker": "WARIANT 2 — ROLKA",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/variants/b/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.32,
+      "tear_hold_frame": 17,
+      "tear_source_note": "Sheet rolled down from the top, source 1.00-1.95s."
+    },
+    {
+      "id": "variant-3-diagonal",
+      "type": "paper_reveal",
+      "duration": 3.5,
+      "background": {
+        "kind": "solid",
+        "color": "#141C17"
+      },
+      "kicker": "WARIANT 3 — PRZEKĄTNA",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/variants/e/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.55,
+      "tear_hold_frame": 35,
+      "tear_source_note": "Diagonal peel with a curling flap, source 7.00-8.90s."
+    },
+    {
+      "id": "variant-4-slit",
+      "type": "paper_reveal",
+      "duration": 3.0,
+      "background": {
+        "kind": "solid",
+        "color": "#141C17"
+      },
+      "kicker": "WARIANT 4 — SZCZELINA",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/variants/f/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.32,
+      "tear_hold_frame": 17,
+      "tear_source_note": "V-shaped slit opening from the top edge, source 9.00-10.05s."
+    },
+    {
+      "id": "variant-5-corner",
+      "type": "paper_reveal",
+      "duration": 2.3,
+      "background": {
+        "kind": "solid",
+        "color": "#141C17"
+      },
+      "kicker": "WARIANT 5 — NAROŻNIK",
+      "headline": "JEST WIĘCEJ",
+      "subtitle": "ODKRYJ, CO KRYJE SIĘ POD POWIERZCHNIĄ",
+      "tear_sequence": "imports/paper-tear/variants/g/keyed",
+      "tear_fps": 25,
+      "tear_start": 0.35,
+      "tear_speed": 0.32,
+      "tear_hold_frame": 11,
+      "tear_source_note": "Corner tear running across the sheet, source 10.20-11.05s."
+    }
+  ]
+}

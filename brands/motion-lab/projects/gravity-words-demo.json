@@ -16,7 +16,7 @@
   "scenes": [
     {
       "type": "gravity_words",
-      "duration": 22.4,
+      "duration": 11.1,
       "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
       "theme": "dark",
       "background": {
@@ -25,11 +25,11 @@
       },
       "word_drop": {
         "start": 0.24,
-        "stagger": 1.12,
+        "stagger": 0.5,
         "duration": 1.1,
         "distance_units": 168,
         "restitution": 0.48,
-        "pan_duration": 0.28
+        "pan_duration": 0.11
       }
     }
   ],

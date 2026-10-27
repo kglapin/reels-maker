@@ -154,10 +154,11 @@ def _safe_area(elements: list[dict], built, time: float,
         box = element["bounds"]
         meta = element.get("meta") or {}
         if meta.get("allow_horizontal_edge_travel"):
+            # Tagged word trails are clipped by their node viewport, so their
+            # horizontal transform may move fully beyond the frame. Keep the
+            # normal vertical safe-zone check for the falling motion.
             outside = (
-                box[0] < -tolerance
-                or box[1] < safe[1] - tolerance
-                or box[2] > built.context.width + tolerance
+                box[1] < safe[1] - tolerance
                 or box[3] > safe[3] + tolerance
             )
         else:
@@ -296,13 +297,15 @@ def _text_ink_safe_area(roots: list[Node], built, time: float,
                                 (safe_rect.right + tolerance, safe_rect.bottom + tolerance),
                                 (safe_rect.x - tolerance, safe_rect.bottom + tolerance)),
                                "layout-safe")
-    edge_travel_polygon = SafePolygon(((-tolerance, safe_rect.y - tolerance),
-                                      (built.context.width + tolerance,
-                                       safe_rect.y - tolerance),
-                                      (built.context.width + tolerance,
-                                       safe_rect.bottom + tolerance),
-                                      (-tolerance, safe_rect.bottom + tolerance)),
-                                     "horizontal-edge-travel")
+    edge_travel_polygon = SafePolygon(((-1_000_000.0,
+                                        safe_rect.y - tolerance),
+                                       (1_000_000.0,
+                                        safe_rect.y - tolerance),
+                                       (1_000_000.0,
+                                        safe_rect.bottom + tolerance),
+                                       (-1_000_000.0,
+                                        safe_rect.bottom + tolerance)),
+                                      "clipped-horizontal-edge-travel")
     issues = []
     seen = set()
 

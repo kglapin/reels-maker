@@ -87,21 +87,22 @@ restitution. Each rebound loses energy, so the word makes several progressively
 smaller ballistic hops before resting. As the next word enters, a smooth
 rightward camera pan centers it while the earlier words move left.
 The baseline remains implicit: the scene draws no floor rule. Trailing words
-remain fully visible until they reach the physical frame edge, and QA permits
-only this explicitly tagged horizontal travel outside the platform-safe inset.
+continue to move after crossing the physical frame edge; the viewport clips
+only the portion beyond it, so each word disappears in parts instead of
+vanishing as a whole. QA permits this explicitly tagged horizontal travel.
 
 ```json
 {
   "type": "gravity_words",
-  "duration": 22.4,
+  "duration": 11.1,
   "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
   "word_drop": {
     "start": 0.24,
-    "stagger": 1.12,
+    "stagger": 0.5,
     "duration": 1.1,
     "distance_units": 168,
     "restitution": 0.48,
-    "pan_duration": 0.28
+    "pan_duration": 0.11
   }
 }
 ```
@@ -109,13 +110,14 @@ only this explicitly tagged horizontal travel outside the platform-safe inset.
 `start`, `stagger`, `duration` and `pan_duration` are seconds. `duration` is
 the target time from release through the diminishing rebounds;
 `pan_duration` controls the short camera move that ends as the next word
-appears. `distance_units` scales with the canvas short side (1080 reference
-units), and `restitution` must be between 0.30 and 0.68. Schedule the next word
-after the current word's rebounds finish.
+appears. `stagger` sets the spoken-word cadence and may be shorter than the
+rebound settle time, so several words can be bouncing at once. `distance_units`
+scales with the canvas short side (1080 reference units), and `restitution`
+must be between 0.30 and 0.68.
 Long copy can contain many words, provided each individual word fits the safe
-content width. The camera keeps the newest word centered; old words remain
-visible to the video edges and fade only as they reach them. Leave a readable
-hold after the final landing.
+content width. The camera centers each new word; older words remain visible as
+they pass beyond the frame, where the viewport clips them progressively.
+Leave a readable hold after the final landing.
 For phone review, inspect multiple impact frames and the final hold in the
 actual MP4.
 

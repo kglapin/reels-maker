@@ -52,87 +52,29 @@ def _ballistic_track(onset: float, distance: float, target_settle: float,
     return Track(keys), impact - onset
 
 
-def _smooth(p: float) -> float:
-    p = max(0.0, min(1.0, p))
-    return p * p * (3 - 2 * p)
-
-
-def _inverse_smooth(p: float) -> float:
-    low, high = 0.0, 1.0
-    for _ in range(32):
-        middle = (low + high) / 2
-        if _smooth(middle) < p:
-            low = middle
-        else:
-            high = middle
-    return (low + high) / 2
-
-
 def _camera_track(onsets: list[float], centers: list[float],
-                  pan_duration: float) -> tuple[Track, list[tuple[float, float, float, float]]]:
+                  pan_duration: float) -> Track:
     keys = [Keyframe(0.0, 0.0, "linear")]
-    transitions: list[tuple[float, float, float, float]] = []
     for index in range(1, len(centers)):
         # Finish the pan at the new word's release, so it is centered from
         # the moment it appears and stays centered throughout its fall.
         start = onsets[index] - pan_duration
         end = onsets[index]
         previous, current = centers[index - 1], centers[index]
-        transitions.append((start, end, previous, current))
         keys.extend((Keyframe(start, previous, "linear"),
                      Keyframe(end, current, "smooth")))
-    return Track(keys), transitions
-
-
-def _crossing_time(camera_value: float,
-                   transitions: list[tuple[float, float, float, float]]) -> float | None:
-    for start, end, first, last in transitions:
-        if first <= camera_value <= last and last > first:
-            progress = (camera_value - first) / (last - first)
-            return start + (end - start) * _inverse_smooth(progress)
-    return None
-
-
-def _word_opacity_track(index: int, onsets: list[float],
-                        base_lefts: list[float], widths: list[float],
-                        camera: Track,
-                        transitions: list[tuple[float, float, float, float]],
-                        viewport: Rect, scene_duration: float,
-                        *, fade_in: float, edge_fade: float,
-                        edge_pad: float) -> Track:
-    onset = onsets[index]
-    left, width = base_lefts[index], widths[index]
-    right_edge = viewport.right - edge_pad
-    left_edge = viewport.x + edge_pad
-
-    def opacity(time: float) -> float:
-        if time <= onset:
-            return 0.0
-        camera_x = float(camera.value(time))
-        screen_left = left - camera_x
-        screen_right = screen_left + width
-        left_margin = screen_left - left_edge
-        right_margin = right_edge - screen_right
-        if left_margin < 0 or right_margin < 0:
-            return 0.0
-        edge_alpha = max(0.0, min(1.0,
-                                  min(left_margin, right_margin) / edge_fade))
-        entrance_alpha = max(0.0, min(1.0, (time - onset) / fade_in))
-        return min(edge_alpha, entrance_alpha)
-
-    times = {0.0, onset, min(scene_duration, onset + fade_in), scene_duration}
-    # Fade only at the actual video-frame edges, keeping each trailing word
-    # fully visible right up to the edge instead of fading at the UI-safe inset.
-    margins = [edge_fade * part / 4 for part in range(5)]
-    targets = [right_edge - (left + width) + margin for margin in margins]
-    targets.extend(left - left_edge - margin for margin in margins)
-    for target in targets:
-        crossing = _crossing_time(target, transitions)
-        if crossing is not None and onset <= crossing <= scene_duration:
-            times.add(crossing)
-    keys = [Keyframe(time, opacity(time), "linear")
-            for time in sorted(times)]
     return Track(keys)
+
+
+def _word_opacity_track(onset: float, scene_duration: float,
+                        *, fade_in: float) -> Track:
+    """Fade a word in once, then let the viewport clip its exit."""
+    return Track([
+        Keyframe(0.0, 0.0, "linear"),
+        Keyframe(onset, 0.0, "linear"),
+        Keyframe(onset + fade_in, 1.0, "out-cubic"),
+        Keyframe(scene_duration, 1.0, "linear"),
+    ])
 
 
 def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
@@ -152,12 +94,9 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
     centers = [word.x + word.width / 2 - first_center
                for word in line.words]
     onsets = [onset + index * stagger for index in range(len(line.words))]
-    camera, transitions = _camera_track(onsets, centers, pan_duration)
+    camera = _camera_track(onsets, centers, pan_duration)
     # Authored text stays centered within the safe area; horizontal travel is
-    # carried by transforms and may continue to the physical frame edges.
-    base_lefts = [rect.center_x - word.width / 2 + centers[index]
-                  for index, word in enumerate(line.words)]
-    widths = [word.width for word in line.words]
+    # carried by transforms and clipped only by the physical frame edges.
     children: list[Node] = []
     actual_settle = 0.0
 
@@ -199,9 +138,7 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
             for key in camera.keys
         ]))
         node.track("opacity", _word_opacity_track(
-            index, onsets, base_lefts, widths, camera, transitions, viewport,
-            scene_duration, fade_in=.16, edge_fade=ctx_edge_fade(block),
-            edge_pad=4.0))
+            onsets[index], scene_duration, fade_in=.16))
         children.append(node)
 
     group = Node(kind="group", role="headline", children=children,
@@ -219,11 +156,6 @@ def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
     return group, actual_settle
 
 
-def ctx_edge_fade(block: TextBlock) -> float:
-    """Use only a short fade at the physical edge of the video frame."""
-    return max(8.0, min(14.0, block.style.size * .25))
-
-
 def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Build a ballistic word sequence that pans to center each new word."""
     theme = _theme(ctx, scene)
@@ -235,11 +167,11 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
     if not isinstance(config, dict):
         raise ValueError("word_drop must be an object")
     start = _number(config, "start", .24, 0.0, 8.0)
-    stagger = _number(config, "stagger", 1.12, .25, 2.5)
+    stagger = _number(config, "stagger", .5, .25, 2.5)
     duration = _number(config, "duration", 1.1, .55, 2.5)
     distance_units = _number(config, "distance_units", 168.0, 24.0, 360.0)
     restitution = _number(config, "restitution", .48, .30, .68)
-    pan_duration = _number(config, "pan_duration", .28, .12, .65)
+    pan_duration = _number(config, "pan_duration", .11, .08, .65)
     if pan_duration >= stagger:
         raise ValueError("word_drop.pan_duration must be shorter than stagger")
 
@@ -250,8 +182,8 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
     base_style = replace(base_style, size=max(
         ctx.tokens.type_size("subtitle"), round(base_style.size * .80)))
     # Typeset the whole copy on one virtual line. Each individual word is
-    # checked against the real safe width; the trailing sequence may travel
-    # through the platform margins but fades at the actual frame boundary.
+    # checked against the real safe width; the viewport clips only the portions
+    # that have actually moved beyond the physical frame edge.
     block = typeset(text, base_style, 1_000_000.0, ctx.fonts)
     if len(block.lines) != 1 or len(block.lines[0].words) < 2:
         raise ValueError("gravity_words needs at least two words")
@@ -274,9 +206,6 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
         start, distance_px, duration, restitution,
         max(1.0, ctx.tokens.px(1.5)))
     del settle_track
-    if stagger < actual_settle + .025:
-        raise ValueError(
-            "word_drop.stagger must leave each word time to finish its rebounds")
     word_count = len(block.lines[0].words)
     last_landing = start + (word_count - 1) * stagger + actual_settle
     if ctx.duration - last_landing < max(.8, ctx.tokens.motion.hold):
@@ -300,11 +229,13 @@ def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
               "typography_family": "ballistic-word-drop-camera-follow",
               "animation_intent": (
                   "Each word falls under constant gravity, rebounds with "
-                  "diminishing restitution, and is centered by a smooth "
-                  "rightward camera pan."),
+                  "diminishing restitution; a speech-paced rightward camera "
+                  "pan centers each new word as older words continue past the "
+                  "clipped frame edge."),
               "word_count": word_count,
               "restitution": restitution,
               "camera_pan_duration": pan_duration,
+              "word_interval": stagger,
               "camera_follow": "latest-word-centered",
               "last_word_landing": round(last_landing, 3),
               "actual_rebound_settle": round(actual_settle, 3),

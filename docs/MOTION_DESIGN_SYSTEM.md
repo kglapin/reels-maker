@@ -124,7 +124,7 @@ size against the text size, and `color` is a hex RGB color.
   "library": "lucide",
   "style": "outline",
   "names": ["sparkles", "heart", "zap", "star", "flame"],
-  "size_ratio": 0.82,
+  "size_ratio": 1.2,
   "color": "#FFFFFF"
 }
 ```

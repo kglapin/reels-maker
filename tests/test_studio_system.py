@@ -37,6 +37,58 @@ _DEMO_MEDIA_AVAILABLE = has_real_media(
 
 
 class StudioDesignTests(unittest.TestCase):
+    def test_gravity_words_interleaves_icons_as_reproducible_bouncing_beats(self):
+        width, height, fps = 720, 1280, 30
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        context = SceneContext(width, height, fps, 6.0, tokens,
+                               "editorial-premium", FontBook(), seed=42)
+        scene = {
+            "type": "gravity_words", "duration": 6.0,
+            "headline": "one two three four five six",
+            "word_drop": {
+                "start": .2, "stagger": .5, "duration": .9,
+                "distance_units": 120, "restitution": .48,
+                "pan_duration": .1,
+                "icons": {
+                    "count": 2, "library": "lucide",
+                    "names": ["sparkles", "heart"],
+                    "color": "#FFFFFF",
+                },
+            },
+        }
+
+        first = build_scene(context, scene).elements["headline"].children
+        second = build_scene(context, scene).elements["headline"].children
+        self.assertEqual(len(first), 8)
+        self.assertEqual([node.role for node in first],
+                         [node.role for node in second])
+        icons = [node for node in first if node.kind == "icon"]
+        self.assertEqual([node.props["name"] for node in icons],
+                         [node.props["name"] for node in second
+                          if node.kind == "icon"])
+        self.assertEqual([node.props["color"] for node in icons],
+                         ["#FFFFFF", "#FFFFFF"])
+
+        onsets = [node.tracks["opacity"].keys[1].time for node in first]
+        self.assertEqual(onsets, [round(.2 + index * .5, 6)
+                                  for index in range(len(first))])
+        reference = first[0].tracks["dy"]
+        reference_onset = reference.start
+        reference_motion = [(key.time - reference_onset, key.value)
+                            for key in reference.keys]
+        for node in icons:
+            track = node.tracks["dy"]
+            onset = track.start
+            actual_motion = [(key.time - onset, key.value)
+                             for key in track.keys]
+            self.assertEqual([value for _time, value in actual_motion],
+                             [value for _time, value in reference_motion])
+            for (actual_time, _), (expected_time, _) in zip(
+                    actual_motion, reference_motion):
+                self.assertAlmostEqual(actual_time, expected_time)
+            self.assertAlmostEqual(node.sample(onset).dx, 0.0)
+            self.assertAlmostEqual(node.sample(onset).dy, -80.0, delta=1.0)
+
     def test_animated_node_opacity_is_applied_once_to_isolated_layer(self):
         width = height = 24
         tokens = resolve_tokens("editorial-premium", width=width, height=height)

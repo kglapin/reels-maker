@@ -95,6 +95,17 @@ The `amount` / `hero-number` component uses `battery`. The
 
 Without `icon_library`, legacy primitive icons remain unchanged.
 
+## Use icons as words in a gravity sequence
+
+The reusable `gravity_words` scene can insert licensed library icons between
+words. Each icon is a full sequence beat: it fades in, falls, rebounds under
+the same gravity and restitution, and is centered by the same camera follow.
+It uses the same `stagger` interval as the text, so every inserted icon shifts
+the following words by one beat. Distinct insertion gaps come from the scene
+seed and repeat across renders of the same manifest. See
+[`MOTION_DESIGN_SYSTEM.md`](MOTION_DESIGN_SYSTEM.md#reusable-gravity-word-sequence-with-camera-follow)
+for the complete `word_drop.icons` configuration.
+
 Material Symbols names use the upstream namespace, e.g. `web/home`. Variant
 fields are `icon_weight` (100, 200, 300, 400, 500, 600, 700), `icon_fill`
 (boolean), `icon_grade` (-25, 0, 200) and `icon_optical_size` (20, 24, 40,

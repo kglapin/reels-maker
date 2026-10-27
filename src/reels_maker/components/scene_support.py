@@ -286,7 +286,10 @@ def _validate_icon_spacing(ctx: SceneContext, nodes: list[Node]) -> None:
     leaves = [n for root in nodes for n in root.flatten()
               if n.kind in ("icon", "text", "number")]
     gap = max(2.0, ctx.tokens.space("xs") * .5)
-    for icon in (n for n in leaves if n.kind == "icon"):
+    # Kinetic icon-as-word nodes share an authored center. Their dx tracks
+    # create the spacing, so timed Studio QA checks them at their actual poses.
+    for icon in (n for n in leaves if n.kind == "icon"
+                 and not n.meta.get("icon_as_word")):
         occupied = [n for n in leaves if n is not icon]
         clashes = _icon_collisions(icon, occupied, gap)
         if clashes:

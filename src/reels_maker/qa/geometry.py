@@ -154,7 +154,7 @@ def _safe_area(elements: list[dict], built, time: float,
         box = element["bounds"]
         meta = element.get("meta") or {}
         if meta.get("allow_horizontal_edge_travel"):
-            # Tagged word trails are clipped by their node viewport, so their
+            # Tagged word/icon trails are clipped by their node viewport, so their
             # horizontal transform may move fully beyond the frame. Keep the
             # normal vertical safe-zone check for the falling motion.
             outside = (

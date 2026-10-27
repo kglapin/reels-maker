@@ -1,15 +1,15 @@
 # Paper Tear Animation Assets — reuse guide
 
-This directory contains everything needed to produce paper‑tear reveal animations
-within the `reels_maker` studio pipeline. All assets stay in the **public**
-repository; third‑party footage is kept in the ignored `imports/` quarantine and
-documented via provenance records.
+This directory documents reusable paper‑tear reveal animations in the
+`reels_maker` studio pipeline. Project manifests and code are tracked; the
+third‑party source footage and keyed frames are local-only in the git-ignored
+`imports/` quarantine, with provenance records kept beside them.
 
 ## Folder structure (under `brands/paper-studio/`)
 
 ```
 imports/paper-tear/
-  source.webm            ← raw YouTube Short (EQNIm_LSbFo, trimmed)
+  source.webm            ← raw YouTube Short (EQNIm_LSbFo)
   provenance.json        ← source hash, key params, rights note
   keyed/
     f_0001.png … f_0040.png   RGBA frames, chroma‑keyed green out
@@ -24,7 +24,7 @@ projects/
   paper-tear-variants.json    ← 5 variants in one MP (16 s)
 ```
 
-## How to render a single scene
+## How to render
 
 ```sh
 # 1️⃣ Baseline (centre‑out tear)
@@ -32,11 +32,15 @@ projects/
   --profile review --supersample 1 --no-cache \
   --output renders/paper-studio/paper-tear-captured.mp4 --json
 
-# 2️⃣ One variant (e.g. “rolka”)
+# 2️⃣ Full comparison reel (all five scenes)
 .venv/bin/reels-maker studio-render brands/paper-studio/projects/paper-tear-variants.json \
   --profile review --supersample 1 --no-cache \
-  --output renders/paper-studio/paper-tear-rolka.mp4 --json
+  --output renders/paper-studio/paper-tear-variants.mp4 --json
 ```
+
+For a single variant, copy its scene object from `paper-tear-variants.json`
+into a one-scene project manifest, keeping the corresponding
+`tear_sequence`, `tear_speed`, `tear_hold_frame`, and duration values.
 
 ## Variant quick‑reference
 
@@ -69,8 +73,9 @@ written alongside.
 
 ## QA & human gates
 
-- `studio-qa --strict` passes with **0 errors** for both the baseline and all
-  variants (one `composition_monotony` warning is expected for a single‑scene demo).
+- `studio-qa --strict` passes with **0 errors** for both the baseline and the
+  five-scene comparison reel (one `composition_monotony` warning is expected
+  for these demo compositions).
 - The motion‑strip PNGs are in `renders/<brand>/qa/`.
 - Always review the real MP4 with audio on a phone before sign‑off (the clips
   are silent because the source YouTube Short had no audio; add a sound effect
@@ -102,7 +107,7 @@ stock‑footage ID and resolve the repository’s privacy gate.
 
 ---
 
-**Need a new variant or a different tear window?**  
+**Need a new variant or a different tear window?**
 Run the preparation script with different `--start` / `--duration` values, or
 point it at a different source file. The resulting `keyed/` folder can be added
 to `projects/<name>.json` under a new `tear_sequence` entry.

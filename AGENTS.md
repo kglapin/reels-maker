@@ -44,7 +44,7 @@ Resolve quality warnings or document an intentional exception before omitting st
 
 ## Tests and environment
 - CI's full suite is `python -m unittest discover -s tests -v`. From a fresh checkout create `.venv` and install editable first: integration tests spawn `.venv/bin/reels-maker`. Focus a unittest with `PYTHONPATH=src:tests .venv/bin/python -m unittest <test_module>.<TestCase>.<test_method>`.
-- Golden strips are exact-pixel fixtures. After an intended visual change, inspect new strips, then recapture with `PYTHONPATH=src:tests .venv/bin/python tests/studio_golden.py --write`; run without `--write` to verify. A golden update is not creative approval.
+- Golden strips are exact-pixel fixtures. After an intended visual change, inspect new strips, then recapture with `PYTHONPATH=src:tests .venv/bin/python tests/studio_golden.py --write`; run without `--write` to verify. A golden update is not creative approval. Exact pixels also depend on Pillow's bundled FreeType: Pillow 12 (FreeType 2.14) shifts glyph anti-aliasing by a few pixels versus Pillow 10–11, so `pyproject.toml` caps Pillow below 12; do not raise the cap without recapturing and reviewing the strips.
 - macOS icon raster tests need Cairo (`brew install cairo`). If setting `DYLD_LIBRARY_PATH`, expose only Cairo libraries; adding all of `/opt/homebrew/lib` can substitute Homebrew font libraries and alter PIL antialiasing. See `docs/ICON_LIBRARIES.md`.
 - Some source videos are Git LFS assets (`git lfs pull`). Synthetic tests do not need large footage. Archived scripts under `legacy/` may contain machine-specific paths; do not run without porting.
 

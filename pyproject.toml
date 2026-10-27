@@ -7,12 +7,16 @@ name = "reels-maker"
 version = "0.1.0"
 description = "Portable, configuration-driven multi-format video renderer"
 requires-python = ">=3.11"
-dependencies = ["Pillow>=10,<13"]
+# Pillow 12 bundles FreeType 2.14, whose glyph rasterization shifts the
+# exact-pixel studio golden strips in tests/fixtures/studio-golden. Keep the
+# rasterizer family the fixtures were captured with until they are
+# deliberately recaptured and reviewed.
+dependencies = ["Pillow>=10,<12"]
 
 [project.optional-dependencies]
 pdf = ["reportlab>=4,<5"]
 brand = ["reportlab>=4,<5", "tinycss2>=1.3,<2"]
-kinetic = ["cairocffi>=1.6,<2", "Pillow>=10,<13"]
+kinetic = ["cairocffi>=1.6,<2", "Pillow>=10,<12"]
 icons = ["CairoSVG>=2.7,<3"]
 xlsx = ["openpyxl>=3.1,<4"]
 

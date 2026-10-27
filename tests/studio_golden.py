@@ -9,6 +9,12 @@ intended visual change — human review the new strips first. Running without
 ``--write`` verifies and exits 1 on any mismatch. Pixel comparison is exact:
 the studio graph is fully deterministic (fixed seeds, no time randomness).
 
+Exact pixels also depend on the rasterizer: Pillow bundles its own FreeType, and
+FreeType 2.14 (Pillow 12) anti-aliases glyph edges slightly differently from
+2.13 (Pillow 10-11). ``pyproject.toml`` therefore caps Pillow below 12. Raising
+that cap requires recapturing these strips and reviewing them, not just
+refreshing the files.
+
 QA renders are not creative approval: goldens catch unintended regressions,
 and the owner still reviews real renders on a phone.
 """

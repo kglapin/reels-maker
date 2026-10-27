@@ -1,0 +1,40 @@
+{
+  "name": "gravity-words-test",
+  "brand": "motion-lab",
+  "style": "editorial-premium",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium"
+  },
+  "scenes": [
+    {
+      "type": "gravity_words",
+      "duration": 5.0,
+      "headline": "Słowa lekko opadają",
+      "theme": "dark",
+      "background": {
+        "kind": "solid",
+        "color": "#0B1020"
+      },
+      "word_drop": {
+        "start": 0.28,
+        "stagger": 0.25,
+        "duration": 0.9,
+        "distance_units": 168,
+        "bounce_units": 28
+      }
+    }
+  ],
+  "output": "renders/motion-lab/word-gravity-demo.mp4",
+  "metadata": {
+    "synthetic_demo": true,
+    "notice": "Test animacji tekstu; demonstracja techniczna, nie materiał reklamowy."
+  }
+}

@@ -78,6 +78,37 @@ the actual scene surface. Because arbitrary imagery can contain mid-tones,
 strict QA emits a human-review warning instead of claiming automatic contrast
 approval; inspect the actual MP4 at phone size.
 
+### Gravity-settled word sequence
+
+The `gravity_words` Studio scene splits a single-line headline into measured
+word nodes. Words enter one after another along the same baseline, accelerate
+downward, make one damped rebound, and hold together for reading. The rebound
+is tuned relative to the fall so velocity changes at floor contact remain
+controlled; it does not use an endlessly oscillating spring.
+
+```json
+{
+  "type": "gravity_words",
+  "duration": 5.0,
+  "headline": "Słowa lekko opadają",
+  "word_drop": {
+    "start": 0.28,
+    "stagger": 0.25,
+    "duration": 0.9,
+    "distance_units": 168,
+    "bounce_units": 28
+  }
+}
+```
+
+`start`, `stagger` and `duration` are seconds. `distance_units` and
+`bounce_units` scale with the canvas short side (1080 reference units).
+`bounce_units` must be 10%–20% of `distance_units` to keep the rebound visible
+and its impact speed controlled. The headline must contain at least two words
+and fit on one line; the scene also
+needs a readable hold after the final landing. For phone review, inspect the
+contact frame, rebound apex and settled phrase in the actual MP4.
+
 ## Manifest essentials
 
 Projects remain under `brands/<slug>/projects/`; relative input paths are

@@ -81,7 +81,7 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
         ))
         lbl = text_node(f"waterfall-label-{idx}", item["label"], lbl_style,
                         Rect(plot.x + idx * slot_w, plot.bottom + ctx.tokens.px(6),
-                             slot_w, max(14.0, ctx.tokens.px(28))),
+                             slot_w, max(20.0, ctx.tokens.px(28))),
                         ctx.fonts, align="center", valign="top", fit=True)
         if lbl:
             children.append(lbl)

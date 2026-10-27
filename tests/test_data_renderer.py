@@ -459,7 +459,13 @@ class DataRendererTests(unittest.TestCase):
         choice = select_data_story_variant(
             fin_data, question="Oszczędności", candidate_scenes=[families_scenes[0], camp_scenes[1]]
         )
-        self.assertIsNotNone(choice["selected_variant_id"])
+        self.assertIsNotNone(
+            choice["selected_variant_id"],
+            "No valid chart variant: " + str([
+                (v["variant_id"], v["responsive_aspects"])
+                for v in choice["variants"]
+            ]),
+        )
 
         # DM-201, DM-202, DM-203, DM-204
         snap1 = snapshot_dataset_version(fin_data, snapshot_id="s1", captured_at="2026-10-24T08:00:00Z")

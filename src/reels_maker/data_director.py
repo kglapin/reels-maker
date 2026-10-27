@@ -358,9 +358,17 @@ def select_data_story_variant(
             try:
                 built = build_scene(ctx, scene)
                 issues = audit_data_scene(built)
-                errs = sum(1 for i in issues if i.severity == "error")
+                error_details = [
+                    issue.to_dict() for issue in issues
+                    if issue.severity == "error"
+                ]
+                errs = len(error_details)
                 total_issues += errs
-                aspect_results[asp_name] = {"ok": errs == 0, "errors": errs}
+                aspect_results[asp_name] = {
+                    "ok": errs == 0,
+                    "errors": errs,
+                    "error_details": error_details,
+                }
             except Exception as exc:
                 total_issues += 1
                 aspect_results[asp_name] = {"ok": False, "errors": 1, "error": str(exc)}

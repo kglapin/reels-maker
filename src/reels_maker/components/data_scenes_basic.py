@@ -71,7 +71,7 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
     track_h = max(8.0, min(ctx.tokens.px(14), row_h * .17))
     for index, item in enumerate(parsed):
         y = plot.y + index * (row_h + row_gap)
-        label_style = TextStyle(ctx.tokens.px(22), colors["axis"], "bold",
+        label_style = TextStyle(max(9, int(round(ctx.tokens.px(22)))), colors["axis"], "bold",
                                 uppercase=True, tracking=.35, line_height=1.0)
         label = text_node(f"bar-label-{index}", item["label"], label_style,
                           Rect(plot.x, y, plot.w * .70, row_h * .40), ctx.fonts,

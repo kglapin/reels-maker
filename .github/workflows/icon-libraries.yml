@@ -3,7 +3,10 @@ name: Backend SVG icon libraries
 on:
   push:
     branches:
-      - feat/icon-libraries-lucide-heroicons-20261023
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -30,17 +33,39 @@ jobs:
         run: python -m compileall -q src/reels_maker tests/test_icon_library.py
       - name: Test safe icon backend
         run: python -m unittest discover -s tests -p test_icon_library.py -v
-      - name: Load icons from real pinned upstream releases
+      - name: Load and rasterize every pinned icon style
         run: |
           python - <<'PY'
           from reels_maker.icon_library import asset, raster
-          for library, name in (("lucide", "sun"), ("heroicons", "home")):
-              path = asset(library, name)
-              icon = raster(library, name, 96, "#47A013")
-              assert path.is_file() and icon.getbbox()
-              print("Verified", library, name, path)
+
+          samples = [
+              ("lucide", "sun", {}),
+              ("heroicons", "home", {"style": "outline"}),
+              ("heroicons", "home", {"style": "solid"}),
+              ("tabler", "home", {"style": "outline"}),
+              ("tabler", "home", {"style": "filled"}),
+              *[
+                  ("phosphor", "house", {"style": style})
+                  for style in ("thin", "light", "regular", "bold", "fill", "duotone")
+              ],
+              *[
+                  ("material_symbols", "web/home", {"style": style})
+                  for style in ("outlined", "rounded", "sharp")
+              ],
+              ("material_symbols", "web/home", {
+                  "style": "rounded", "weight": 500, "fill": True, "grade": 200,
+              }),
+          ]
+
+          for library, name, options in samples:
+              path = asset(library, name, **options)
+              icon = raster(library, name, 96, "#47A013", **options)
+              assert path.is_file() and icon.mode == "RGBA" and icon.getbbox()
+              offline = raster(library, name, 96, "#47A013", offline=True, **options)
+              assert offline.size == (96, 96) and offline.getbbox()
+              print("Verified", library, name, options)
           PY
-      - name: Smoke-test native studio scene with two icon libraries
+      - name: Smoke-test native studio scene with all five icon libraries
         run: |
           python - <<'PY'
           import json
@@ -51,6 +76,17 @@ jobs:
 
           with tempfile.TemporaryDirectory() as temp:
               path = Path(temp) / "smoke.json"
+              icons = [
+                  {"library": "lucide", "name": "sun", "x": .12},
+                  {"library": "heroicons", "name": "home", "style": "solid", "x": .31},
+                  {"library": "tabler", "name": "home", "style": "filled", "x": .50},
+                  {"library": "phosphor", "name": "house", "style": "duotone", "x": .69},
+                  {"library": "material_symbols", "name": "web/home",
+                   "style": "rounded", "weight": 500, "fill": True, "grade": 200,
+                   "x": .88},
+              ]
+              for icon in icons:
+                  icon.update({"y": .24, "size": .12, "color": "#47A013"})
               data = {
                   "name": "icon-smoke",
                   "style": "social-native",
@@ -60,25 +96,18 @@ jobs:
                       "composition": "statement",
                       "headline": "ICON TEST",
                       "subtitle": "Lorem ipsum",
-                      "icon_assets": [
-                          {"library": "lucide", "name": "sun",
-                           "x": .30, "y": .26, "size": .22,
-                           "color": "#FF8833"},
-                          {"library": "heroicons", "name": "home",
-                           "x": .68, "y": .26, "size": .22,
-                           "color": "#FFFFFF"}
-                      ]
-                  }]
+                      "icon_assets": icons,
+                  }],
               }
               path.write_text(json.dumps(data))
               project = load_studio(path, root=temp)
               built = project.build()
-              icons = [n for n in built[0].nodes if n.kind == "icon"]
-              assert len(icons) == 2
+              rendered_icons = [node for node in built[0].nodes if node.kind == "icon"]
+              assert len(rendered_icons) == 5
               renderer = SceneRenderer(project.width, project.height,
                                        project.tokens, project.fonts)
               frame = renderer.render(built[0], 1.0)
               assert frame.size == (360, 640)
               assert len(frame.getcolors(360 * 640)) > 8
-              print("Actual scene rasterization: PASS")
+              print("Five-library scene rasterization: PASS")
           PY

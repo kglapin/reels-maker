@@ -78,36 +78,42 @@ the actual scene surface. Because arbitrary imagery can contain mid-tones,
 strict QA emits a human-review warning instead of claiming automatic contrast
 approval; inspect the actual MP4 at phone size.
 
-### Gravity-settled word sequence
+### Gravity word sequence with camera follow
 
-The `gravity_words` Studio scene splits a single-line headline into measured
-word nodes. Words enter one after another along the same baseline, accelerate
-downward, make one damped rebound, and hold together for reading. The rebound
-is tuned relative to the fall so velocity changes at floor contact remain
-controlled; it does not use an endlessly oscillating spring.
+The `gravity_words` Studio scene measures a long line of copy and animates each
+word independently. Every word falls from rest under constant downward
+acceleration, then rebounds from the floor with a configurable coefficient of
+restitution. Each rebound loses energy, so the word makes several progressively
+smaller ballistic hops before resting. As the next word enters, a smooth
+rightward camera pan centers it while the earlier words move left.
 
 ```json
 {
   "type": "gravity_words",
-  "duration": 5.0,
-  "headline": "Słowa lekko opadają",
+  "duration": 22.4,
+  "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
   "word_drop": {
-    "start": 0.28,
-    "stagger": 0.25,
-    "duration": 0.9,
+    "start": 0.24,
+    "stagger": 1.12,
+    "duration": 1.1,
     "distance_units": 168,
-    "bounce_units": 28
+    "restitution": 0.48,
+    "pan_duration": 0.28
   }
 }
 ```
 
-`start`, `stagger` and `duration` are seconds. `distance_units` and
-`bounce_units` scale with the canvas short side (1080 reference units).
-`bounce_units` must be 10%–20% of `distance_units` to keep the rebound visible
-and its impact speed controlled. The headline must contain at least two words
-and fit on one line; the scene also
-needs a readable hold after the final landing. For phone review, inspect the
-contact frame, rebound apex and settled phrase in the actual MP4.
+`start`, `stagger`, `duration` and `pan_duration` are seconds. `duration` is
+the target time from release through the diminishing rebounds;
+`pan_duration` controls the short camera move that ends as the next word
+appears. `distance_units` scales with the canvas short side (1080 reference
+units), and `restitution` must be between 0.30 and 0.68. Schedule the next word
+after the current word's rebounds finish.
+Long copy can contain many words, provided each individual word fits the safe
+content width. The camera keeps the newest word centered; old words fade as
+they leave the safe viewport. Leave a readable hold after the final landing.
+For phone review, inspect multiple impact frames and the final hold in the
+actual MP4.
 
 ## Manifest essentials
 

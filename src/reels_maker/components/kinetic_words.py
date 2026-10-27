@@ -1,14 +1,13 @@
-"""Word-level kinetic typography scene builders."""
+"""Word-level kinetic typography with ballistic rebounds and camera follow."""
 from __future__ import annotations
 
 import math
-from dataclasses import replace
 
 from ..core.scene_graph import Node
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.models import Line, TextBlock
-from ..textkit.typesetter import fit_text
+from ..textkit.typesetter import typeset
 from .base import resolve_text_style
 from .model import BuiltScene, SceneContext
 from .scene_support import _background, _finish, _headline, _theme
@@ -25,155 +24,290 @@ def _number(config: dict, key: str, default: float, low: float,
     return value
 
 
+def _ballistic_track(onset: float, distance: float, target_settle: float,
+                     restitution: float, min_rebound: float) -> tuple[Track, float]:
+    """Model a fall from rest, then several exact gravity/restitution arcs."""
+    fall_time = target_settle * (1 - restitution) / (1 + restitution)
+    gravity = 2 * distance / (fall_time * fall_time)
+    first_impact = onset + fall_time
+    keys = [Keyframe(onset, -distance, "linear"),
+            Keyframe(first_impact, 0.0, "in-quad")]
+    impact = first_impact
+    next_fall_time = fall_time
+
+    # Each rebound starts with a lower vertical velocity. out-quad describes
+    # the upward arc losing speed under gravity; in-quad describes the exact
+    # accelerated return from the apex to the floor.
+    while True:
+        up_time = restitution * next_fall_time
+        apex_height = .5 * gravity * up_time * up_time
+        if apex_height <= min_rebound:
+            break
+        apex = impact + up_time
+        impact = apex + up_time
+        keys.extend((Keyframe(apex, -apex_height, "out-quad"),
+                     Keyframe(impact, 0.0, "in-quad")))
+        next_fall_time = up_time
+    return Track(keys), impact - onset
+
+
+def _smooth(p: float) -> float:
+    p = max(0.0, min(1.0, p))
+    return p * p * (3 - 2 * p)
+
+
+def _inverse_smooth(p: float) -> float:
+    low, high = 0.0, 1.0
+    for _ in range(32):
+        middle = (low + high) / 2
+        if _smooth(middle) < p:
+            low = middle
+        else:
+            high = middle
+    return (low + high) / 2
+
+
+def _camera_track(onsets: list[float], centers: list[float],
+                  pan_duration: float) -> tuple[Track, list[tuple[float, float, float, float]]]:
+    keys = [Keyframe(0.0, 0.0, "linear")]
+    transitions: list[tuple[float, float, float, float]] = []
+    for index in range(1, len(centers)):
+        # Finish the pan at the new word's release, so it is centered from
+        # the moment it appears and stays centered throughout its fall.
+        start = onsets[index] - pan_duration
+        end = onsets[index]
+        previous, current = centers[index - 1], centers[index]
+        transitions.append((start, end, previous, current))
+        keys.extend((Keyframe(start, previous, "linear"),
+                     Keyframe(end, current, "smooth")))
+    return Track(keys), transitions
+
+
+def _crossing_time(camera_value: float,
+                   transitions: list[tuple[float, float, float, float]]) -> float | None:
+    for start, end, first, last in transitions:
+        if first <= camera_value <= last and last > first:
+            progress = (camera_value - first) / (last - first)
+            return start + (end - start) * _inverse_smooth(progress)
+    return None
+
+
+def _word_opacity_track(index: int, onsets: list[float],
+                        base_lefts: list[float], widths: list[float],
+                        camera: Track,
+                        transitions: list[tuple[float, float, float, float]],
+                        safe: Rect, scene_duration: float,
+                        *, fade_in: float, edge_fade: float,
+                        edge_pad: float) -> Track:
+    onset = onsets[index]
+    left, width = base_lefts[index], widths[index]
+    right_safe = safe.right - edge_pad
+    left_safe = safe.x + edge_pad
+
+    def opacity(time: float) -> float:
+        if time <= onset:
+            return 0.0
+        camera_x = float(camera.value(time))
+        screen_left = left - camera_x
+        screen_right = screen_left + width
+        left_margin = screen_left - left_safe
+        right_margin = right_safe - screen_right
+        if left_margin < 0 or right_margin < 0:
+            return 0.0
+        edge_alpha = max(0.0, min(1.0,
+                                  min(left_margin, right_margin) / edge_fade))
+        entrance_alpha = max(0.0, min(1.0, (time - onset) / fade_in))
+        return min(edge_alpha, entrance_alpha)
+
+    times = {0.0, onset, min(scene_duration, onset + fade_in), scene_duration}
+    # Add exact points where the word enters and leaves the safe zone, with a
+    # few intermediate fade samples for a clean edge fade over a smooth pan.
+    margins = [edge_fade * part / 4 for part in range(5)]
+    targets = [right_safe - (left + width) + margin for margin in margins]
+    targets.extend(left - left_safe - margin for margin in margins)
+    for target in targets:
+        crossing = _crossing_time(target, transitions)
+        if crossing is not None and onset <= crossing <= scene_duration:
+            times.add(crossing)
+    keys = [Keyframe(time, opacity(time), "linear")
+            for time in sorted(times)]
+    return Track(keys)
+
+
 def _word_nodes(block: TextBlock, rect: Rect, *, onset: float,
-                stagger: float, duration: float, drop_distance: float,
-                bounce_distance: float) -> list[Node]:
-    """Split one measured headline into aligned, independently animated words."""
+                stagger: float, settle_window: float, drop_distance: float,
+                restitution: float, min_rebound: float, pan_duration: float,
+                safe: Rect, scene_duration: float) -> tuple[Node, float]:
+    """Split a measured long line into words and follow each landing."""
     if len(block.lines) != 1:
-        raise ValueError("gravity_words requires a single-line headline")
+        raise ValueError("gravity_words requires a single measured line")
     line = block.lines[0]
     if len(line.words) < 2:
         raise ValueError("gravity_words requires at least two words")
 
     line_y = rect.y + (rect.h - block.height) / 2
-    fade_end_offset = min(duration * .30, .22)
+    first_center = line.words[0].x + line.words[0].width / 2
+    centers = [word.x + word.width / 2 - first_center
+               for word in line.words]
+    onsets = [onset + index * stagger for index in range(len(line.words))]
+    camera, transitions = _camera_track(onsets, centers, pan_duration)
+    # Authored text stays within the safe area; word motion lives in the
+    # animated transform so static layout QA sees a valid centered placement.
+    base_lefts = [rect.center_x - word.width / 2 + centers[index]
+                  for index, word in enumerate(line.words)]
+    widths = [word.width for word in line.words]
     children: list[Node] = []
+    actual_settle = 0.0
+
     for index, word in enumerate(line.words):
-        word_onset = onset + index * stagger
-        word_fall_end = word_onset + duration * .58
-        word_bounce_end = word_onset + duration * .80
-        word_landing = word_onset + duration
-        local_word = replace(word, x=0.0)
+        word_fall, word_settle = _ballistic_track(
+            onsets[index], drop_distance, settle_window,
+            restitution, min_rebound)
+        actual_settle = max(actual_settle, word_settle)
+        local_word = word.__class__(
+            word.text, 0.0, word.width, word.font_path, word.font_index,
+            word.color, word.run, word.tracking, word.size, word.weight,
+            word.effect)
         word_line = Line((local_word,), word.width, line.ascent, line.descent,
                          line.baseline, line.height)
         word_block = TextBlock((word_line,), word.width, float(line.height),
                                block.style, word.text)
-        x = rect.x + word.x
-        child_y = line_y
+        left = rect.center_x - word.width / 2
         node = Node(
             kind="text",
             role=f"headline-word-{index + 1}",
-            props={"x": x, "y": child_y, "w": word.width,
+            props={"x": left, "y": line_y, "w": word.width,
                    "h": float(line.height), "block": word_block,
                    "align": "left", "color": word.color,
                    "size": word.size, "weight": word.weight,
                    "tracking_offset": 0.0},
+            clip=safe.bbox,
             qa_class="text",
             meta={"text": word.text,
-                  "bounds": (x, child_y, x + word.width,
-                             child_y + line.height),
-                  "motion_family": "gravity-word-drop",
-                  "word_index": index},
+                  "motion_family": "ballistic-gravity-word-drop",
+                  "word_index": index,
+                  "camera_follow": "latest-word"},
         )
-        node.track("opacity", Track([
-            Keyframe(word_onset, 0.0, "linear"),
-            Keyframe(word_onset + fade_end_offset, 1.0, "out-cubic"),
+        node.track("dy", word_fall)
+        node.track("dx", Track([
+            Keyframe(key.time,
+                     centers[index] - float(camera.value(key.time)),
+                     key.easing)
+            for key in camera.keys
         ]))
-        # Accelerate into the baseline, lose about half the impact speed on
-        # the rebound, then return on a smooth, damped arc. The easing on each
-        # destination keyframe controls the segment leading into it.
-        node.track("dy", Track([
-            Keyframe(word_onset, -drop_distance, "linear"),
-            Keyframe(word_fall_end, 0.0, "in-cubic"),
-            Keyframe(word_bounce_end, -bounce_distance, "out-cubic"),
-            Keyframe(word_landing, 0.0, "in-out-cubic"),
-        ]))
+        node.track("opacity", _word_opacity_track(
+            index, onsets, base_lefts, widths, camera, transitions, safe,
+            scene_duration, fade_in=.16, edge_fade=ctx_edge_fade(block),
+            edge_pad=4.0))
         children.append(node)
 
-    # Keep linting tools and scene inspection aware of the schedule.
     group = Node(kind="group", role="headline", children=children,
                  qa_class="text",
                  meta={"component": "gravity_words",
                        "word_count": len(children),
-                       "drop_duration": duration,
-                       "last_landing": onset + (len(children) - 1) * stagger
-                       + duration})
-    return [group]
+                       "camera_follow": "latest-word-centered",
+                       "drop_model": "constant-gravity-with-restitution",
+                       "restitution": restitution,
+                       "rebound_count": max(
+                           0, (len(children[0].tracks["dy"].keys) - 2) // 2)
+                       if children else 0,
+                       "last_landing": round(onset + (len(children) - 1)
+                                             * stagger + actual_settle, 3)})
+    return group, actual_settle
+
+
+def ctx_edge_fade(block: TextBlock) -> float:
+    """Keep the fade width modest relative to the measured type size."""
+    return max(28.0, min(56.0, block.style.size * .62))
 
 
 def build_gravity_words(ctx: SceneContext, scene: dict) -> BuiltScene:
-    """Build a short text-only scene where words fall, rebound and settle."""
+    """Build a ballistic word sequence that pans to center each new word."""
     theme = _theme(ctx, scene)
     text = " ".join(_headline(scene).split())
     if not text:
-        raise ValueError("gravity_words requires a non-empty headline")
-
-    width = ctx.layout.safe.w
-    base_style = resolve_text_style(
-        ctx.tokens, "title", theme["ink"], align="center",
-        line_height=1.0, balance=False)
-    block, style = fit_text(
-        text, base_style, width, ctx.tokens.px(180),
-        ctx.fonts, min_scale=.58)
-    if len(block.lines) != 1:
-        raise ValueError(
-            "gravity_words headline must fit on one line; shorten the copy")
-    if style.size < ctx.tokens.type_size("subtitle"):
-        raise ValueError(
-            "gravity_words headline would be too small; shorten the copy")
-    if len(block.lines[0].words) < 2:
-        raise ValueError("gravity_words requires at least two words")
+        raise ValueError("gravity_words requires non-empty copy")
 
     config = scene.get("word_drop") or {}
     if not isinstance(config, dict):
         raise ValueError("word_drop must be an object")
     start = _number(config, "start", .24, 0.0, 8.0)
-    stagger = _number(config, "stagger", .24, .06, 1.2)
-    duration = _number(config, "duration", .84, .45, 1.8)
+    stagger = _number(config, "stagger", 1.12, .25, 2.5)
+    duration = _number(config, "duration", 1.1, .55, 2.5)
     distance_units = _number(config, "distance_units", 168.0, 24.0, 360.0)
-    bounce_units = _number(config, "bounce_units", 30.0, 6.0, 72.0)
-    bounce_ratio = bounce_units / distance_units
-    if not .10 <= bounce_ratio <= .20:
-        raise ValueError(
-            "word_drop.bounce_units must be 10%–20% of distance_units "
-            "for a visible, controlled rebound")
+    restitution = _number(config, "restitution", .48, .30, .68)
+    pan_duration = _number(config, "pan_duration", .28, .12, .65)
+    if pan_duration >= stagger:
+        raise ValueError("word_drop.pan_duration must be shorter than stagger")
 
-    word_count = len(block.lines[0].words)
-    last_landing = start + (word_count - 1) * stagger + duration
-    if ctx.duration - last_landing < max(.55, ctx.tokens.motion.hold):
-        raise ValueError(
-            "gravity_words needs a readable hold after the final word lands; "
-            "extend the scene or shorten the phrase")
+    width = ctx.layout.safe.w
+    base_style = resolve_text_style(
+        ctx.tokens, "title", theme["ink"], align="left",
+        line_height=1.0, balance=False)
+    # Typeset the whole copy on one virtual line. Each individual word is
+    # checked against the real safe width and is clipped/faded at its edges.
+    block = typeset(text, base_style, 1_000_000.0, ctx.fonts)
+    if len(block.lines) != 1 or len(block.lines[0].words) < 2:
+        raise ValueError("gravity_words needs at least two words")
+    widest = max(word.width for word in block.lines[0].words)
+    if widest > width - 16:
+        raise ValueError("Every gravity_words token must fit the safe width")
 
-    measured = {"headline": (width, block.height)}
-    layout = ctx.layout.layout("statement", measured)
+    layout = ctx.layout.layout("statement", {
+        "headline": (width, block.height),
+    })
     headline_rect = layout.region("headline")
     distance_px = ctx.tokens.px(distance_units)
-    bounce_px = ctx.tokens.px(bounce_units)
     line_y = headline_rect.y + (headline_rect.h - block.height) / 2
     if line_y - distance_px < layout.safe.y:
         raise ValueError(
             "gravity_words fall starts above the safe content area; "
-            "reduce distance_units or move the composition")
+            "reduce distance_units or adjust the composition")
 
-    headline = _word_nodes(
+    settle_track, actual_settle = _ballistic_track(
+        start, distance_px, duration, restitution,
+        max(1.0, ctx.tokens.px(1.5)))
+    del settle_track
+    if stagger < actual_settle + .025:
+        raise ValueError(
+            "word_drop.stagger must leave each word time to finish its rebounds")
+    word_count = len(block.lines[0].words)
+    last_landing = start + (word_count - 1) * stagger + actual_settle
+    if ctx.duration - last_landing < max(.8, ctx.tokens.motion.hold):
+        raise ValueError(
+            "gravity_words needs a readable hold after the final word lands; "
+            "extend the scene or shorten the copy")
+
+    headline, actual_settle = _word_nodes(
         block, headline_rect, onset=start, stagger=stagger,
-        duration=duration, drop_distance=distance_px,
-        bounce_distance=bounce_px)[0]
-    line = block.lines[0]
-    floor_y = line_y + line.height + ctx.tokens.px(8)
-    floor_left = max(layout.safe.x,
-                     headline_rect.x + line.words[0].x - ctx.tokens.px(18))
-    floor_right = min(layout.safe.right,
-                      headline_rect.x + line.words[-1].x
-                      + line.words[-1].width + ctx.tokens.px(18))
+        settle_window=duration, drop_distance=distance_px,
+        restitution=restitution,
+        min_rebound=max(1.0, ctx.tokens.px(1.5)),
+        pan_duration=pan_duration,
+        safe=layout.safe, scene_duration=ctx.duration)
+    floor_y = line_y + block.height + ctx.tokens.px(8)
     floor = Node(
         kind="line", role="gravity-floor",
-        props={"x1": floor_left, "y1": floor_y,
-               "x2": floor_right,
-               "y2": floor_y, "color": theme["accent"],
+        props={"x1": layout.safe.x, "y1": floor_y,
+               "x2": layout.safe.right, "y2": floor_y,
+               "color": theme["accent"],
                "width": max(1, ctx.tokens.px(2)), "cap": "round"},
         opacity=.30, qa_class="decor",
-        meta={"purpose": "visible landing baseline"})
+        meta={"purpose": "fixed floor for ballistic word impacts"})
 
     return _finish(
         ctx, scene, layout, _background(ctx, scene, theme),
         {"headline": headline}, [], decor=[floor],
         meta={"component": "gravity_words",
-              "typography_family": "gravity-word-drop",
+              "typography_family": "ballistic-word-drop-camera-follow",
               "animation_intent": (
-                  "Words arrive sequentially, accelerate into a shared baseline, "
-                  "rebound once, and settle for reading."),
+                  "Each word falls under constant gravity, rebounds with "
+                  "diminishing restitution, and is centered by a smooth "
+                  "rightward camera pan."),
               "word_count": word_count,
+              "restitution": restitution,
+              "camera_pan_duration": pan_duration,
+              "camera_follow": "latest-word-centered",
               "last_word_landing": round(last_landing, 3),
+              "actual_rebound_settle": round(actual_settle, 3),
               "bounce_visible": True})

@@ -16,19 +16,20 @@
   "scenes": [
     {
       "type": "gravity_words",
-      "duration": 5.0,
-      "headline": "Słowa lekko opadają",
+      "duration": 22.4,
+      "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
       "theme": "dark",
       "background": {
         "kind": "solid",
         "color": "#0B1020"
       },
       "word_drop": {
-        "start": 0.28,
-        "stagger": 0.25,
-        "duration": 0.9,
+        "start": 0.24,
+        "stagger": 1.12,
+        "duration": 1.1,
         "distance_units": 168,
-        "bounce_units": 28
+        "restitution": 0.48,
+        "pan_duration": 0.28
       }
     }
   ],

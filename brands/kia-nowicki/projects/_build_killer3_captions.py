@@ -21,7 +21,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(".").resolve()
 MEDIA = ROOT / "brands/kia-nowicki/imports/footage"
@@ -44,42 +44,99 @@ LINE_STEP = int(FONT_SIZE * 1.24)
 
 
 def caption_layout(cap):
-    """Wrap words into lines; returns list of lines, each [(word, x_offset, width)]."""
+    """Wrap words into lines; returns list of lines, each [(word, x_offset, width)].
+
+    A word whose text ends with '\\n' forces a line break after it.
+    """
     space_w = _font.getlength(" ")
     lines, current, widths = [], [], []
     for word in cap["words"]:
-        w_width = _font.getlength(word["w"])
+        text = word["w"]
+        forced = text.endswith("\n")
+        if forced:
+            text = text[:-1]
+        w_width = _font.getlength(text)
         candidate = sum(widths) + space_w * len(widths) + w_width
         if current and candidate > MAX_TEXT_WIDTH:
             lines.append(current)
             current, widths = [], []
-        current.append((word, w_width))
+        current.append((word, w_width, text))
         widths.append(w_width)
+        if forced:
+            # break only AFTER this word, never before it
+            lines.append(current)
+            current, widths = [], []
     if current:
         lines.append(current)
     return lines
 
 
+def _car_band(car_paths):
+    """Load, scale and bottom-align car cutouts; returns (list of RGBA, total_w, height)."""
+    imgs = []
+    target_h = 160
+    brand = ROOT / "brands/kia-nowicki"
+    for p in car_paths:
+        path = p if p.startswith("brands/") else (brand / p)
+        im = Image.open(path).convert("RGBA")
+        scale = target_h / im.height
+        im = im.resize((max(1, round(im.width * scale)), target_h), Image.LANCZOS)
+        imgs.append(im)
+    gap = 48
+    total_w = sum(im.width for im in imgs) + gap * (len(imgs) - 1)
+    return imgs, total_w, target_h, gap
+
+
 def render_frame(cap, lines, t, path):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+
+    # --- car photos band (upper part of the frame, transparent cutouts) ---
+    car_paths = cap.get("photos") or []
+    if car_paths:
+        imgs, total_w, car_h, gap = _car_band(car_paths)
+        x = (W - total_w) / 2
+        band_bottom = 620
+        # soft blurred ground shadow under the cars
+        ground = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        gdraw = ImageDraw.Draw(ground)
+        for im in imgs:
+            gdraw.ellipse(
+                [x + 10, band_bottom - 16, x + im.width - 10, band_bottom + 8],
+                fill=(0, 0, 0, 130))
+            x += im.width + gap
+        ground = ground.filter(ImageFilter.GaussianBlur(12))
+        img = Image.alpha_composite(img, ground)
+        x = (W - total_w) / 2
+        for im in imgs:
+            img.alpha_composite(im, (round(x), band_bottom - im.height))
+            x += im.width + gap
+
+    # --- text layer with a strongly blurred drop shadow for readability ---
+    text_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    shadow_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(text_layer)
+    sdraw = ImageDraw.Draw(shadow_layer)
     space_w = _font.getlength(" ")
     block_h = LINE_STEP * len(lines)
     top = cap["y"] - block_h // 2
     for line in lines:
-        line_w = sum(w for _, w in line) + _font.getlength(" ") * (len(line) - 1)
+        line_w = sum(w for _, w, _ in line) + space_w * (len(line) - 1)
         x = (W - line_w) / 2
         baseline = top + (LINE_STEP - FONT_SIZE) // 2
-        for word, w_width in line:
+        for word, w_width, text in line:
             spoken = (cap["static"] or t >= word["t"])
             color = COLOR_SPOKEN if spoken else COLOR_PENDING
-            draw.text((x + 2, baseline + 3), word["w"], font=_font,
-                      fill=SHADOW, stroke_width=STROKE_WIDTH + 1,
-                      stroke_fill=(0, 0, 0, 0))
-            draw.text((x, baseline), word["w"], font=_font, fill=color,
+            sdraw.text((x + 3, baseline + 7), text, font=_font,
+                       fill=(0, 0, 0, 150), stroke_width=STROKE_WIDTH + 2,
+                       stroke_fill=(0, 0, 0, 150))
+            draw.text((x, baseline), text, font=_font, fill=color,
                       stroke_width=STROKE_WIDTH, stroke_fill=OUTLINE)
             x += w_width + space_w
         top += LINE_STEP
+    shadow_blur = shadow_layer.filter(ImageFilter.GaussianBlur(9))
+    shadow_blur.putalpha(shadow_blur.getchannel("A").point(lambda v: v * 70 // 100))
+    img = Image.alpha_composite(img, shadow_blur)
+    img = Image.alpha_composite(img, text_layer)
     img.save(path, compress_level=3)
 
 

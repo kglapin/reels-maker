@@ -64,6 +64,8 @@ captions = [
                W("ratować", 44.66), W("sytuację.", 45.06)]},
 
     {"target": MASTER, "local_t0": 46.3, "local_t1": 50.1, "y": 1120,  # RECHECK: model names
+     "photos": ["imports/photos/sportage.png", "imports/photos/seltos.png",
+                "imports/photos/xceed.png"],
      "words": [W("Sportage,", 46.42), W("Seltos,", 47.22), W("i", 47.70),
                W("XCeed", 47.90), W("w", 48.28), W("specjalnych", 49.16),
                W("cenach,", 49.82)]},
@@ -119,8 +121,8 @@ captions = [
      "y": 1330,  # RECHECK: "wkład własny"
      "words": [W("To", 0.05), W("niech", 0.75), W("przyjeżdża,", 0.95),
                W("tylko", 1.45), W("niech", 2.10), W("sprawdzi,", 2.30),
-               W("czy", 2.65), W("ma", 2.75), W("wkład", 2.95),
-               W("własny.", 3.20)]},
+               W("czy", 2.65), W("ma", 2.75), W("na", 2.82),
+               W("wkład", 2.92), W("własny.", 3.20)]},
 
     # ---- punch-in 3: Wąsik at the desk, CTA (y=1180) ----
     {"target": "punch3_desk.mp4", "local_t0": 0.05, "local_t1": 1.6,
@@ -132,7 +134,7 @@ captions = [
      "y": 1180,
      "words": [W("zostaw", 1.91), W("reakcję,", 2.26), W("zostaw", 2.76),
                W("komentarz,", 3.60)]},
-    {"target": "punch3_desk.mp4", "local_t0": 4.15, "local_t1": 7.0,
+    {"target": "punch3_desk.mp4", "local_t0": 4.15, "local_t1": 6.5,
      "y": 1180,
      "words": [W("a", 4.16), W("Super", 4.46), W("Wąsik", 4.88),
                W("leci", 5.36), W("ratować", 5.94), W("sytuację.", 6.30)]},
@@ -143,7 +145,7 @@ captions = [
      "words": [W("Nowicki", 0.60), W("zaprasza.", 1.04)]},
     {"target": "drone_white.mp4", "local_t0": 1.75, "local_t1": 5.2,
      "y": 1050,
-     "words": [W("Kalisz,", 1.82), W("ulica", 2.36),
+     "words": [W("Kalisz,", 1.82), W("ulica\n", 2.36),
                W("Stanczukowskiego,", 2.70), W("18.", 3.44)]},
 ]
 

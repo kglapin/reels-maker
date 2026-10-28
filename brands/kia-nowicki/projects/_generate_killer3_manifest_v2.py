@@ -19,8 +19,8 @@ Total: 110.7s
 """
 import json
 
-DRONE_START = 102.70
-VOICEOVER_OFFSET = 103.30
+DRONE_START = 101.00
+VOICEOVER_OFFSET = 101.60
 
 SCENES = [
     ("imports/footage/killer3_intro_punch_cap.mp4", 0.0, 4.3),
@@ -29,8 +29,8 @@ SCENES = [
     ("imports/footage/killer3_graded_cap.mp4", 57.9, 30.0),
     ("imports/footage/punch2_couch_cap.mp4", 0.0, 4.0),
     ("imports/footage/killer3_graded_cap.mp4", 91.9, 1.5),
-    ("imports/footage/punch3_desk_cap.mp4", 0.0, 7.0),
-    ("imports/footage/killer3_outro_fade.mp4", 0.0, 2.3),
+    ("imports/footage/punch3_desk_cap.mp4", 0.0, 6.5),
+    ("imports/footage/killer3_outro_fade.mp4", 0.0, 1.1),
     ("imports/footage/drone_white_cap.mp4", 0.0, 8.0),
 ]
 

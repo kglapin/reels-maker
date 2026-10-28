@@ -16,7 +16,7 @@
   "voiceover": {
     "file": "imports/audio/nowicki-kalisz-radio-dogrywka-teleadresowa.wav",
     "start": 0.0,
-    "offset_seconds": 103.3,
+    "offset_seconds": 101.6,
     "volume": 0.6
   },
   "scenes": [
@@ -53,12 +53,12 @@
     {
       "file": "imports/footage/punch3_desk_cap.mp4",
       "start": 0.0,
-      "duration": 7.0
+      "duration": 6.5
     },
     {
       "file": "imports/footage/killer3_outro_fade.mp4",
       "start": 0.0,
-      "duration": 2.3
+      "duration": 1.1
     },
     {
       "file": "imports/footage/drone_white_cap.mp4",

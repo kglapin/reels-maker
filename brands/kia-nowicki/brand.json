@@ -1,0 +1,27 @@
+{
+  "id": "kia-nowicki",
+  "name": "Nowicki KIA Kalisz",
+  "identity": {
+    "palette": {
+      "primary": "#BB162B",
+      "background": "#05141F",
+      "text": "#FFFFFF",
+      "neutral": "#8A8F94"
+    },
+    "typography": {
+      "primary": "KiaDesignK"
+    }
+  },
+  "branding": {
+    "accent": "#BB162B",
+    "font_family": "KiaDesignK",
+    "font_regular": "brands/kia-nowicki/imports/fonts/KiaDesignK-Regular.ttf",
+    "font_bold": "brands/kia-nowicki/imports/fonts/KiaDesignK-Bold.ttf",
+    "logo": false
+  },
+  "version": 1,
+  "scaffold": {
+    "status": "operator-authored identity for kia-nowicki social reels; licensed KiaDesignK fonts are operator-supplied and must stay out of the public repository",
+    "created": "2026-10-28"
+  }
+}

@@ -1,0 +1,397 @@
+{
+  "name": "kia-nowicki-killer3-reel",
+  "brand": "kia-nowicki",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "output": "renders/kia-nowicki/kia-nowicki-killer3-reel.mp4",
+  "music": {
+    "file": "imports/audio/killer3_dialog_padded.m4a",
+    "start": 0.0,
+    "volume": 1.0,
+    "fade_out": 0.6
+  },
+  "voiceover": {
+    "file": "imports/audio/nowicki-kalisz-radio-dogrywka-teleadresowa.wav",
+    "start": 0.0,
+    "offset_seconds": 102.9,
+    "volume": 0.6
+  },
+  "scenes": [
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 0.0,
+      "duration": 6.0
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 6.0,
+      "duration": 5.9,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Wąsik, poznajesz mnie? To ja, kierownik."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 11.9,
+      "duration": 6.0,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Zaklinam was, córy jerozolimskie, na gaze i łany polne…"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 17.9,
+      "duration": 6.0,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Nie budźcie ani nie rozbudzajcie ukochanej, póki nie zechce sama."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 23.9,
+      "duration": 5.1,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Zechce, nie zechce, ale muszę."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 29.0,
+      "duration": 4.1,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "– Wstałem.\n– Wstawaj, Wąsik, KIA cię wzywa."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 33.1,
+      "duration": 3.6,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "– Ale po co? – Sportki się sprzedawały."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 36.7,
+      "duration": 3.4,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Właśnie był zamach na plan sprzedaży."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 40.1,
+      "duration": 1.8,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Udany?"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 41.9,
+      "duration": 2.2,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "O, na szczęście nie."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 44.1,
+      "duration": 2.8,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Ale musisz ratować sytuację."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 46.9,
+      "duration": 3.3,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Sportage, Seltos i XCeed w specjalnych cenach"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 50.2,
+      "duration": 2.1,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "A ty sobie Hawaję urządzasz."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 52.3,
+      "duration": 2.4
+    },
+    {
+      "file": "imports/footage/punch1_couch.mp4",
+      "start": 0.0,
+      "duration": 3.2,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "No to kierownik, jak to się stało?"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 57.9,
+      "duration": 3.8,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Klienci zobaczyli nowe ceny."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 61.7,
+      "duration": 1.7,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "I co?"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 63.4,
+      "duration": 2.1,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "I zaczęli kupować."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 65.5,
+      "duration": 1.8,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Ja już niedługo odchodzę na rentę,"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 67.3,
+      "duration": 2.6,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "bo te zakupy mnie do grobów prowadzą."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 69.9,
+      "duration": 2.7,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Pomyślałem, że mógłbyś zająć moje miejsce."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 72.6,
+      "duration": 3.6
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 76.2,
+      "duration": 3.9,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Oczywiście, jak zaczniesz więcej sprzedawać."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 80.1,
+      "duration": 2.9,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "A naród ma zdolność kredytową?"
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 83.0,
+      "duration": 2.3,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Wąsik, naród Cię potrzebuje."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 85.3,
+      "duration": 2.6
+    },
+    {
+      "file": "imports/footage/punch2_couch.mp4",
+      "start": 0.0,
+      "duration": 4.0,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "To niech przyjeżdża, tylko niech sprawdzi, czy ma wkład własny."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 91.9,
+      "duration": 1.5
+    },
+    {
+      "file": "imports/footage/punch3_desk.mp4",
+      "start": 0.0,
+      "duration": 2.2,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Jeśli podobały Ci się żartobliwe filmiki,"
+      }
+    },
+    {
+      "file": "imports/footage/punch3_desk.mp4",
+      "start": 2.2,
+      "duration": 2.4,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "Zostaw reakcję, zostaw komentarz,"
+      }
+    },
+    {
+      "file": "imports/footage/punch3_desk.mp4",
+      "start": 4.6,
+      "duration": 2.4,
+      "title": {
+        "theme": "dark",
+        "position": "lower",
+        "backdrop": "soft",
+        "logo": false,
+        "accent_rule": false,
+        "body": "A super Wąsik leci ratować sytuację."
+      }
+    },
+    {
+      "file": "imports/footage/killer3_graded.mp4",
+      "start": 100.4,
+      "duration": 2.3
+    },
+    {
+      "file": "imports/footage/dron_graded_vertical.mp4",
+      "start": 0.0,
+      "duration": 7.1
+    }
+  ]
+}

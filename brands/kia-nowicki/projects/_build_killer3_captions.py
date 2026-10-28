@@ -31,7 +31,7 @@ WORK.mkdir(parents=True, exist_ok=True)
 W, H = 1080, 1920
 FPS = 30
 FONT_SIZE = 58
-FONT_PATH = ROOT / "brands/kia-nowicki/imports/fonts/KiaDesignK-Regular.ttf"
+FONT_PATH = ROOT / "brands/kia-nowicki/imports/fonts/KiaDesignK-Bold.ttf"
 STROKE_WIDTH = 2
 MAX_TEXT_WIDTH = W - 2 * 96  # brand safe area
 COLOR_SPOKEN = (255, 255, 255, 255)
@@ -71,44 +71,81 @@ def caption_layout(cap):
     return lines
 
 
-def _car_band(car_paths):
-    """Load, scale and bottom-align car cutouts; returns (list of RGBA, total_w, height)."""
+def _car_band(car_specs):
+    """Load and scale car cutouts; returns ([(spec, im)], total_w, target_h, gap)."""
     imgs = []
     target_h = 160
     brand = ROOT / "brands/kia-nowicki"
-    for p in car_paths:
+    for spec in car_specs:
+        p = spec["path"]
         path = p if p.startswith("brands/") else (brand / p)
         im = Image.open(path).convert("RGBA")
         scale = target_h / im.height
         im = im.resize((max(1, round(im.width * scale)), target_h), Image.LANCZOS)
-        imgs.append(im)
+        imgs.append((spec, im))
     gap = 48
-    total_w = sum(im.width for im in imgs) + gap * (len(imgs) - 1)
+    total_w = sum(im.width for _, im in imgs) + gap * (len(imgs) - 1)
     return imgs, total_w, target_h, gap
+
+
+def _car_state(spec, t):
+    """Sequential entrance/exit animation state: None | (alpha, y_offset).
+
+    Entrance: fade in + rise (ease-out, 0.25s) at the model's spoken onset.
+    Exit: fade out + rise (ease-out, 0.25s) ending at spec['t_out'].
+    """
+    t_in, t_out = spec["t_in"], spec["t_out"]
+    fade = 0.25
+    if t < t_in - 1e-6 or t > t_out + 1e-6:
+        return None
+    alpha, offset = 1.0, 0.0
+    dt = t - t_in
+    if dt < fade:
+        p = max(0.0, dt / fade)
+        p = 1 - (1 - p) ** 3  # ease-out cubic
+        alpha = p
+        offset = (1 - p) * 28
+    dt2 = t_out - t
+    if dt2 < fade:
+        p = max(0.0, dt2 / fade)
+        p = 1 - (1 - p) ** 3
+        alpha = min(alpha, p)
+        offset = max(offset, (1 - p) * 28)
+    return alpha, int(round(offset))
 
 
 def render_frame(cap, lines, t, path):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    # --- car photos band (upper part of the frame, transparent cutouts) ---
-    car_paths = cap.get("photos") or []
-    if car_paths:
-        imgs, total_w, car_h, gap = _car_band(car_paths)
-        x = (W - total_w) / 2
-        band_bottom = 620
-        # soft blurred ground shadow under the cars
+    # --- car photos band (upper part, sequential fade/rise in and out) ---
+    car_specs = cap.get("photos") or []
+    if car_specs:
+        cars, total_w, car_h, gap = _car_band(car_specs)
+        x0 = (W - total_w) / 2
+        band_bottom = 540
         ground = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         gdraw = ImageDraw.Draw(ground)
-        for im in imgs:
-            gdraw.ellipse(
-                [x + 10, band_bottom - 16, x + im.width - 10, band_bottom + 8],
-                fill=(0, 0, 0, 130))
+        x = x0
+        for spec, im in cars:
+            state = _car_state(spec, t)
+            if state:
+                alpha, dy = state
+                gdraw.ellipse(
+                    [x + 10, band_bottom - 16, x + im.width - 10, band_bottom + 8],
+                    fill=(0, 0, 0, int(130 * alpha)))
             x += im.width + gap
         ground = ground.filter(ImageFilter.GaussianBlur(12))
         img = Image.alpha_composite(img, ground)
-        x = (W - total_w) / 2
-        for im in imgs:
-            img.alpha_composite(im, (round(x), band_bottom - im.height))
+        x = x0
+        for spec, im in cars:
+            state = _car_state(spec, t)
+            if state:
+                alpha, dy = state
+                layer = im.copy()
+                layer.putalpha(layer.getchannel("A").point(
+                    lambda v: int(v * alpha)))
+                img.alpha_composite(
+                    layer, (round(x), band_bottom - im.height + dy))
             x += im.width + gap
 
     # --- text layer with a strongly blurred drop shadow for readability ---
@@ -119,7 +156,10 @@ def render_frame(cap, lines, t, path):
     space_w = _font.getlength(" ")
     block_h = LINE_STEP * len(lines)
     top = cap["y"] - block_h // 2
+    show_text = cap.get("show_text", True)
     for line in lines:
+        if not show_text:
+            break
         line_w = sum(w for _, w, _ in line) + space_w * (len(line) - 1)
         x = (W - line_w) / 2
         baseline = top + (LINE_STEP - FONT_SIZE) // 2
@@ -159,8 +199,13 @@ def build_overlay(target: str, caps):
         active = None
         active_lines = None
         for cap, lines in layouts:
-            if cap["local_t0"] - 1e-6 <= t <= cap["local_t1"] + 1e-6:
+            in_caption = cap["local_t0"] - 1e-6 <= t <= cap["local_t1"] + 1e-6
+            in_cars = any(
+                spec["t_in"] - 1e-6 <= t <= spec["t_out"] + 1e-6
+                for spec in (cap.get("photos") or []))
+            if in_caption or in_cars:
                 active, active_lines = cap, lines
+                active["show_text"] = in_caption
         frame_path = frames_dir / f"cap_{i:05d}.png"
         if active is None:
             # cheap fully transparent placeholder only when missing

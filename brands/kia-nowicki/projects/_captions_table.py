@@ -64,8 +64,11 @@ captions = [
                W("ratować", 44.66), W("sytuację.", 45.06)]},
 
     {"target": MASTER, "local_t0": 46.3, "local_t1": 50.1, "y": 1120,  # RECHECK: model names
-     "photos": ["imports/photos/sportage.png", "imports/photos/seltos.png",
-                "imports/photos/xceed.png"],
+     "photos": [
+         {"path": "imports/photos/sportage.png", "t_in": 46.42, "t_out": 50.10},
+         {"path": "imports/photos/seltos.png",   "t_in": 47.22, "t_out": 50.25},
+         {"path": "imports/photos/xceed.png",    "t_in": 47.90, "t_out": 50.40},
+     ],
      "words": [W("Sportage,", 46.42), W("Seltos,", 47.22), W("i", 47.70),
                W("XCeed", 47.90), W("w", 48.28), W("specjalnych", 49.16),
                W("cenach,", 49.82)]},
@@ -146,7 +149,7 @@ captions = [
     {"target": "drone_white.mp4", "local_t0": 1.75, "local_t1": 5.2,
      "y": 1050,
      "words": [W("Kalisz,", 1.82), W("ulica\n", 2.36),
-               W("Stanczukowskiego,", 2.70), W("18.", 3.44)]},
+               W("Stanczukowskiego", 2.70), W("18.", 3.44)]},
 ]
 
 (OUT / "captions.json").write_text(

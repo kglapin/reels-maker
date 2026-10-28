@@ -19,28 +19,28 @@ def W(text, t):
 
 captions = [
     # ---- intro: meme label over the manager walking in (punch-in on door) ----
-    {"target": "killer3_intro_punch.mp4", "local_t0": 0.4, "local_t1": 4.6,
-     "y": 1250, "words": [W("wchodzi kierownik", 0.4)]},
+    {"target": "killer3_intro_punch.mp4", "local_t0": 0.4, "local_t1": 4.2,
+     "y": 1270, "words": [W("*wchodzi kierownik*", 0.4)]},
 
     # ---- sketch dialogue (wide shots; y=1120 stays below both faces) ----
     {"target": MASTER, "local_t0": 5.4, "local_t1": 11.0, "y": 1120,
      "words": [W("Wąsik,", 5.76), W("poznajesz", 6.72), W("mnie?", 7.30),
                W("To", 8.52), W("ja,", 9.00), W("kierownik.", 9.36)]},
 
-    {"target": MASTER, "local_t0": 11.1, "local_t1": 17.2, "y": 1120,  # RECHECK: Song of Songs quote
+    {"target": MASTER, "local_t0": 11.1, "local_t1": 17.2, "y": 1120,  # text per original sketch "Wstawaj Ryba"
      "words": [W("Zaklinam", 11.24), W("was,", 12.20), W("córy", 12.44),
-               W("jerozolimskie,", 12.90), W("na", 14.14), W("gaze,", 14.62),
-               W("na", 15.46), W("łanie", 15.88), W("polne.", 16.42)]},
+               W("Jerozolimskie,", 12.90), W("na", 14.14), W("gazele,", 14.62),
+               W("na", 15.46), W("łanie.", 15.88)]},
 
-    {"target": MASTER, "local_t0": 17.3, "local_t1": 22.9, "y": 1120,  # RECHECK
-     "words": [W("Nie", 17.44), W("budźcie,", 17.92), W("nie", 19.10),
-               W("rozbudzajcie", 19.58), W("ukochanej,", 20.30),
-               W("póki", 21.62), W("nie", 22.10), W("zechce", 22.26),
-               W("sama.", 22.66)]},
+    {"target": MASTER, "local_t0": 17.3, "local_t1": 22.9, "y": 1120,  # text per original sketch
+     "words": [W("Nie", 17.44), W("budźcie", 17.92), W("ze", 18.15),
+               W("snu,", 18.40), W("nie", 19.10), W("rozbudzajcie", 19.58),
+               W("ukochanej,", 20.30), W("póki", 21.62), W("nie", 22.10),
+               W("zechce", 22.26), W("sama.", 22.66)]},
 
-    {"target": MASTER, "local_t0": 23.2, "local_t1": 28.9, "y": 1120,
-     "words": [W("Zechce,", 23.44), W("nie", 24.32), W("zechce,", 24.40),
-               W("ale", 25.02), W("muszę.", 26.20)]},
+    {"target": MASTER, "local_t0": 23.2, "local_t1": 28.9, "y": 1120,  # text per original sketch
+     "words": [W("Zechce,", 23.44), W("czy", 24.32), W("nie", 24.40),
+               W("zechce,", 24.50), W("ale", 25.02), W("muszę.", 26.20)]},
 
     {"target": MASTER, "local_t0": 29.0, "local_t1": 33.0, "y": 1120,  # RECHECK: "KIA" vs "Kija"
      "words": [W("Wstawaj,", 29.36), W("Wąsik,", 30.16), W("KIA", 30.70),

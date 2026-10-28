@@ -31,7 +31,8 @@ WORK.mkdir(parents=True, exist_ok=True)
 W, H = 1080, 1920
 FPS = 30
 FONT_SIZE = 58
-FONT_PATH = ROOT / "brands/kia-nowicki/imports/fonts/KiaDesignK-Bold.ttf"
+FONT_PATH = ROOT / "brands/kia-nowicki/imports/fonts/KiaDesignK-Regular.ttf"
+STROKE_WIDTH = 2
 MAX_TEXT_WIDTH = W - 2 * 96  # brand safe area
 COLOR_SPOKEN = (255, 255, 255, 255)
 COLOR_PENDING = (176, 182, 190, 255)
@@ -73,9 +74,10 @@ def render_frame(cap, lines, t, path):
             spoken = (cap["static"] or t >= word["t"])
             color = COLOR_SPOKEN if spoken else COLOR_PENDING
             draw.text((x + 2, baseline + 3), word["w"], font=_font,
-                      fill=SHADOW, stroke_width=4, stroke_fill=(0, 0, 0, 0))
+                      fill=SHADOW, stroke_width=STROKE_WIDTH + 1,
+                      stroke_fill=(0, 0, 0, 0))
             draw.text((x, baseline), word["w"], font=_font, fill=color,
-                      stroke_width=4, stroke_fill=OUTLINE)
+                      stroke_width=STROKE_WIDTH, stroke_fill=OUTLINE)
             x += w_width + space_w
         top += LINE_STEP
     img.save(path, compress_level=3)

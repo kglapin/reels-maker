@@ -2,10 +2,11 @@
 """Generate the kia-nowicki KILLER3 reel manifest v2 (karaoke captions burned
 into per-file media by _build_killer3_captions.py; manifest only cuts).
 
-Timeline v2:
-  0.0-4.8   killer3_intro_punch_cap  (punch-in: manager entering the door,
-            meme label "wchodzi kierownik")
-  4.8-54.7  killer3_master_cap       (wide shots + karaoke captions)
+Timeline v2.1:
+  0.0-4.3   killer3_intro_punch_cap  (punch-in: manager entering the door,
+            meme label "*wchodzi kierownik*"; ends exactly at the source's
+            own cut, so the next shot is already full-frame)
+  4.3-54.7  killer3_graded_cap       (wide shots + karaoke captions)
   54.7-57.9 punch1_couch_cap         (punch-in: Wąsik on the couch)
   57.9-87.9 killer3_master_cap
   87.9-91.9 punch2_couch_cap         (punch-in: Wąsik)
@@ -22,8 +23,8 @@ DRONE_START = 102.70
 VOICEOVER_OFFSET = 103.30
 
 SCENES = [
-    ("imports/footage/killer3_intro_punch_cap.mp4", 0.0, 4.8),
-    ("imports/footage/killer3_graded_cap.mp4", 4.8, 49.9),
+    ("imports/footage/killer3_intro_punch_cap.mp4", 0.0, 4.3),
+    ("imports/footage/killer3_graded_cap.mp4", 4.3, 50.4),
     ("imports/footage/punch1_couch_cap.mp4", 0.0, 3.2),
     ("imports/footage/killer3_graded_cap.mp4", 57.9, 30.0),
     ("imports/footage/punch2_couch_cap.mp4", 0.0, 4.0),

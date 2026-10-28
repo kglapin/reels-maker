@@ -23,12 +23,21 @@ used by every project under `projects/`.
 
 ## Captions / subtitles (mandatory on dialogue)
 
-- Every spoken line gets a burned-in caption; one line per scene segment.
+- Every spoken line gets a burned-in caption; one caption per speech unit.
+- **Karaoke emphasis**: the word currently being spoken turns bright white
+  while not-yet-spoken words stay muted grey (per-frame overlay rendered from
+  `KiaDesignK-Bold`; implemented by `projects/_build_killer3_captions.py`
+  because the local FFmpeg builds ship without libass/drawtext).
+- Position: as close to the vertical centre as possible, never covering a
+  speaker's face (per-scene y offsets measured from QA frames).
 - Short lines: max ~42 characters per caption; split long sentences at
   natural breath points; never mid-word.
-- Position `lower`, theme `dark`, backdrop `soft`.
 - No emoji, no ALL CAPS shouting; sentence case with proper punctuation.
-- Never cover the speaker's face: captions live in the lower safe area.
+- Meme-style stage labels (e.g. `wchodzi kierownik`) use the same caption
+  style, lowercase, centred.
+- Scene transitions between films use a white dip: fade-to-white on the
+  outro of the outgoing clip and fade-from-white on the incoming clip,
+  which must already be in visible camera motion at its trimmed start.
 
 ## Footage rules
 

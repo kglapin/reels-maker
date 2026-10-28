@@ -114,6 +114,49 @@ def _car_state(spec, t):
     return alpha, int(round(offset))
 
 
+COUNTDOWN_FONT = ROOT / "brands/kia-nowicki/imports/fonts/KiaDesignK-Bold.ttf"
+_font_cache = {}
+
+
+def _big_font(size: int):
+    if size not in _font_cache:
+        _font_cache[size] = ImageFont.truetype(str(COUNTDOWN_FONT), size)
+    return _font_cache[size]
+
+
+def render_countdown(cap, t, img):
+    """Big 3/2/1 numerals centred on screen with a pop-in and blurred shadow."""
+    for item in cap.get("countdown") or []:
+        t0, t1 = item["t0"], item["t1"]
+        if not (t0 - 1e-6 <= t <= t1 + 1e-6):
+            continue
+        p = min(1.0, (t - t0) / max(0.01, (t1 - t0)))
+        pop = 1.0 + 0.14 * max(0.0, 1 - p * 3)  # settles to 1.0 quickly
+        alpha = min(1.0, max(0.0, (t - t0) / 0.12))
+        size = int(340 * pop)
+        font = _big_font(size)
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        s = ImageDraw.Draw(shadow)
+        num = item["n"]
+        bbox = d.textbbox((0, 0), num, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        x, y = W / 2 - tw / 2 - bbox[0], 900 - th / 2 - bbox[1]
+        s.text((x + 6, y + 10), num, font=font, fill=(0, 0, 0, 150),
+               stroke_width=6, stroke_fill=(0, 0, 0, 150))
+        d.text((x, y), num, font=font, fill=(255, 255, 255, int(255 * alpha)),
+               stroke_width=6, stroke_fill=OUTLINE)
+        shadow = shadow.filter(ImageFilter.GaussianBlur(14))
+        shadow.putalpha(shadow.getchannel("A").point(
+            lambda v: int(v * alpha * 0.7)))
+        layer.putalpha(layer.getchannel("A").point(
+            lambda v: int(v * alpha)))
+        img = Image.alpha_composite(img, shadow)
+        img = Image.alpha_composite(img, layer)
+    return img
+
+
 def render_frame(cap, lines, t, path):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
@@ -177,6 +220,7 @@ def render_frame(cap, lines, t, path):
     shadow_blur.putalpha(shadow_blur.getchannel("A").point(lambda v: v * 70 // 100))
     img = Image.alpha_composite(img, shadow_blur)
     img = Image.alpha_composite(img, text_layer)
+    img = render_countdown(cap, t, img)
     img.save(path, compress_level=3)
 
 
@@ -203,7 +247,10 @@ def build_overlay(target: str, caps):
             in_cars = any(
                 spec["t_in"] - 1e-6 <= t <= spec["t_out"] + 1e-6
                 for spec in (cap.get("photos") or []))
-            if in_caption or in_cars:
+            in_countdown = any(
+                item["t0"] - 1e-6 <= t <= item["t1"] + 1e-6
+                for item in (cap.get("countdown") or []))
+            if in_caption or in_cars or in_countdown:
                 active, active_lines = cap, lines
                 active["show_text"] = in_caption
         frame_path = frames_dir / f"cap_{i:05d}.png"

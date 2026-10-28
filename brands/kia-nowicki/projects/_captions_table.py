@@ -20,7 +20,12 @@ def W(text, t):
 captions = [
     # ---- intro: meme label over the manager walking in (punch-in on door) ----
     {"target": "killer3_intro_punch.mp4", "local_t0": 0.4, "local_t1": 4.2,
-     "y": 1270, "words": [W("*wchodzi kierownik*", 0.4)]},
+     "y": 1270, "words": [W("*wchodzi kierownik*", 0.4)],
+     "countdown": [
+         {"n": "3", "t0": 0.3, "t1": 1.6},
+         {"n": "2", "t0": 1.6, "t1": 2.9},
+         {"n": "1", "t0": 2.9, "t1": 4.2},
+     ]},
 
     # ---- sketch dialogue (wide shots; y=1120 stays below both faces) ----
     {"target": MASTER, "local_t0": 5.4, "local_t1": 11.0, "y": 1120,
@@ -98,8 +103,8 @@ captions = [
      "words": [W("Ja", 64.82), W("już", 65.58), W("niedługo", 65.74),
                W("odchodzę", 66.14), W("na", 66.56), W("rentę,", 66.66)]},
 
-    {"target": MASTER, "local_t0": 67.0, "local_t1": 69.7, "y": 1120,  # RECHECK: "zakupy"
-     "words": [W("bo", 67.10), W("te", 67.38), W("zakupy", 67.50),
+    {"target": MASTER, "local_t0": 67.0, "local_t1": 69.7, "y": 1120,  # RECHECK: "odkupy" per owner
+     "words": [W("bo", 67.10), W("te", 67.38), W("odkupy", 67.50),
                W("mnie", 67.90), W("do", 68.02), W("grobu", 68.14),
                W("wprowadzają.", 68.44)]},
 

@@ -78,6 +78,71 @@ the actual scene surface. Because arbitrary imagery can contain mid-tones,
 strict QA emits a human-review warning instead of claiming automatic contrast
 approval; inspect the actual MP4 at phone size.
 
+### Reusable gravity word sequence with camera follow
+
+The `gravity_words` Studio scene is a reusable sequence preset. It measures a
+long line of copy and animates each word independently. Every word falls from
+rest under constant downward acceleration, then rebounds from the floor with a
+configurable coefficient of restitution. Each rebound loses energy, so the
+word makes several progressively smaller ballistic hops before resting. As the
+next sequence item enters, a smooth rightward camera pan centers it while
+earlier items move left. Optional library icons can occupy sequence positions
+between words; an icon uses the same cadence, pan, fall and rebounds as a word.
+Icon gaps are sampled from the scene seed, so renders of the same manifest and
+scene position repeat consistently.
+The baseline remains implicit: the scene draws no floor rule. Trailing words
+continue to move after crossing the physical frame edge; the viewport clips
+only the portion beyond it, so each word disappears in parts instead of
+vanishing as a whole. QA permits this explicitly tagged horizontal travel.
+
+```json
+{
+  "type": "gravity_words",
+  "duration": 11.1,
+  "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+  "word_drop": {
+    "start": 0.24,
+    "stagger": 0.5,
+    "duration": 1.1,
+    "distance_units": 168,
+    "restitution": 0.48,
+    "pan_duration": 0.11
+  }
+}
+```
+
+To add icons as sequence beats, set `word_drop.icons`. `count` must be smaller
+than the number of words, and `names` supplies one icon-library slug for each
+inserted icon. The renderer samples distinct gaps with the scene seed; each
+icon consumes one `stagger` interval, so the following word shifts by one beat.
+The library is version-pinned by the icon renderer. `size_ratio` scales icon
+size against the text size, and `color` is a hex RGB color.
+
+```json
+"icons": {
+  "count": 5,
+  "library": "lucide",
+  "style": "outline",
+  "names": ["sparkles", "heart", "zap", "star", "flame"],
+  "size_ratio": 1.2,
+  "color": "#FFFFFF"
+}
+```
+
+`start`, `stagger`, `duration` and `pan_duration` are seconds. `duration` is
+the target time from release through the diminishing rebounds;
+`pan_duration` controls the short camera move that ends as the next word or
+icon appears. `stagger` sets the spoken-item cadence and may be shorter than the
+rebound settle time, so several words can be bouncing at once. `distance_units`
+scales with the canvas short side (1080 reference units), and `restitution`
+must be between 0.30 and 0.68.
+Long copy can contain many words, provided each individual word fits the safe
+content width. The camera centers each new word; older words remain visible as
+they pass beyond the frame, where the viewport clips them progressively.
+Leave a readable hold after the final landing.
+For phone review, inspect multiple impact frames and the final hold in the
+actual MP4.
+
 ## Manifest essentials
 
 Projects remain under `brands/<slug>/projects/`; relative input paths are

@@ -25,6 +25,7 @@ from .editorial_scenes import (
     build_cta, build_deadline, build_energy, build_quote, build_spotlight,
     build_statement, build_urgency,
 )
+from .kinetic_words import build_gravity_words
 from .table_scenes import build_table
 from .media_scenes import build_polaroid_burst, build_product_3d
 from .custom_scenes import _build_full_bleed, _build_split, _build_stack
@@ -180,6 +181,7 @@ BUILDERS = {
     "paper_reveal": build_paper_reveal,
     "note_canvas": build_note_canvas,
     "search_canvas": build_search_canvas,
+    "gravity_words": build_gravity_words,
 }
 
 

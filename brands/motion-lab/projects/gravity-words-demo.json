@@ -1,0 +1,49 @@
+{
+  "name": "gravity-words-test",
+  "brand": "motion-lab",
+  "style": "editorial-premium",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium"
+  },
+  "scenes": [
+    {
+      "type": "gravity_words",
+      "duration": 14.4,
+      "headline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "theme": "dark",
+      "background": {
+        "kind": "solid",
+        "color": "#0B1020"
+      },
+      "word_drop": {
+        "start": 0.24,
+        "stagger": 0.5,
+        "duration": 1.1,
+        "distance_units": 168,
+        "restitution": 0.48,
+        "pan_duration": 0.11,
+        "icons": {
+          "count": 5,
+          "library": "lucide",
+          "style": "outline",
+          "names": ["sparkles", "heart", "zap", "star", "flame"],
+          "size_ratio": 1.2,
+          "color": "#FFFFFF"
+        }
+      }
+    }
+  ],
+  "output": "renders/motion-lab/gravity-words-demo-with-icons.mp4",
+  "metadata": {
+    "synthetic_demo": true,
+    "notice": "Test animacji tekstu; demonstracja techniczna, nie materiał reklamowy."
+  }
+}

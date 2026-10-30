@@ -60,6 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     studio.add_argument("--no-cache", action="store_true",
                         help="Disable the Studio segment cache")
     studio.add_argument("--json", action="store_true")
+    studio.add_argument("--status", choices=("accepted", "in-progress"),
+                        default="accepted",
+                        help="Render status: 'accepted' (default) or 'in-progress'")
 
     studio_qa = commands.add_parser(
         "studio-qa",

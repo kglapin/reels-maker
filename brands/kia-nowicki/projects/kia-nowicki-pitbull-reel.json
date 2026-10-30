@@ -1,0 +1,69 @@
+{
+  "name": "kia-nowicki-pitbull-reel",
+  "brand": "kia-nowicki",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "output": "renders/kia-nowicki/kia-nowicki-pitbull-reel.mp4",
+  "music": {
+    "file": "imports/audio/pitbull_dialog_padded.m4a",
+    "start": 0.0,
+    "volume": 1.0,
+    "fade_out": 0.5
+  },
+  "voiceover": {
+    "file": "imports/audio/nowicki-kalisz-radio-dogrywka-teleadresowa.wav",
+    "start": 0.0,
+    "offset_seconds": 59.267,
+    "volume": 0.6
+  },
+  "scenes": [
+    {
+      "file": "imports/footage/pitbull_graded_cap.mp4",
+      "start": 0.0,
+      "duration": 18.833
+    },
+    {
+      "file": "imports/footage/pitbull_punch1_table_cap.mp4",
+      "start": 0.0,
+      "duration": 2.767
+    },
+    {
+      "file": "imports/footage/pitbull_graded_cap.mp4",
+      "start": 21.6,
+      "duration": 19.4
+    },
+    {
+      "file": "imports/footage/pitbull_punch2_neptun_cap.mp4",
+      "start": 0.0,
+      "duration": 2.133
+    },
+    {
+      "file": "imports/footage/pitbull_graded_cap.mp4",
+      "start": 43.133,
+      "duration": 2.767
+    },
+    {
+      "file": "imports/footage/pitbull_punch3_price_cap.mp4",
+      "start": 0.0,
+      "duration": 2.9
+    },
+    {
+      "file": "imports/footage/pitbull_graded_cap.mp4",
+      "start": 48.8,
+      "duration": 9.367
+    },
+    {
+      "file": "imports/footage/pitbull_outro_fade.mp4",
+      "start": 0.0,
+      "duration": 1.1
+    },
+    {
+      "file": "imports/footage/drone_white_pitbull_cap.mp4",
+      "start": 0.0,
+      "duration": 8.0
+    }
+  ]
+}

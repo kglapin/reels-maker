@@ -465,6 +465,84 @@ replace listening to the final file. When narration is retrimmed, re-check
 the original source timestamps. Never silently treat unmarked speech as
 aligned.
 
+## FFmpeg-Skill Integrated Modules (new video processing features)
+
+All 16 modules from `ffmpeg-skill` are now available as `reels-maker` CLI commands. Each supports `--dry-run --json` for planning and filter complex generation.
+
+```sh
+# B-roll insertion
+reels-maker broll INPUT --broll B-ROLL.mp4 --insert START END --audio mix
+
+# Speed ramping (planning only)
+reels-maker speedramp INPUT --segment TIME SPEED --segment TIME SPEED
+
+# Privacy redaction / censor
+reels-maker redact INPUT --x X --y Y --width W --height H --mode delogo|blur
+
+# Image overlay/insert
+reels-maker insert INPUT --image FILE --at TIME --end TIME --position pos
+
+# Multi-camera switching
+reels-maker multicam CAM1 CAM2 CAM3 --switch PATTERN
+
+# Noise reduction
+reels-maker denoise INPUT --strength STRONG|MEDIUM|WEAK --mode video|audio|both
+
+# Video stabilization (Vidstab)
+reels-maker stabilize INPUT --steps N --smooth N
+
+# Audiogram visualizer
+reels-maker waveform AUDIO --style line|bar|full --color 0xRRGGBB
+
+# Clip looping
+reels-maker loop INPUT --duration SECONDS --mode repeat|pingpong
+
+# Frame reversal
+reels-maker reverse INPUT
+
+# Color/gradient background generation
+reels-maker background --color 0xRRGGBB --duration SECONDS
+               --gradient color1,color2|--mode color|gradient
+
+# Auto-crop black borders
+reels-maker cropdetect INPUT --pixels N
+
+# Video metadata/tags
+reels-maker metadata INPUT --title "TEXT" --artist "NAME" --comment "TEXT" --date YYYY
+
+# Audio equalization
+reels-maker audioequalizer INPUT --preset speech|music|voice|film|custom
+               --bands BAND_SETTINGS
+
+# Color space conversion
+reels-maker colormatrix INPUT --target sdr|hdr|rec709|bt2020
+               --mode convert|transform
+
+# Fade in/out transitions
+reels-maker fade INPUT --fade-in SECONDS --fade-out SECONDS
+               --direction in|out|both --mode video|audio|both
+```
+
+**Dry-run planning (all modules):**
+```sh
+reels-maker [module] INPUT ... --dry-run --json
+```
+
+**Full encoding (10 modules with direct FFmpeg support):**
+```sh
+reels-maker [module] INPUT ... --output OUTPUT_PATH
+```
+
+**Planning-only mode (6 modules, valid JSON output but FFmpeg filter limitations):**
+- `speedramp` - requires `tmix` transitions between segments
+- `insert` - requires compatible overlay source video/images
+- `loop` - requires seekable concatenation
+- `audioequalizer` - FFmpeg AEVALIB/equalizer filter complexity
+- `colormatrix` - color space conversion filter availability
+- `fade` - actually works in full encoding (see above)
+
+---
+
 ## Fast Polaroid photo burst
 
 Use a `polaroid_burst` scene to pop in several photos as overlapping white

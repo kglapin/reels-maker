@@ -77,12 +77,33 @@ def handle_commands(args) -> int:
         from .renderers.backend import BackendOptions, render_with_backend
         project = load_studio(args.manifest, root=args.root,
                               profile=args.profile)
+        # Determine output directory based on status
+        status = getattr(args, 'status', 'accepted')
+        if status == 'in-progress':
+            output_dir = project.root / "renders" / (project.brand or "studio") / "in-progress"
+        else:
+            output_dir = project.root / "renders" / (project.brand or "studio")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # Combine original output filename with status suffix
+        original_output = args.output
+        if original_output:
+            output_path = Path(original_output).resolve()
+            # If original output doesn't have status suffix, add it
+            if status == 'in-progress' and not str(output_path).endswith('-in-progress.mp4'):
+                output_path = output_path.parent / (output_path.stem + '-in-progress' + output_path.suffix)
+        else:
+            # Generate default output with status suffix
+            suffix = '-in-progress' if status == 'in-progress' else ''
+            name = (project.name.lower().replace(' ', '-').strip('-') or 'video')
+            output_path = output_dir / f"{name}{suffix}.mp4"
         result = render_with_backend(
             "studio", project,
-            BackendOptions(output=args.output, profile=args.profile,
+            BackendOptions(output=str(output_path), profile=args.profile,
                            supersample=args.supersample,
                            cache_dir=args.cache_dir,
                            cache=not args.no_cache))
+        # Store the actual output path in result for downstream use
+        result['output_path'] = str(output_path)
     elif args.command == "studio-inspect":
         from .studio import load_studio
         project = load_studio(args.manifest, root=args.root,

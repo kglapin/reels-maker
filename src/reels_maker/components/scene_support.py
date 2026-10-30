@@ -114,6 +114,34 @@ def _measure(copy: str, style: TextStyle, width: float,
     return measure_text(copy, style, width, ctx.fonts)
 
 
+def _reposition_kicker(ctx: SceneContext, scene: dict, layout) -> None:
+    """Honour an explicit ``kicker_position`` for this scene.
+
+    The spotlight-style recipes seat the kicker at the top of the safe
+    rectangle, detached from the copy block. ``kicker_position:
+    "above-headline"`` moves the kicker region directly above the measured
+    headline block with one ``md`` gap — the kicker-to-headline spacing the
+    stack recipes already use. When the pair would leave the safe area the
+    recipe position is kept, so the layout contract still holds.
+    """
+    position = scene.get("kicker_position", "")
+    if not position:
+        return
+    if position != "above-headline":
+        raise ValueError(
+            f"Unsupported kicker_position {position!r}; "
+            "expected 'above-headline'")
+    headline = layout.optional("headline")
+    if headline is None:
+        return
+    kicker_h = ctx.tokens.type_size("kicker") * 1.4
+    top = headline.y - ctx.tokens.space("md") - kicker_h
+    if top < layout.safe.y - 1:
+        return
+    layout.regions["kicker"] = Rect(headline.x, top, headline.w, kicker_h)
+    layout.notes.append("kicker placed above headline")
+
+
 def _text_elements(ctx: SceneContext, scene: dict, layout, theme: dict,
                    *, headline_role: str = "title",
                    align: str = "left",
@@ -123,6 +151,7 @@ def _text_elements(ctx: SceneContext, scene: dict, layout, theme: dict,
                    rich: bool = True) -> dict[str, Node]:
     elements: dict[str, Node] = {}
     if include_kicker and scene.get("kicker"):
+        _reposition_kicker(ctx, scene, layout)
         style = resolve_text_style(ctx.tokens, "kicker",
                                    theme.get("kicker", theme["accent"]),
                                    align=align)

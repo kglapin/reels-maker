@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "name": "Dom bliźniaczy — Kalisz, Majków v2 (materiał do przeglądu)",
+  "brand": "staniszewska-nieruchomosci",
+  "style": "editorial-premium",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "export": {
+    "profile": "final",
+    "codec": "libx264",
+    "crf": 19,
+    "preset": "slow"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#171C22",
+      "surface": "#F4F5F6",
+      "ink": "#FFFFFF",
+      "muted": "#E3E6E9",
+      "accent": "#D8A356"
+    }
+  },
+  "audio": {
+    "music": {
+      "file": "media/audio/artmylife-powerful-dramatic-trailer-514242.mp3",
+      "start": 0,
+      "volume": 0.82,
+      "fade_out": 1.2
+    }
+  },
+  "scenes": [
+    {
+      "id": "property-introduction",
+      "composition": "spotlight",
+      "duration": 4.6,
+      "photo": "imports/photos/kalisz-majkow/WhatsApp-Image-2026-10-08-at-08.30.11.webp",
+      "background": {
+        "scrim": 0.62,
+        "scrim_color": "#171C22",
+        "tint": "#171C22",
+        "tint_amount": 0.22,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.035
+        }
+      },
+      "kicker": "",
+      "headline": "DOM W ZABUDOWIE\nBLIŹNIACZEJ",
+      "subtitle": "KALISZ · MAJKÓW · UL. C. GODEBSKIEGO\nOK. 140 m² · DZIAŁKA 500 m²",
+      "editorial_media": [
+        {
+          "asset": "media/assets/logo_white-300x78.png",
+          "x": 0.085,
+          "y": 0.11,
+          "w": 0.39,
+          "h": 0.057
+        },
+        {
+          "asset": "imports/photos/kalisz-majkow/WhatsApp-Image-2026-10-08-at-08.30.11-polaroid.png",
+          "x": 0.22,
+          "y": 0.18,
+          "w": 0.56,
+          "h": 0.3667,
+          "rotation": {
+            "family": "tilt-settle",
+            "angle": -4.5,
+            "settle_angle": 1.5,
+            "start": 0.05,
+            "duration": 0.45
+          }
+        }
+      ],
+      "typography_motion": "mask-rise"
+    },
+    {
+      "id": "property-area",
+      "composition": "amount",
+      "duration": 4.6,
+      "background": {
+        "kind": "gradient",
+        "from": "#171C22",
+        "to": "#242B33"
+      },
+      "kicker": "POWIERZCHNIA UŻYTKOWA",
+      "value": 140,
+      "format": {
+        "suffix": " m²",
+        "decimals": 0,
+        "thousands": " "
+      },
+      "subtitle": "budynek 159,4 m² · działka 500 m²\n4 pokoje",
+      "visual": "none",
+      "typography_motion": "scale-focus"
+    },
+    {
+      "id": "property-layout",
+      "composition": "spotlight",
+      "duration": 5.6,
+      "photo": "imports/photos/kalisz-majkow/WhatsApp-Image-2026-10-08-at-08.30.11.webp",
+      "background": {
+        "scrim": 0.85,
+        "scrim_color": "#171C22",
+        "tint": "#171C22",
+        "tint_amount": 0.55,
+        "camera": {
+          "direction": "push-in",
+          "intensity": 0.02
+        }
+      },
+      "kicker": "UKŁAD DOMU",
+      "kicker_position": "above-headline",
+      "headline": "PARTER I PIĘTRO",
+      "subtitle": "Salon z aneksem i taras 4 × 4 m\nTrzy sypialnie i łazienka na górze",
+      "editorial_media": [
+        {
+          "asset": "media/assets/logo_white-300x78.png",
+          "x": 0.085,
+          "y": 0.11,
+          "w": 0.39,
+          "h": 0.057
+        },
+        {
+          "asset": "imports/photos/dom-w-zabudowie-blizniaczej-w-stanie-deweloperskim-kalisz-majkow/parter-polaroid.png",
+          "x": 0.085,
+          "y": 0.19,
+          "w": 0.36,
+          "h": 0.236,
+          "rotation": {
+            "family": "tilt-settle",
+            "angle": -2.5,
+            "settle_angle": 1,
+            "start": 0.05,
+            "duration": 0.45
+          }
+        },
+        {
+          "asset": "imports/photos/dom-w-zabudowie-blizniaczej-w-stanie-deweloperskim-kalisz-majkow/pietro-polaroid.png",
+          "x": 0.555,
+          "y": 0.19,
+          "w": 0.36,
+          "h": 0.236,
+          "rotation": {
+            "family": "tilt-settle",
+            "angle": 2.5,
+            "settle_angle": -1,
+            "start": 0.05,
+            "duration": 0.45
+          }
+        }
+      ],
+      "typography_motion": "word-cascade"
+    },
+    {
+      "id": "property-price",
+      "composition": "spotlight",
+      "duration": 5.4,
+      "photo": "imports/photos/kalisz-majkow/WhatsApp-Image-2026-10-08-at-08.30.11-1.webp",
+      "background": {
+        "scrim": 0.7,
+        "scrim_color": "#171C22",
+        "tint": "#171C22",
+        "tint_amount": 0.34,
+        "camera": {
+          "direction": "pan-left",
+          "intensity": 0.025
+        }
+      },
+      "kicker": "",
+      "headline": "740 000 zł",
+      "subtitle": "Pompa ciepła · ogrzewanie podłogowe\nFotowoltaika 3,915 kW",
+      "editorial_media": [
+        {
+          "asset": "media/assets/logo_white-300x78.png",
+          "x": 0.085,
+          "y": 0.11,
+          "w": 0.39,
+          "h": 0.057
+        },
+        {
+          "asset": "imports/photos/kalisz-majkow/WhatsApp-Image-2026-10-08-at-08.30.11-1-polaroid.png",
+          "x": 0.22,
+          "y": 0.18,
+          "w": 0.56,
+          "h": 0.3667,
+          "rotation": {
+            "family": "tilt-settle",
+            "angle": -4.5,
+            "settle_angle": 1.5,
+            "start": 0.05,
+            "duration": 0.45
+          }
+        }
+      ],
+      "typography_motion": "tracking-in"
+    },
+    {
+      "id": "contact-and-presentation",
+      "composition": "cta",
+      "duration": 5.4,
+      "background": {
+        "kind": "gradient",
+        "from": "#171C22",
+        "to": "#242B33"
+      },
+      "headline": "Zobacz nieruchomość na żywo",
+      "phone": "502 180 180",
+      "line_one": "Umów prezentację domu",
+      "website": "staniszewskanieruchomosci.pl",
+      "logo": "media/assets/logo_white-300x78.png",
+      "typography_motion": "pop-settle"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "id": "staniszewska-nieruchomosci",
+  "name": "Staniszewska Nieruchomości",
+  "version": 1,
+  "source": {
+    "website": "https://staniszewskanieruchomosci.pl/oferty/?sn_action=na-sprzedaz",
+    "reviewed": "2026-10-26",
+    "status": "website-derived draft; exact CSS colors and font family remain unverified; the user-supplied white logo is included locally"
+  },
+  "branding": {
+    "accent": "#D8A356",
+    "logo": "media/assets/logo_white-300x78.png",
+    "editorial_profiles": {
+      "property-feature-light": {
+        "theme": "light",
+        "position": "upper",
+        "headline_style": "standard",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": true
+      },
+      "property-story-dark": {
+        "theme": "dark",
+        "position": "middle",
+        "headline_style": "hero",
+        "backdrop": "soft",
+        "logo": true,
+        "accent_rule": true
+      },
+      "property-close-light": {
+        "theme": "light",
+        "position": "middle",
+        "headline_style": "standard",
+        "backdrop": "none",
+        "logo": false,
+        "accent_rule": false
+      }
+    }
+  },
+  "identity": {
+    "short_name": "Staniszewska",
+    "typography": {
+      "primary": "Inter",
+      "fallback": "DejaVu Sans",
+      "status": "Not confirmed from website CSS. Inter is only a provisional visual recommendation; do not describe it as the brand font until the site stylesheet or brand owner confirms it."
+    },
+    "palette": {
+      "primary": "#D8A356",
+      "secondary": "#171C22",
+      "background": "#FFFFFF",
+      "surface": "#F4F5F6",
+      "text": "#171C22",
+      "ink": "#171C22",
+      "muted_text": "#68717A",
+      "neutral": "#171C22",
+      "border": "#E3E6E9",
+      "accent_light": "#F4E8D6"
+    },
+    "tagline": "Nieruchomości: z nami to proste!",
+    "logo": {
+      "status": "White logo supplied by the user from the official website; original WebP and renderer-ready PNG are stored locally.",
+      "source_url": "https://staniszewskanieruchomosci.pl/wp-content/uploads/2024/04/logo_white-300x78.webp?ver=1790416777",
+      "file": "media/assets/logo_white-300x78.webp",
+      "render_file": "media/assets/logo_white-300x78.png",
+      "observed_description": "Gold monogram with a light uppercase wordmark and smaller spaced NIERUCHOMOŚCI descriptor, shown over dark graphite on the website.",
+      "preview_background": "#171C22"
+    },
+    "motion": {
+      "style": "Calm, informative property storytelling; restrained camera movement, clear holds and unobtrusive transitions.",
+      "accent_usage": "Use warm gold for brief emphasis, prices and key markers; avoid large gold fills.",
+      "vertical_safe_area": "Keep all text and foreground illustrations inside the purple content zone; the orange zone is a margin. Only backgrounds and motion travel may extend outside the purple zone."
+    },
+    "voice": {
+      "attributes": [
+        "local",
+        "calm",
+        "concrete",
+        "attentive",
+        "professional"
+      ],
+      "avoid": [
+        "pressure tactics",
+        "unsupported performance claims",
+        "guaranteed sale prices or timelines",
+        "unverified legal or planning statements",
+        "emoji"
+      ]
+    }
+  },
+  "catalog": {
+    "footage": "media/footage",
+    "stock": "media/stock",
+    "audio": "media/audio",
+    "effects": "media/fx",
+    "assets": "media/assets",
+    "references": "references"
+  },
+  "scaffold": {
+    "status": "Website-derived draft preset with user-supplied logo; confirm exact colors and font family before final identity approval.",
+    "created": "2026-10-26"
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "name": "ASTA Energy — Energia w domu | editorial explainer",
+  "brand": "asta-energy",
+  "style": "editorial-premium",
+  "video": {
+    "width": 540,
+    "height": 960,
+    "fps": 24
+  },
+  "export": {
+    "profile": "review",
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium"
+  },
+  "design_overrides": {
+    "palette": {
+      "background": "#F7F7F2",
+      "surface": "#FFFFFF",
+      "ink": "#14221A",
+      "muted": "#59685E",
+      "accent": "#47A013"
+    }
+  },
+  "scenes": [
+    {
+      "id": "01-hook",
+      "composition": "statement",
+      "duration": 2.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "TWOJA ENERGIA.",
+      "subtitle": "Na własnych zasadach.",
+      "kicker": "MAGAZYNY ENERGII DLA DOMU"
+    },
+    {
+      "id": "02-sun",
+      "composition": "statement",
+      "duration": 2.3,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "SŁOŃCE PRODUKUJE",
+      "subtitle": "więcej, niż zużywasz.",
+      "kicker": "W CIĄGU DNIA"
+    },
+    {
+      "id": "03-surplus",
+      "composition": "bars",
+      "duration": 2.5,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "NADWYŻKA ENERGII",
+      "subtitle": "Schemat poglądowy — nie dane z instalacji",
+      "bars": [
+        {
+          "label": "PORANEK",
+          "value": 35,
+          "suffix": "%"
+        },
+        {
+          "label": "POŁUDNIE",
+          "value": 92,
+          "suffix": "%"
+        },
+        {
+          "label": "WIECZÓR",
+          "value": 24,
+          "suffix": "%"
+        }
+      ]
+    },
+    {
+      "id": "04-grid",
+      "composition": "statement",
+      "duration": 2.2,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "BEZ MAGAZYNU",
+      "subtitle": "Nadwyżki trafiają do sieci.",
+      "kicker": "CO DZIEJE SIĘ Z ENERGIĄ?"
+    },
+    {
+      "id": "05-battery",
+      "composition": "energy",
+      "duration": 2.6,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "Z MAGAZYNEM",
+      "subtitle": "Część nadwyżek zachowujesz w domu.",
+      "kicker": "FOTOWOLTAIKA → MAGAZYN → DOM"
+    },
+    {
+      "id": "06-evening",
+      "composition": "energy",
+      "duration": 2.6,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "PO ZACHODZIE SŁOŃCA",
+      "subtitle": "Dom może korzystać z energii z magazynu.",
+      "kicker": "WIECZOREM"
+    },
+    {
+      "id": "07-cost",
+      "composition": "statement",
+      "duration": 2.4,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "MNIEJ ZAKUPÓW Z SIECI",
+      "subtitle": "Więcej własnej energii wykorzystujesz na miejscu.",
+      "kicker": "KOSZTY ENERGII"
+    },
+    {
+      "id": "08-control",
+      "composition": "statement",
+      "duration": 2.3,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "WIĘCEJ KONTROLI",
+      "subtitle": "Dopasuj magazyn do potrzeb domowników.",
+      "kicker": "NIEZALEŻNOŚĆ"
+    },
+    {
+      "id": "09-benefit",
+      "composition": "checklist",
+      "duration": 2.6,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "CO ZYSKUJESZ?",
+      "subtitle": "",
+      "items": [
+        "Większą autokonsumpcję",
+        "Energię na później",
+        "Kontrolę nad zużyciem"
+      ]
+    },
+    {
+      "id": "10-how",
+      "composition": "energy",
+      "duration": 2.6,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "JAK TO DZIAŁA?",
+      "subtitle": "Panele → magazyn → dom.",
+      "kicker": "TRZY ELEMENTY"
+    },
+    {
+      "id": "11-message",
+      "composition": "statement",
+      "duration": 2.3,
+      "theme": "light",
+      "background": {
+        "kind": "solid",
+        "color": "#F7F7F2"
+      },
+      "headline": "ENERGIA ZOSTAJE",
+      "subtitle": "Tam, gdzie jej potrzebujesz.",
+      "kicker": "ASTA ENERGY"
+    },
+    {
+      "id": "12-cta",
+      "composition": "cta",
+      "duration": 3.2,
+      "theme": "dark",
+      "background": {
+        "kind": "solid",
+        "color": "#14221A"
+      },
+      "headline": "ZADBAJ O ENERGIĘ W DOMU",
+      "phone": "UMÓW KONSULTACJĘ",
+      "line_one": "Dobierz magazyn do swoich potrzeb",
+      "line_two": "asta-energy.pl",
+      "website": "asta-energy.pl",
+      "logo": "assets/logo.png"
+    }
+  ]
+}

@@ -18,7 +18,7 @@ from ..components.chart_style import chart_colors
 SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter"}
 
-_ENGINE_VERSION = 5
+_ENGINE_VERSION = 6
 _SUPERSAMPLE = 2
 
 
@@ -142,11 +142,18 @@ def _ease_out(t: float) -> float:
 
 def _stagger(t: float, count: int, start: float = .12,
              step: float = .07) -> list[float]:
-    """Per-item progress values 0..1 staggered across the timeline."""
-    span = max(.2, 1.0 - start - step * max(0, count - 1) - .1)
+    """Per-item progress values 0..1 staggered across the timeline.
+
+    ``step`` is a *preference*: when ``count`` is large (e.g. a dense
+    heatmap) the effective step shrinks so the last item still starts
+    inside the animation window instead of never appearing.
+    """
+    window = max(.15, 1.0 - start - .10)
+    step_eff = step if count <= 1 else min(step, window * .55 / (count - 1))
+    span = max(.12, window - step_eff * max(0, count - 1))
     out = []
     for i in range(count):
-        local = (t - start - i * step) / span
+        local = (t - start - i * step_eff) / span
         out.append(max(0.0, min(1.0, _ease_out(local))))
     return out
 
@@ -172,18 +179,33 @@ def _fmt(value: float, decimals: int = 0) -> str:
     return f"{value:,.{decimals}f}".replace(",", " ")
 
 
+def _reset_axes(ax, width: int, height: int) -> None:
+    """Clear a reused axes and re-apply the pixel-space decoration state."""
+    ax.clear()
+    ax.set_facecolor("none")
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+
 def _chart_frame(kind: str, scene: dict, theme: dict, width: int,
                  height: int, t: float, duration: float,
-                 fonts: dict, pal: dict, plt) -> None:
-    fig, ax = _new_figure(plt, width, height)
+                 fonts: dict, pal: dict, plt, fig=None, ax=None) -> None:
+    if fig is None or ax is None:
+        fig, ax = _new_figure(plt, width, height)
+    else:
+        _reset_axes(ax, width, height)
     _draw_card(ax, width, height, pal)
     draw = _DRAWERS.get(kind)
     if draw is None:
-        plt.close(fig)
+        if fig is not None:
+            plt.close(fig)
         return
     draw(ax, scene, width, height, t, duration, pal, plt)
     _save(fig, _CURRENT_FRAME[0])
-    plt.close(fig)
 
 
 _CURRENT_FRAME: list[Path] = [Path()]
@@ -195,14 +217,15 @@ def _render_all(kind: str, scene: dict, theme: dict, width: int,
     plt = _setup_matplotlib(fonts)
     pal = _palette(theme)
     duration = count / fps
-    font_regular = fonts.get("regular")
-    font_bold = fonts.get("bold")
-    for index in range(count):
-        _CURRENT_FRAME[0] = out_dir / f"frame_{index:04d}.png"
-        _chart_frame(kind, scene, theme, width, height,
-                     index / fps, duration, fonts, pal, plt)
-    # keep references for potential reuse
-    _ = (font_regular, font_bold)
+    fig, ax = _new_figure(plt, width, height)
+    try:
+        for index in range(count):
+            _CURRENT_FRAME[0] = out_dir / f"frame_{index:04d}.png"
+            _chart_frame(kind, scene, theme, width, height,
+                         index / fps, duration, fonts, pal, plt,
+                         fig=fig, ax=ax)
+    finally:
+        plt.close(fig)
 
 
 # -- individual drawers -------------------------------------------------------
@@ -238,6 +261,21 @@ def _clip(text: str, fs_pt: float, max_frac: float, w: float) -> str:
     return text[:budget].rstrip() + "…"
 
 
+def _fit_fs(text: str, fs_max: float, box_w: float, box_h: float) -> float:
+    """Largest font size (pt) whose estimated glyphs fit ``box_w``×``box_h`` px.
+
+    Average glyph advance ≈ 0.55em and cap height ≈ 0.72em; at dpi=100 a
+    point is 100/72 px, so 0.72em * 100/72 ≈ 1.0 px per pt of cap height.
+    """
+    text = str(text)
+    if not text or box_w <= 0 or box_h <= 0:
+        return fs_max
+    px_per_pt = 100 / 72
+    w_lim = box_w * .85 / (len(text) * .55 * px_per_pt)
+    h_lim = box_h * .75
+    return max(9.0, min(fs_max, w_lim, h_lim))
+
+
 def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
     data = scene.get("bars") or scene.get("data") or []
@@ -248,7 +286,7 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     if not items:
         return
     n = len(items)
-    max_v = max(i["value"] for i in items) or 1
+    max_v = max(max(i["value"] for i in items), 0.0) or 1
     label_x = (PLOT_L - .015) * w
     left, right = PLOT_L * w, PLOT_R * w
     top, bottom = PLOT_T * h, h * .90
@@ -257,7 +295,7 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     for i, item in enumerate(items):
         p = progresses[i]
         y = top + i * (bottom - top) / n + ((bottom - top) / n - track_h) / 2
-        frac = item["value"] / max_v
+        frac = min(1.0, max(0.0, item["value"] / max_v))
         # track
         ax.add_patch(mpatches.Rectangle((left, y), right - left, track_h,
                                    facecolor=pal["grid"], edgecolor="none",
@@ -278,9 +316,12 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
                 transform=ax.transData)
         shown = item["value"] * p
         txt = item["prefix"] + _fmt(shown) + item["suffix"]
+        from matplotlib import patheffects as pe
         ax.text(right, y + track_h * .5, txt, va="center", ha="right",
                 fontsize=FS_VALUE, color=pal["accent"],
-                fontweight="bold")
+                fontweight="bold",
+                path_effects=[pe.withStroke(linewidth=3.5,
+                                            foreground=pal["plot"])])
 
 
 def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
@@ -299,7 +340,8 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
     top, bottom = PLOT_T * h, PLOT_B * h
     pw, ph = right - left, bottom - top
     xs = np.linspace(left, right, len(values))
-    ys = bottom - (np.array(values) - lo) / (hi - lo) * ph
+    ys = np.clip(bottom - (np.array(values) - lo) / (hi - lo) * ph,
+                 top, bottom)
     # grid + ticks
     tick_fs = FS_TICK
     for i in range(5):
@@ -346,15 +388,29 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
                    edgecolors=pal["accent"], linewidths=max(1.2, w * .002),
                    zorder=4)
         ax.scatter([x], [y], s=dot_s * .32, color=pal["accent"], zorder=5)
-    # latest value label
+    # latest value label counts up with the draw-on progress
     lv = values[-1] * min(1.0, p * 1.15)
+    from matplotlib import patheffects as pe
     ax.text(right, min(ys[-1], bottom) - h * .03,
-            _fmt(values[-1]), va="bottom", ha="right",
-            fontsize=FS_VALUE, color=pal["accent"], fontweight="bold")
+            _fmt(lv), va="bottom", ha="right",
+            fontsize=FS_VALUE, color=pal["accent"], fontweight="bold",
+            path_effects=[pe.withStroke(linewidth=3.5,
+                                        foreground=pal["plot"])])
     for i, lab in enumerate(labels):
         ax.text(xs[i], bottom + h * XLABEL_DY, lab, va="top", ha="center",
                 fontsize=FS_LABEL, color=pal["muted"],
                 rotation=0)
+    # axis titles from the manifest (native builders render these too)
+    x_title = str(scene.get("x_axis_label") or "")
+    y_title = str(scene.get("y_axis_label") or "")
+    if x_title:
+        ax.text((left + right) / 2, bottom + h * (XLABEL_DY + .045),
+                x_title.upper(), ha="center", va="top",
+                fontsize=FS_MICRO, color=pal["muted"], fontweight="bold")
+    if y_title:
+        ax.text(w * .04, (top + bottom) / 2, y_title.upper(),
+                ha="center", va="center", rotation=90,
+                fontsize=FS_MICRO, color=pal["muted"], fontweight="bold")
 
 
 def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
@@ -413,13 +469,14 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
             nx = left + (i + 1) * slot + (slot - bar_w) / 2
             ax.plot([x + bar_w, nx], [lvl, lvl], color=pal["hairline"],
                     linewidth=max(1, w * .0015), zorder=1)
-        # value label
+        # value label fades in as the bar lands
+        va = min(1.0, max(0.0, (p - .45) / .4))
         sign = "+" if item["kind"] == "delta" and item["value"] > 0 else (
             "−" if item["kind"] == "delta" and item["value"] < 0 else "")
         ax.text(x + bar_w / 2, y_top - h * .015,
                 f"{sign}{_fmt(abs(item['value']))}",
                 ha="center", va="bottom", fontsize=FS_VALUE,
-                color=pal["axis"], fontweight="bold")
+                color=pal["axis"], fontweight="bold", alpha=va)
         ax.text(x + bar_w / 2, bottom + h * XLABEL_DY, item["label"],
                 ha="center", va="top", fontsize=FS_LABEL,
                 color=pal["muted"], fontweight="bold")
@@ -459,10 +516,13 @@ def _draw_bullet(ax, scene, w, h, t, dur, pal, plt):
             ax.plot([tx, tx], [ty - h * .01, ty + track_h + h * .01],
                     color=pal["axis"], linewidth=max(2, w * .005),
                     zorder=3)
+            from matplotlib import patheffects as pe
             ax.text(right, ty + track_h / 2,
                     _fmt(item["value"] * min(1.0, p)),
                     va="center", ha="right", fontsize=FS_VALUE,
-                    color=pal["accent"], fontweight="bold")
+                    color=pal["accent"], fontweight="bold",
+                    path_effects=[pe.withStroke(linewidth=3.5,
+                                                foreground=pal["plot"])])
         ax.text(label_x, ty + track_h / 2,
                 _clip(item["label"], FS_LABEL, label_x - w * .04, w),
                 va="center", ha="right", fontsize=FS_LABEL,
@@ -503,18 +563,23 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
             color = "#%02x%02x%02x" % mixc
             cx = left + c_i * cw + w * .006
             cy = top + r_i * ch + h * .006
-            cw_px = cw - w * .012
-            ch_px = ch - h * .012
+            cw_px = max(2.0, cw - w * .012)
+            ch_px = max(2.0, ch - h * .012)
             from matplotlib.patches import FancyBboxPatch
             alpha = p
+            # grow from cell center, not left edge
+            gx = cx + cw_px * (1 - p) / 2
             ax.add_patch(FancyBboxPatch(
-                (cx, cy), cw_px * p, ch_px, boxstyle="round,pad=0,rounding_size=6",
+                (gx, cy), cw_px * p, ch_px,
+                boxstyle="round,pad=0,rounding_size=6",
                 facecolor=color, edgecolor="none", alpha=alpha, zorder=2))
             if p > .8:
                 lum = sum(mixc) / 3
                 tx_col = "#ffffff" if lum < 140 else "#111111"
-                ax.text(cx + cw_px / 2, cy + ch_px / 2, _fmt(val),
-                        ha="center", va="center", fontsize=FS_VALUE,
+                txt = _fmt(val)
+                fs = _fit_fs(txt, FS_VALUE, cw_px * .92, ch_px * .9)
+                ax.text(cx + cw_px / 2, cy + ch_px / 2, txt,
+                        ha="center", va="center", fontsize=fs,
                         color=tx_col, fontweight="bold")
     # headers
     for c_i, lab in enumerate(cols):
@@ -547,7 +612,8 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
         # keep the bar wide enough for its centered label
         min_w = max(_text_frac(label_txt, FS_VALUE, w) * 1.12,
                     (right - left) * .20)
-        bar_w = max(min_w, (right - left) * share) * p
+        bar_w = min(right - left,
+                    max(min_w, (right - left) * share)) * p
         x = (left + right) / 2 - bar_w / 2
         y = top + i * row_h + row_h * .10
         bh = row_h * .72
@@ -556,8 +622,8 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
         ax.add_patch(FancyBboxPatch(
             (x, y), bar_w, bh,
             boxstyle=f"round,pad=0,rounding_size={min(bh * .3, w * .02)}",
-            facecolor=pal["accent"], edgecolor="none", alpha=.95 - i * .12,
-            zorder=2))
+            facecolor=pal["accent"], edgecolor="none",
+            alpha=max(.15, .95 - i * .12), zorder=2))
         if p > .7:
             ax.text((left + right) / 2, y + bh / 2, label_txt,
                     ha="center", va="center", fontsize=FS_VALUE,
@@ -626,6 +692,10 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
     yd = scene.get("y_domain") or [0, 1]
     x0, x1 = float(xd[0]), float(xd[1])
     y0, y1 = float(yd[0]), float(yd[1])
+    if x1 == x0:
+        x1 = x0 + 1
+    if y1 == y0:
+        y1 = y0 + 1
     left, right = PLOT_L * w, PLOT_R * w
     top, bottom = PLOT_T * h, PLOT_B * h
     pw, ph = right - left, bottom - top
@@ -646,8 +716,8 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
     dot_s = (w * .017) ** 2
     for i, pt in enumerate(pts):
         xv, yv = float(pt.get("x", 0)), float(pt.get("y", 0))
-        px = left + (xv - x0) / (x1 - x0) * pw
-        py = bottom - (yv - y0) / (y1 - y0) * ph
+        px = min(right, max(left, left + (xv - x0) / (x1 - x0) * pw))
+        py = min(bottom, max(top, bottom - (yv - y0) / (y1 - y0) * ph))
         p = prog[i]
         if p <= 0:
             continue
@@ -667,7 +737,7 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                        zorder=1)
     ax.add_patch(track)
     if isinstance(segments, list) and len(segments) >= 2:
-        vals = [float(s.get("value", 0) or 0) for s in segments]
+        vals = [max(0.0, float(s.get("value", 0) or 0)) for s in segments]
         total = sum(vals) or 1
         prog = _stagger(t / dur, len(segments), start=.12, step=.10)
         start_deg = 90.0
@@ -682,10 +752,11 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                     zorder=2)
                 ax.add_patch(wedge)
             start_deg -= 360 * share
-        # legend
+        # legend fades in once the last segment has landed
         n = len(segments)
         lw = w * .88 / n
         label_budget = max(.04, lw / w - .055)
+        la = min(1.0, max(0.0, (prog[-1] - .55) / .35)) if prog else 1.0
         for i, seg in enumerate(segments):
             lx = w * .06 + i * lw
             from matplotlib.patches import FancyBboxPatch
@@ -693,13 +764,14 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                 (lx, h * .855), w * .02, h * .030,
                 boxstyle="round,pad=0,rounding_size=4",
                 facecolor=pal["series"][i % len(pal["series"])],
-                edgecolor="none", zorder=2))
+                edgecolor="none", alpha=la, zorder=2))
             ax.text(lx + w * .028, h * .87, _clip(seg.get("label", ""),
                     FS_LABEL, label_budget, w),
                     va="center", ha="left", fontsize=FS_LABEL,
-                    color=pal["muted"])
+                    color=pal["muted"], alpha=la)
     else:
-        pct = float(scene.get("value", scene.get("percent", 0)) or 0)
+        pct = min(100.0, max(0.0,
+                   float(scene.get("value", scene.get("percent", 0)) or 0)))
         p = _ease_out(min(1.0, max(0.0, (t / dur - .10) / .6)))
         sweep = 360 * (pct / 100.0) * p
         if sweep > .5:
@@ -708,9 +780,16 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                 facecolor=pal["accent"], edgecolor="none", zorder=2)
             ax.add_patch(wedge)
         # center number counts up
-    shown = float(scene.get("value", scene.get("percent", 0)) or 0)
     count_p = _ease_out(min(1.0, max(0.0, (t / dur - .15) / .7)))
-    ax.text(cx, cy, f"{shown * count_p:,.0f}%", ha="center", va="center",
+    if isinstance(segments, list) and len(segments) >= 2:
+        shown = sum(max(0.0, float(s.get("value", 0) or 0))
+                    for s in segments)
+        center_fmt = _fmt(shown * count_p)
+    else:
+        shown = min(100.0, max(0.0,
+                   float(scene.get("value", scene.get("percent", 0)) or 0)))
+        center_fmt = f"{shown * count_p:,.0f}%"
+    ax.text(cx, cy, center_fmt, ha="center", va="center",
             fontsize=h * .075, color=pal["axis"], fontweight="bold",
             zorder=3)
     label = str(scene.get("label", ""))

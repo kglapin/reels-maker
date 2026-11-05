@@ -48,7 +48,11 @@ def suggested_typography(style: str, width: int, height: int) -> dict:
     if type(width) is not int or type(height) is not int or min(width, height) <= 0:
         raise ValueError("Positive integer canvas dimensions required")
     config = _load()
-    selected = style if style in config["styles"] else "editorial-premium"
+    if style not in config["styles"]:
+        raise ValueError(
+            f"Unknown typography style {style!r}; choose one of "
+            + ", ".join(sorted(config["styles"])))
+    selected = style
     factor = min(width, height) / config["design_basis_short_side_px"]
     roles = {}
     for role, item in config["styles"][selected]["roles"].items():

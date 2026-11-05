@@ -15,7 +15,8 @@ def audit_editorial_style(scene: dict) -> list[dict]:
     background = scene.get("background") or {}
     if isinstance(background, dict) and background.get("kind") == "gradient":
         warn("generic_gradient", "Gradient background: verify it serves the brand and composition.")
-    if scene.get("icon_assets") and len(scene["icon_assets"]) > 3:
+    icon_assets = scene.get("icon_assets")
+    if isinstance(icon_assets, (list, tuple)) and len(icon_assets) > 3:
         warn("icon_overload", "More than three free-floating icons; simplify the composition.")
     headline = scene.get("headline") or {}
     if isinstance(headline, dict):

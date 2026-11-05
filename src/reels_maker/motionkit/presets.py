@@ -284,8 +284,15 @@ def apply_exit(node: Node, onset: float, duration: float,
     else:
         current = float(opacity.value(onset))
         easing = opacity.keys[-1].easing
-        opacity.add(onset, current, easing)
-        opacity.add(end, 0.0, "out-quad")
+        # Replace any keys sitting exactly on the exit boundaries; Track
+        # rejects coincident keyframes with different values.
+        kept = [key for key in opacity.keys
+                if key.time != onset and key.time != end]
+        opacity.keys = Track(
+            kept + [Keyframe(onset, current, easing),
+                    Keyframe(end, 0.0, "out-quad")],
+            clamp_before=opacity.clamp_before,
+            clamp_after=opacity.clamp_after).keys
     node.meta["exit_onset"] = round(onset, 4)
     node.meta["exit_duration"] = round(duration, 4)
     return node
@@ -320,13 +327,17 @@ def progress_track(onset: float, duration: float, *,
                    easing: str = "out-cubic", start: float = 0.0) -> Track:
     if duration <= 0:
         raise ValueError("Progress duration must be positive")
-    return Track([Keyframe(max(0.0, onset), start, easing),
+    if onset < 0:
+        raise ValueError("Progress onset must be nonnegative")
+    return Track([Keyframe(onset, start, easing),
                   Keyframe(onset + duration, 1.0, easing)])
 
 
 def number_track(value: float, onset: float, duration: float, *,
                  start: float = 0.0, easing: str = "out-cubic") -> Track:
-    return Track([Keyframe(max(0.0, onset), start, easing),
+    if onset < 0:
+        raise ValueError("Number onset must be nonnegative")
+    return Track([Keyframe(onset, start, easing),
                   Keyframe(onset + duration, float(value), easing)])
 
 

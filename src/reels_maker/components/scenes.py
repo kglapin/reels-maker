@@ -96,6 +96,22 @@ def _scene_type(scene: dict) -> str:
     if composition == "data-panel":
         if scene.get("bars") is not None or scene.get("data") is not None:
             return "bars"
+        hints = []
+        if scene.get("steps") is not None:
+            hints.append("waterfall")
+        if scene.get("links") is not None:
+            hints.append("sankey")
+        if scene.get("stages") is not None:
+            hints.append("funnel")
+        if all(scene.get(key) is not None
+               for key in ("row_labels", "col_labels", "values")):
+            hints.append("heatmap")
+        if len(hints) > 1:
+            raise ValueError(
+                f"data-panel data keys match multiple components {hints}; "
+                "set an explicit scene type")
+        if hints:
+            return hints[0]
         return "donut"
     matches = [name for name, value in TYPE_COMPOSITION.items()
                if value == composition]

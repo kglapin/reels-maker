@@ -41,7 +41,10 @@ def rotation_track(spec: Mapping, duration: float, *, role: str) -> Track:
     if family == "rotation-to-layout":
         return Track.from_pairs([(0, settle), (start, settle),
                                  (end, peak)], easing=easing)
-    return Track.from_pairs([(0, peak), (end, settle)], easing=easing)
+    # Hold the entry angle until `start`, then travel to the settle angle;
+    # `start` was previously validated but ignored for these families.
+    return Track.from_pairs([(0, peak), (start, peak),
+                             (end, settle)], easing=easing)
 
 def apply_editorial_rotations(elements: Mapping[str, Node],
                               settings: Mapping, duration: float) -> list[dict]:

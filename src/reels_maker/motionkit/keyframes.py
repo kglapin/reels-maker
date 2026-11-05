@@ -157,11 +157,19 @@ class Track:
         return Track(self.keys + other.keys)
 
 
+def _checked_onset(onset: float) -> float:
+    if (isinstance(onset, bool) or not isinstance(onset, (int, float))
+            or not math.isfinite(float(onset)) or onset < 0):
+        raise ValueError("onset must be a finite nonnegative number")
+    return float(onset)
+
+
 def opacity_track(onset: float, duration: float, peak: float = 1.0,
                   easing: str = "out-cubic") -> Track:
     if duration <= 0:
         raise ValueError("Entrance duration must be positive")
-    return Track([Keyframe(max(0.0, onset), 0.0, easing),
+    onset = _checked_onset(onset)
+    return Track([Keyframe(onset, 0.0, easing),
                   Keyframe(onset + duration, peak, easing)])
 
 
@@ -169,8 +177,9 @@ def offset_track(onset: float, duration: float, distance: float,
                  axis: str = "y", easing: str = "out-cubic") -> Track:
     if axis not in ("x", "y"):
         raise ValueError("Offset axis must be x or y")
+    onset = _checked_onset(onset)
     start = (distance, 0.0) if axis == "x" else (0.0, distance)
-    return Track([Keyframe(max(0.0, onset), start, easing),
+    return Track([Keyframe(onset, start, easing),
                   Keyframe(onset + duration, (0.0, 0.0), easing)])
 
 
@@ -178,13 +187,15 @@ def scale_track(onset: float, duration: float, start: float = .88,
                 end: float = 1.0, easing: str = "back") -> Track:
     if start <= 0 or end <= 0:
         raise ValueError("Scale must be positive")
-    return Track([Keyframe(max(0.0, onset), start, easing),
+    onset = _checked_onset(onset)
+    return Track([Keyframe(onset, start, easing),
                   Keyframe(onset + duration, end, easing)])
 
 
 def value_track(onset: float, duration: float, start: float,
                 end: float, easing: str = "out-cubic") -> Track:
-    return Track([Keyframe(max(0.0, onset), start, easing),
+    onset = _checked_onset(onset)
+    return Track([Keyframe(onset, start, easing),
                   Keyframe(onset + duration, end, easing)])
 
 

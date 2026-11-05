@@ -18,7 +18,7 @@ from ..components.chart_style import chart_colors
 SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter"}
 
-_ENGINE_VERSION = 1
+_ENGINE_VERSION = 2
 _SUPERSAMPLE = 2
 
 
@@ -118,7 +118,16 @@ def _new_figure(plt, width: int, height: int):
     fig.patch.set_alpha(0.0)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_facecolor("none")
-    ax.axis("off")
+    # axison must stay True: axis("off") suppresses ALL artists (patches,
+    # lines, text), which is what made early frames fully transparent.
+    # Instead hide decorations and map data coords 1:1 onto top-left-origin
+    # pixel space (y grows downward, matching the native builders).
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     return fig, ax
 
 
@@ -280,7 +289,7 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
         xs_d = np.concatenate([[xs[0]], xs[:n_pts], [xs[n_pts - 1]]])
         ys_d = np.concatenate([[ys[0]], ys[:n_pts], [ys[n_pts - 1]]])
         dense_x, dense_y = [], []
-        for seg in range(n_pts):
+        for seg in range(n_pts - 1):
             px_ = (xs_d[seg], xs_d[seg + 1], xs_d[seg + 2], xs_d[seg + 3])
             py_ = (ys_d[seg], ys_d[seg + 1], ys_d[seg + 2], ys_d[seg + 3])
             for step in range(6):

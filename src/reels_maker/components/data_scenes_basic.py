@@ -397,6 +397,11 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     })
     chart = layout.region("chart")
     colors = chart_colors(theme)
+    elements: dict[str, Node] = {
+        "headline": text_node("headline", headline, headline_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center")
+    }
     if scene.get("chart_engine") == "mpl":
         from ..chart_mpl.engine import sequence_node
         seq = sequence_node(ctx, scene, theme, chart)
@@ -418,11 +423,6 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
                                  "y_domain": [low, high]})
     plot = Rect(chart.x + chart.w * .21, chart.y + chart.h * .15,
                 chart.w * .74, chart.h * .59)
-    elements: dict[str, Node] = {
-        "headline": text_node("headline", headline, headline_style,
-                              layout.region("headline"), ctx.fonts,
-                              align="center", valign="center")
-    }
     children: list[Node] = [chart_card("line-chart-surface", chart,
                                         ctx.tokens, theme)]
     tick_values = [low + (high - low) * index / 4 for index in range(5)]

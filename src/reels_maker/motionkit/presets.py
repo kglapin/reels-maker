@@ -6,7 +6,7 @@ based on narrative role, style and scene position.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 import math
 
 from ..core.scene_graph import Node
@@ -344,7 +344,6 @@ def number_track(value: float, onset: float, duration: float, *,
 def restyle(node: Node, *, opacity: float | None = None,
             color: tuple[int, int, int] | None = None) -> Node:
     """Convenience for components that need a static variant."""
-    node = replace(node) if False else node
     if opacity is not None:
         node.opacity = opacity
     if color is not None:

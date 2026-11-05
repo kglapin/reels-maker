@@ -75,7 +75,7 @@ def _shadow_tracks(card_x: float, card_y: float, card_w: float,
 
 
 def build_photo_marquee(ctx: SceneContext, scene: dict):
-    from .scenes import _background, _finish, _theme
+    from .scene_support import _background, _finish, _theme
 
     config = scene.get("carousel") or {}
     items = config.get("items") or []

@@ -6,6 +6,7 @@ frame rate and makes interpolation testable without video encoding.
 """
 from __future__ import annotations
 
+import bisect
 import math
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -111,6 +112,21 @@ class Track:
                 raise ValueError(
                     "Track cannot have different values at the same keyframe time")
 
+    def __setattr__(self, name: str, value) -> None:
+        object.__setattr__(self, name, value)
+        if name == "keys":
+            object.__setattr__(
+                self, "_key_times",
+                tuple(key.time for key in value))
+
+    @property
+    def _times(self) -> tuple[float, ...]:
+        times = getattr(self, "_key_times", None)
+        if times is None:
+            times = tuple(key.time for key in self.keys)
+            object.__setattr__(self, "_key_times", times)
+        return times
+
     @classmethod
     def from_pairs(cls, pairs: Iterable[tuple[float, Value]],
                    easing: str = "out-cubic") -> "Track":
@@ -145,13 +161,13 @@ class Track:
             if not self.clamp_after:
                 raise ValueError("Sample exceeds last keyframe")
             return keys[-1].value
-        for left, right in zip(keys, keys[1:]):
-            if left.time <= time <= right.time:
-                span = right.time - left.time
-                amount = 0.0 if span <= 0 else (time - left.time) / span
-                return interpolate(left.value, right.value,
-                                   right.evaluated_amount(amount))
-        return keys[-1].value
+        times = self._times
+        index = bisect.bisect_right(times, time) - 1
+        left, right = keys[index], keys[index + 1]
+        span = right.time - left.time
+        amount = 0.0 if span <= 0 else (time - left.time) / span
+        return interpolate(left.value, right.value,
+                           right.evaluated_amount(amount))
 
     def merge(self, other: "Track") -> "Track":
         return Track(self.keys + other.keys)

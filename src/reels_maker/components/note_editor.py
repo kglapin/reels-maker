@@ -70,7 +70,6 @@ def _caption_node(role: str, content: str, style: TextStyle,
 
 
 _KEYBOARD_ROWS = ("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")
-_TOOLBAR_KEYS = ("123", "return")
 
 
 def _key_target(char: str) -> str:

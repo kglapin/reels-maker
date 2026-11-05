@@ -330,7 +330,6 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     from ..motionkit.choreography import plan_choreography
     specs = list(specs)
     elements = {role: node for role, node in elements.items() if node is not None}
-    specs = list(specs)
     roles = {spec.role for spec in specs}
     # Creative Engine's explicit, renderer-backed typography preset wins
     # over the ordinary scene-index pattern, without changing older projects.

@@ -195,7 +195,7 @@ def _card(ctx: SceneContext, image: str, index: int,
         meta={"carousel_item": index, "image": image})
 
 def build_photo_carousel(ctx: SceneContext, scene: dict):
-    from .scenes import _background, _finish, _spec, _theme
+    from .scene_support import _background, _finish, _spec, _theme
 
     config = scene.get("carousel") or {}
     items = config.get("items") or []

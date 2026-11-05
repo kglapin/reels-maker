@@ -389,6 +389,83 @@
    ]
   },
   {
+   "type": "diverging_bar",
+   "duration": 3.8,
+   "headline": "VS BASELINE",
+   "subtitle": "SYNTHETIC DELTAS",
+   "decor": false,
+   "theme": "dark",
+   "chart_engine": "mpl",
+   "baseline": 50,
+   "items": [
+    {
+     "label": "OUTPUT",
+     "value": 72
+    },
+    {
+     "label": "COST",
+     "value": 43
+    },
+    {
+     "label": "LATENCY",
+     "value": 28
+    },
+    {
+     "label": "REACH",
+     "value": 61
+    }
+   ]
+  },
+  {
+   "type": "scatter",
+   "duration": 3.8,
+   "headline": "SCATTER",
+   "subtitle": "EXPLICIT DOMAINS",
+   "decor": false,
+   "theme": "dark",
+   "chart_engine": "mpl",
+   "x_domain": [
+    0,
+    10
+   ],
+   "y_domain": [
+    0,
+    100
+   ],
+   "points": [
+    {
+     "id": "p1",
+     "x": 1,
+     "y": 18
+    },
+    {
+     "id": "p2",
+     "x": 3,
+     "y": 39
+    },
+    {
+     "id": "p3",
+     "x": 5,
+     "y": 48
+    },
+    {
+     "id": "p4",
+     "x": 8,
+     "y": 82
+    },
+    {
+     "id": "p5",
+     "x": 9,
+     "y": 64
+    },
+    {
+     "id": "p6",
+     "x": 2,
+     "y": 71
+    }
+   ]
+  },
+  {
    "type": "chart_morph",
    "duration": 8.0,
    "headline": "TABLE \u2192 BAR MORPH",

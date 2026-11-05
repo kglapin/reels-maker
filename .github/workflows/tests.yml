@@ -149,3 +149,37 @@ jobs:
           path: renders/asta-energy/brandbook.pdf
           if-no-files-found: error
           retention-days: 14
+
+  studio-golden:
+    name: Studio golden frames (LFS media)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /tests/
+            /brands/asta-energy/brand.json
+            /brands/asta-energy/assets/
+            /brands/asta-energy/media/stock/
+            /brands/asta-energy/projects/
+            /pyproject.toml
+          lfs: false
+      - name: Fetch only the LFS stock clips the golden demo uses
+        run: |
+          git lfs install --local
+          git lfs pull --include="brands/asta-energy/media/stock/*.webm"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Create test virtualenv
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -e ".[brand]"
+      - name: Verify studio golden strips
+        run: PYTHONPATH=src:tests .venv/bin/python tests/studio_golden.py

@@ -79,7 +79,8 @@ def _normalise(value):
 def _recipe_match(spec, recipes):
     direction = _normalise(spec.get("creative_direction", ""))
     tokens = set(re.findall(r"[\w-]+", direction))
-    tokens.update(_normalise(shot.get("intent", "")) for shot in spec["shots"])
+    for shot in spec["shots"]:
+        tokens.update(re.findall(r"[\w-]+", _normalise(shot.get("intent", ""))))
     chart_scene = any(shot.get("chart") for shot in spec["shots"])
     scored = []
     for recipe in recipes:

@@ -7,6 +7,7 @@ and the QA report states that no automatic audio-text guarantee exists.
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -190,7 +191,12 @@ def apply_cue_plan(scenes: list[dict], plan: CuePlan) -> list[dict]:
 
 def sfx_plan(scene_lengths: list[float], cues: Mapping[int, Mapping[str, float]],
              *, style: str = "kinetic-advertising") -> list[dict]:
-    """Propose a restrained sound-design layer, not a wall of effects."""
+    """Propose a restrained sound-design layer, not a wall of effects.
+
+    ``cues`` is keyed by 0-based scene index (matching ``CuePlan.scenes``);
+    1-based keys are also accepted for callers that number scenes from 1.
+    Emitted events report ``scene`` as the 1-based scene number.
+    """
     events = []
     cursor = 0.0
     for index, length in enumerate(scene_lengths):
@@ -199,8 +205,10 @@ def sfx_plan(scene_lengths: list[float], cues: Mapping[int, Mapping[str, float]]
                            "time": round(cursor, 4),
                            "asset": "whoosh-soft" if style != "editorial-premium"
                            else "air-soft", "gain_db": -19})
-        scene_cues = cues.get(index, {})
-        for role, seconds in scene_cues.items():
+        scene_cues = cues.get(index)
+        if scene_cues is None:
+            scene_cues = cues.get(index + 1, {})
+        for role, seconds in (scene_cues or {}).items():
             if role in ("amount", "total", "value", "percent"):
                 events.append({"kind": "counter", "scene": index + 1,
                                "time": round(cursor + float(seconds), 4),
@@ -275,12 +283,21 @@ def plan_beat_cue_mix(
     voiceover_segments: list[tuple[float, float]] | None = None,
     cues: Mapping[int, Mapping[str, float]] | None = None,
     target_lufs: float = -14.0,
+    duck_attack_s: float = 0.06,
+    duck_release_s: float = 0.28,
+    duck_db: float = -9.5,
 ) -> dict:
     """Plan beat/onset/cue grid, 3-bus gain staging, sidechain ducking and loudness QC (MD-402)."""
     if bpm <= 0 or bpm > 300:
         raise ValueError("bpm must be between 0 and 300")
     if not scene_durations or any(d <= 0 for d in scene_durations):
         raise ValueError("scene_durations must be non-empty positive numbers")
+    for name, value in (("duck_attack_s", duck_attack_s),
+                        ("duck_release_s", duck_release_s)):
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be a non-negative finite number")
+    if not math.isfinite(duck_db) or duck_db > 0:
+        raise ValueError("duck_db must be finite and non-positive")
     total_duration = round(sum(float(d) for d in scene_durations), 4)
     beat_interval = 60.0 / float(bpm)
     beats = []
@@ -297,9 +314,9 @@ def plan_beat_cue_mix(
         ducking_envelopes.append({
             "voiceover_start": round(s, 4),
             "voiceover_end": round(e, 4),
-            "attack_s": 0.06,
-            "release_s": 0.28,
-            "music_duck_db": -9.5,
+            "attack_s": duck_attack_s,
+            "release_s": duck_release_s,
+            "music_duck_db": duck_db,
         })
 
     sfx = sfx_plan(list(scene_durations), cues or {})

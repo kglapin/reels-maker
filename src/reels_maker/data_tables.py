@@ -96,6 +96,9 @@ def table_scene(
                 raise DataRenderError(f"row {row_id!r}, column {name!r} is missing")
             if schema_columns[name].data_type == "boolean":
                 rendered = "true" if value else "false"
+            elif isinstance(value, Decimal):
+                # format(..., "f") avoids scientific notation like "1E+2".
+                rendered = format(value, "f")
             elif isinstance(value, (date, datetime)):
                 rendered = value.isoformat()
             else:
@@ -167,7 +170,16 @@ def sorted_table_scene(
     indexed = list(enumerate(zip(data.rows, base["rows"])))
     reverse = sort_order == "descending"
     # Python's Timsort is stable: ties preserve original source order.
-    indexed.sort(key=lambda item: item[1][0][sort_by], reverse=reverse)
+    # Nulls always sort last regardless of direction; raw values stay
+    # unconverted so Decimal/date/string columns keep their typed order.
+    present = [item for item in indexed if item[1][0][sort_by] is not None]
+    missing = [item for item in indexed if item[1][0][sort_by] is None]
+    try:
+        present.sort(key=lambda item: item[1][0][sort_by], reverse=reverse)
+    except TypeError as exc:
+        raise DataRenderError(
+            f"sort_by column {sort_by!r} mixes incomparable value types") from exc
+    indexed = present + missing
     sorted_rows = [item[1][1] for item in indexed]
     sorted_ids = [row["id"] for row in sorted_rows]
 
@@ -289,6 +301,19 @@ def table_to_bars_scenes(
 ) -> tuple[dict, dict]:
     """Compile a table -> bar-chart scene pair with shared stable object IDs and conservation proof (DM-101)."""
     from .data_director import recommend_visualizations
+
+    schema_names = {column.name: column for column in data.schema.columns}
+    for name in (row_id_column, label_column, value_column):
+        if name not in schema_names:
+            raise DataRenderError(f"Unknown column {name!r}")
+    if label_column == value_column:
+        raise DataRenderError("label_column and value_column must be different columns")
+    if label_column == row_id_column or value_column == row_id_column:
+        raise DataRenderError("label_column and value_column must differ from row_id_column")
+    if schema_names[label_column].data_type != "string":
+        raise DataRenderError("label_column must be a declared string column")
+    if schema_names[value_column].data_type not in ("integer", "decimal"):
+        raise DataRenderError("value_column must be a declared integer or decimal column")
 
     tbl = table_scene(
         data,

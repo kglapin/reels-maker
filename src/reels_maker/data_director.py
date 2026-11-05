@@ -348,6 +348,7 @@ def select_data_story_variant(
         variant_id = f"story-variant-{idx + 1}:{scene.get('type', 'unknown')}"
         aspect_results = {}
         total_issues = 0
+        total_warnings = 0
         for asp_name, w, h in aspects:
             tokens = resolve_tokens("editorial-premium", width=w, height=h)
             ctx = SceneContext(
@@ -362,11 +363,15 @@ def select_data_story_variant(
                     issue.to_dict() for issue in issues
                     if issue.severity == "error"
                 ]
+                warning_count = sum(
+                    1 for issue in issues if issue.severity == "warning")
+                total_warnings += warning_count
                 errs = len(error_details)
                 total_issues += errs
                 aspect_results[asp_name] = {
                     "ok": errs == 0,
                     "errors": errs,
+                    "warnings": warning_count,
                     "error_details": error_details,
                 }
             except Exception as exc:
@@ -374,13 +379,17 @@ def select_data_story_variant(
                 aspect_results[asp_name] = {"ok": False, "errors": 1, "error": str(exc)}
         valid = total_issues == 0
         # Prefer richer semantic forms when all 3 aspects pass cleanly
+        # Score combines the semantic type preference with measured QA
+        # warnings so same-type variants are no longer decided by id sort.
         type_bonus = {
             "waterfall": 0.95, "sankey": 0.94, "stacked_bars_100": 0.92,
             "line_chart": 0.91, "bars": 0.90, "table": 0.88,
             "bullet": 0.89, "diverging_bar": 0.89, "funnel": 0.88,
             "heatmap": 0.87, "scatter": 0.86,
         }.get(str(scene.get("type")), 0.80)
-        score = round(type_bonus if valid else 0.0, 4)
+        score = round(
+            (type_bonus if valid else 0.0) - min(0.05, total_warnings * 0.005),
+            4)
         evaluated.append({
             "variant_id": variant_id,
             "scene_type": scene.get("type"),

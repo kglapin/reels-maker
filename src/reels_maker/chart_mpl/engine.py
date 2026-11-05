@@ -19,7 +19,7 @@ SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter",
              "stacked_bars_100"}
 
-_ENGINE_VERSION = 12
+_ENGINE_VERSION = 13
 _SUPERSAMPLE = 2
 
 
@@ -169,10 +169,10 @@ def _draw_card(ax, width: int, height: int, pal: dict) -> None:
     "-light rounded chart card matching chart_card() proportions."""
     from matplotlib.patches import FancyBboxPatch
     card = FancyBboxPatch(
-        (width * .015, height * .015), width * .97, height * .97,
-        boxstyle="round,pad=0,rounding_size=%f" % (width * .035),
-        linewidth=1.2, edgecolor=pal["border"], facecolor=pal["plot"],
-        zorder=0)
+        (0, 0), width, height,
+        boxstyle="round,pad=0,rounding_size=%f" % (min(width, height) * .038),
+        linewidth=max(1.5, min(width, height) * .0022),
+        edgecolor=pal["border"], facecolor=pal["plot"], zorder=0)
     ax.add_patch(card)
 
 

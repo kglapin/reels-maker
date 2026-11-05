@@ -145,7 +145,8 @@ def _pick(value):
     return re.sub(r"[-_]+", " ", value).strip()
 
 
-def parse_tracks(source: str, base_url: str = "") -> list[dict]:
+def parse_tracks(source: str, base_url: str = "",
+                 *, cookies: str | None = None) -> list[dict]:
     """Parse candidate tracks from search-page HTML (bootstrap JSON first).
 
     The bootstrap JSON lives behind a URL embedded in the HTML. When it is
@@ -167,7 +168,8 @@ def parse_tracks(source: str, base_url: str = "") -> list[dict]:
     if payload_url:
         full = payload_url if payload_url.startswith("http") else (
             f"https://pixabay.com{payload_url}")
-        payload = json.loads(http_get(full).decode("utf-8", "replace"))
+        payload = json.loads(
+            http_get(full, cookies=cookies).decode("utf-8", "replace"))
         for item in _iter_values(payload):
             url = None
             if not isinstance(item, dict):
@@ -269,7 +271,12 @@ def download_candidates(tracks: list[dict], destination: Path, picks: str,
     """
     selection = []
     for token in picks.split(","):
-        position = int(token.strip())
+        try:
+            position = int(token.strip())
+        except ValueError as exc:
+            raise PixabayError(
+                f"Pick values must be comma-separated item numbers: "
+                f"{token.strip()!r}") from exc
         if not 1 <= position <= len(tracks):
             raise PixabayError(
                 f"Picked item {position} is outside 1..{len(tracks)}")

@@ -17,6 +17,10 @@ def transition_plan(project: Project, frames: list[int]) -> list[dict]:
     for i in range(1, len(project.scenes)):
         config = project.scenes[i].get("transition_in") or {"type": "cut"}
         kind = config.get("type", "cut")
+        if kind != "cut" and kind not in CURATED:
+            raise RenderError(
+                f"Scene {i}: unknown transition type {kind!r}; "
+                f"expected 'cut' or one of {sorted(CURATED)}")
         count = config.get("frames", 0) if kind != "cut" else 0
         if count > min(frames[i - 1], frames[i]) // 3:
             raise RenderError(f"Scene {i}: transition exceeds a third of its shot")
@@ -50,7 +54,11 @@ def assemble(parts: list[Path], frames: list[int], fps: int,
             overlap = step["frames"]
             offset = (total - overlap) / fps
             seconds = overlap / fps
-            mode = CURATED[step["type"]]
+            mode = CURATED.get(step["type"])
+            if mode is None:
+                raise RenderError(
+                    f"Unknown transition type {step['type']!r}; "
+                    f"expected 'cut' or one of {sorted(CURATED)}")
             filters.append(f"[{previous}][v{i}]xfade=transition={mode}:"
                            f"duration={seconds:.8f}:offset={offset:.8f}[{result}]")
             total += frames[i] - overlap

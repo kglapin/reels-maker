@@ -26,7 +26,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "doctor":
             return handle_doctor(args)
         return handle_commands(args)
-    except (ProjectError, AssetError, RenderError, OSError, ValueError) as exc:
+    except (ProjectError, AssetError, RenderError, OSError, ValueError,
+            KeyError, TypeError) as exc:
         _emit({"status": "error", "ok": False,
                "error": {"type": type(exc).__name__, "message": str(exc)}},
               error=True)

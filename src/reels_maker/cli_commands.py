@@ -254,7 +254,8 @@ def handle_commands(args) -> int:
             source = fetch_search_page(args.query, args.kind,
                                        cookies=args.cookies)
             tracks = parse_tracks(
-                source, search_page_url(args.query, args.kind)
+                source, search_page_url(args.query, args.kind),
+                cookies=args.cookies,
             )[:max(1, args.limit)]
         result = {"query": args.query, "candidates": tracks}
         if args.all and not args.pick:

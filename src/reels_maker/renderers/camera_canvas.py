@@ -60,7 +60,12 @@ class CameraCanvasRenderer:
         if ww*hh>32000000:
             raise ValueError("camera_canvas world exceeds 32MP")
         base=Image.new("RGBA",(ww,hh),(247,245,240,255))
+        self.fonts=getattr(project,"fonts",None)
         for i,s in enumerate(self.scenes):
+            if s.get("video"):
+                # Video tiles are decoded per frame at render time; the
+                # static world keeps a transparent placeholder instead.
+                continue
             tile=self._tile(s,photo=True)
             self._paste(base,tile,self.stops[i])
         self._base_world = base
@@ -100,6 +105,12 @@ class CameraCanvasRenderer:
         return stage
 
     def _font(self,size,bold):
+        if self.fonts is not None:
+            try:
+                return ImageFont.truetype(
+                    str(self.fonts.path("bold" if bold else "regular")),size)
+            except Exception:
+                pass
         for p in (["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"] if bold else
                   ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]):
             if Path(p).is_file():

@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from ..studio import StudioProject
 
@@ -90,17 +90,35 @@ def _iter_asset_paths(value, *, path_field: bool = False):
 
 
 def _asset_path(project: StudioProject, value: str) -> Path:
+    """Resolve a manifest asset reference for fingerprinting.
+
+    Mirrors ``studio._resolve_asset`` confinement: ``shared://`` stays under
+    ``shared_media``, ``brands/`` and brand-relative paths stay under the
+    brand root. Absolute paths were already vetted at manifest load time.
+    """
     if value.startswith("shared://"):
-        return (project.root / "shared_media"
-                / value.removeprefix("shared://")).resolve()
+        shared_path = value.removeprefix("shared://")
+        relative = PurePosixPath(shared_path)
+        if (not shared_path or relative.is_absolute() or "\\" in shared_path
+                or any(part in ("", ".", "..") for part in relative.parts)):
+            raise ValueError(f"Invalid shared asset path: {value!r}")
+        shared_root = (project.root / "shared_media").resolve()
+        resolved = shared_root.joinpath(*relative.parts).resolve()
+        if not resolved.is_relative_to(shared_root):
+            raise ValueError(
+                f"Shared asset path escapes shared_media: {value!r}")
+        return resolved
     path = Path(value)
     if path.is_absolute():
         return path.resolve()
-    if value.startswith("brands/"):
-        return (project.root / path).resolve()
     brand_root = (project.root / "brands" / project.brand
-                  if project.brand else project.path.parent)
-    return (brand_root / path).resolve()
+                  if project.brand else project.path.parent).resolve()
+    candidate = (project.root / path if value.startswith("brands/")
+                 else brand_root / path)
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(brand_root):
+        raise ValueError(f"Asset path escapes brand scope: {value!r}")
+    return resolved
 
 
 def _asset_fingerprints(project: StudioProject, scene: dict, built) -> list[dict]:

@@ -12,6 +12,8 @@ from types import SimpleNamespace
 
 from PIL import Image, ImageDraw
 
+from reels_maker.components.base import SceneContext
+from reels_maker.components.scenes import build_scene
 from reels_maker.core.scene_graph import Node
 from reels_maker.design.tokens import resolve_tokens
 from reels_maker.motionkit.keyframes import Keyframe, Track
@@ -383,6 +385,113 @@ class TransitionFrameReuseTests(unittest.TestCase):
         )
         command = popen.call_args.args[0]
         self.assertEqual(command[command.index("-pix_fmt") + 1], "rgb24")
+
+
+class GroupLocalLayerTests(unittest.TestCase):
+    """Animated groups with tile-safe descendants must rasterize through the
+    region-local layer and stay pixel-identical to the full-canvas path."""
+
+    def _scene(self, width=240, height=320):
+        tokens = resolve_tokens("editorial-premium", width=width,
+                                height=height)
+        fonts = FontBook()
+        block = typeset("GRUPA", TextStyle(size=22), 200, fonts)
+        children = [
+            Node(kind="round", role="chip-bg",
+                 props={"x": 50, "y": 100, "w": 140, "h": 60, "r": 16,
+                        "fill": "#FFCB66"}),
+            Node(kind="rect", role="chip-tick", dx=12.0, dy=6.0,
+                 props={"x": 170, "y": 110, "w": 8, "h": 40,
+                        "fill": "#72D18A"}),
+            Node(kind="text", role="chip-label",
+                 props={"x": 60, "y": 118, "block": block}),
+            Node(kind="group", role="nested",
+                 children=[Node(
+                     kind="circle", role="nested-dot",
+                     props={"cx": 200, "cy": 250, "r": 14,
+                            "fill": "#5AA9FF"})]),
+        ]
+        group = Node(kind="group", role="chip", props={}, children=children)
+        group.track("scale", Track([
+            Keyframe(0.0, .8, "smooth"), Keyframe(1.0, 1.15, "smooth")]))
+        group.track("rotation", Track([
+            Keyframe(0.0, -6.0, "smooth"), Keyframe(1.0, 8.0, "smooth")]))
+        group.track("opacity", Track([
+            Keyframe(0.0, .4, "smooth"), Keyframe(1.0, 1.0, "smooth")]))
+        nodes = [group]
+        scene = SimpleNamespace(
+            duration=2.0,
+            background={"kind": "gradient", "from": "#101A14",
+                        "to": "#26382D", "angle": 90},
+            meta={}, nodes=nodes,
+            at=lambda time: [node.sample(time) for node in nodes],
+        )
+        return scene, tokens, fonts
+
+    def test_animated_group_local_layer_is_pixel_identical(self):
+        scene, tokens, fonts = self._scene()
+        for ss in (1, 2):
+            tiled = SceneRenderer(
+                240, 320, tokens, fonts,
+                options=RenderOptions(supersample=ss,
+                                      reuse_node_sprites=False))
+            fallback = SceneRenderer(
+                240, 320, tokens, fonts,
+                options=RenderOptions(supersample=ss,
+                                      reuse_node_sprites=False))
+            with patch.object(SceneRenderer, "_tile_safe_group",
+                              return_value=False):
+                for time in (.3, .9):
+                    expected = fallback.render(scene, time)
+                    actual = tiled.render(scene, time)
+                    self.assertEqual(expected.tobytes(), actual.tobytes(),
+                                     f"ss={ss} t={time}")
+
+    def test_group_with_animated_descendant_falls_back(self):
+        scene, tokens, fonts = self._scene()
+        group = scene.nodes[0]
+        group.children[0].track("opacity", Track([
+            Keyframe(0.0, .2), Keyframe(1.0, 1.0)]))
+        renderer = SceneRenderer(
+            240, 320, tokens, fonts,
+            options=RenderOptions(supersample=1, reuse_node_sprites=False))
+        sampled = scene.at(0.5)[0]
+        self.assertFalse(renderer._tile_safe_group(sampled))
+        frame = renderer.render(scene, 0.5)
+        self.assertIsNotNone(frame)
+
+
+class NegativeTextCropTests(unittest.TestCase):
+    def test_inversion_is_confined_to_glyph_region(self):
+        width, height = 360, 640
+        tokens = resolve_tokens("editorial-premium", width=width,
+                                height=height)
+        fonts = FontBook()
+        context = SceneContext(width, height, 30, 2.0, tokens,
+                               "editorial-premium", fonts, scene_index=0)
+        built = build_scene(context, {
+            "type": "statement", "duration": 2.0, "decor": False,
+            "background": {"kind": "solid", "color": "#345678"},
+            "headline": {"runs": [{
+                "text": "INVERT", "scale": 1.08, "weight": "bold",
+                "color": "white", "effect": "negative",
+            }]},
+        })
+        renderer = SceneRenderer(
+            width, height, tokens, fonts,
+            options=RenderOptions(supersample=1))
+        frame = renderer.render(built, 1.5)
+        background = (0x34, 0x56, 0x78)
+        # Pixels well outside the glyph ink must keep the flat backdrop —
+        # the cropped invert/paste must not bleed across the canvas.
+        for xy in ((4, 4), (width - 5, 4), (4, height - 5),
+                   (width - 5, height - 5), (width // 2, 8)):
+            self.assertEqual(frame.getpixel(xy), background, xy)
+        bounds = built.elements["headline"].meta["bounds"]
+        x0, y0, x1, y1 = (round(value) for value in bounds)
+        colours = {colour for _count, colour in
+                   frame.crop((x0, y0, x1, y1)).getcolors(500_000) or []}
+        self.assertIn((203, 169, 135), colours)
 
 
 if __name__ == "__main__":

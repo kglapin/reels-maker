@@ -426,15 +426,21 @@ class SceneRenderer:
         and shadowed panels. For ordinary typography/vector leaves this avoids
         allocating and resampling a supersampled canvas for a small object.
         """
+        group = node.kind in ("group", "scene")
         if (node.kind not in {"rect", "block", "round", "circle", "ring",
                               "line", "path", "text", "number"}
-                or node.clip is not None or progress < .999
-                or (node.kind == "round" and node.props.get("shadow"))):
+                and not (group and node.children
+                         and self._tile_safe_group(node))) \
+                or node.clip is not None or progress < .999 \
+                or (node.kind == "round" and node.props.get("shadow")):
             return False
         base_bounds = node.base_bounds()
-        if base_bounds is None:
+        if group:
+            bounds = self._tile_bounds(node)
+        else:
+            bounds = base_bounds
+        if bounds is None:
             return False
-        bounds = base_bounds
         if node.kind == "text":
             block = node.props.get("block")
             if isinstance(block, TextBlock):
@@ -489,12 +495,26 @@ class SceneRenderer:
                 lambda value: int(value * node.opacity)))
 
         if node.scale == 1 and abs(rotation) <= 1e-6:
-            transformed = source
+            # The tile was rasterized relative to (source_left, source_top);
+            # composite it back at that same origin. Compositing at the
+            # transform output origin would shift content by the padding
+            # difference (output padding is 3*ss, source padding 4*ss).
+            left = max(0, source_left)
+            top = max(0, source_top)
+            right = min(self.W, source_right)
+            bottom = min(self.H, source_bottom)
+            if right > left and bottom > top:
+                target.alpha_composite(
+                    source.crop((left - source_left, top - source_top,
+                                 right - source_left, bottom - source_top)),
+                    (left, top))
+            return True
         else:
             anchor = node.anchor
+            anchor_bounds = base_bounds if base_bounds is not None else bounds
             if anchor is None:
-                anchor = ((base_bounds[0] + base_bounds[2]) / 2,
-                          (base_bounds[1] + base_bounds[3]) / 2)
+                anchor = ((anchor_bounds[0] + anchor_bounds[2]) / 2,
+                          (anchor_bounds[1] + anchor_bounds[3]) / 2)
             # dx/dy are applied after scale/rotation in the shared scene-graph
             # transform, so the raster pivot includes the node's own offsets.
             ax = (anchor[0] + node.dx + ox) * scale
@@ -523,6 +543,84 @@ class SceneRenderer:
                 resample=Image.Resampling.BICUBIC)
         target.alpha_composite(transformed, (output_left, output_top))
         return True
+
+    _TILE_LEAF_KINDS = {"rect", "block", "round", "circle", "ring",
+                        "line", "path", "text", "number"}
+
+    def _tile_safe_group(self, node: Node) -> bool:
+        """True when every descendant renders correctly onto an offset tile.
+
+        A descendant that would need its own layer (animated transform,
+        opacity, clip or reveal) composites at full-canvas coordinates and
+        cannot draw into the group's local tile, so the whole group must fall
+        back to the legacy full-canvas path. Negative text samples the
+        composed backdrop and also requires the full canvas.
+        """
+        return all(self._tile_safe_node(child) for child in node.children)
+
+    def _tile_safe_node(self, node: Node) -> bool:
+        if not node.visible():
+            return True
+        if node.clip is not None:
+            return False
+        reveal = node.reveal or {}
+        progress = float(reveal.get("progress", 1.0))
+        if progress <= .001:
+            return True
+        if progress < .999:
+            return False
+        rotation = float(node.props.get("_carousel_rotation", node.rotation))
+        if (node.opacity < .999 or node.scale != 1
+                or abs(rotation) > 1e-6):
+            return False
+        if node.kind in ("group", "scene"):
+            return bool(node.children) and self._tile_safe_group(node)
+        if node.kind not in self._TILE_LEAF_KINDS:
+            return False
+        if node.kind == "round" and node.props.get("shadow"):
+            return False
+        if node.kind == "text":
+            block = node.props.get("block")
+            if isinstance(block, TextBlock) and any(
+                    word.effect == "negative"
+                    for line in block.lines for word in line.words):
+                return False
+        return True
+
+    def _tile_bounds(self, node: Node) -> tuple[float, float, float, float] | None:
+        """Union of descendant bounds in the group's local coordinate space,
+        with the same text-ink refinement the leaf path applies."""
+        boxes = []
+        for child in node.children:
+            if child.kind in ("group", "scene"):
+                box = self._tile_bounds(child) if child.children else None
+            else:
+                box = child.base_bounds()
+                if box is not None and child.kind == "text":
+                    block = child.props.get("block")
+                    if isinstance(block, TextBlock):
+                        words = [word for line in block.lines
+                                 for word in line.words]
+                        if words:
+                            x = float(child.props.get("x", 0))
+                            y = float(child.props.get("y", 0))
+                            box = (
+                                min(box[0], x + min(word.x for word in words)),
+                                min(box[1], y),
+                                max(box[2], x + max(word.x + word.width
+                                                    for word in words)),
+                                max(box[3], y + block.height),
+                            )
+            if box is not None:
+                # Descendant dx/dy translate the whole subtree when drawn;
+                # base_bounds does not include them, so shift the box or the
+                # local tile would clip offset children.
+                boxes.append((box[0] + child.dx, box[1] + child.dy,
+                              box[2] + child.dx, box[3] + child.dy))
+        if not boxes:
+            return None
+        return (min(box[0] for box in boxes), min(box[1] for box in boxes),
+                max(box[2] for box in boxes), max(box[3] for box in boxes))
 
     def _apply_node_state(self, layer: Image.Image, node: Node,
                           ox: float, oy: float, progress: float,
@@ -594,10 +692,27 @@ class SceneRenderer:
         normal = self._apply_node_state(normal, node, ox, oy, progress)
         mask_layer = self._apply_node_state(mask_layer, node, ox, oy, progress)
         target.alpha_composite(normal)
-        original = target.convert("RGB")
+        # Restrict the invert/composite/paste to the actual glyph ink. Outside
+        # the union bbox the mask alpha is zero, so compositing is an identity
+        # there — cropping is pixel-identical but avoids three full-canvas
+        # passes on photo scenes.
+        boxes = [box for box in (normal.getbbox(), mask_layer.getbbox())
+                 if box is not None]
+        if not boxes:
+            return
+        pad = 2 * self.ss
+        left = max(0, min(box[0] for box in boxes) - pad)
+        top = max(0, min(box[1] for box in boxes) - pad)
+        right = min(self.W, max(box[2] for box in boxes) + pad)
+        bottom = min(self.H, max(box[3] for box in boxes) + pad)
+        if right <= left or bottom <= top:
+            return
+        original = target.crop((left, top, right, bottom)).convert("RGB")
         negative = ImageOps.invert(original)
-        result = Image.composite(negative, original, mask_layer.getchannel("A"))
-        target.paste(result, (0, 0))
+        result = Image.composite(
+            negative, original,
+            mask_layer.crop((left, top, right, bottom)).getchannel("A"))
+        target.paste(result, (left, top))
 
     def _content(self, target: Image.Image, node: Node,
                  ox: float = 0.0, oy: float = 0.0) -> None:

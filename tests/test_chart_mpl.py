@@ -112,6 +112,40 @@ class DrawerEdgeCases(unittest.TestCase):
             {"label": "A", "value": -10}, {"label": "B", "value": 50}]},
         "donut_many_segments": {"type": "donut", "segments": [
             {"label": f"SEG{i}", "value": 10 + i} for i in range(8)]},
+        "bars_nan_and_inf": {"type": "bars", "bars": [
+            {"label": "A", "value": float("nan")},
+            {"label": "B", "value": float("inf")},
+            {"label": "C", "value": "not-a-number"},
+            {"label": "D", "value": 12}]},
+        "line_nan_points": {"type": "line_chart", "points": [
+            {"label": "A", "value": float("nan")},
+            {"label": "B", "value": 4},
+            {"label": "C", "value": float("-inf")},
+            {"label": "D", "value": 8}]},
+        "heatmap_junk_cells": {"type": "heatmap",
+                              "row_labels": ["A", "B"],
+                              "col_labels": ["X", "Y"],
+                              "values": [["n/a", 2], ["", -1]]},
+        "bullet_nan_target": {"type": "bullet", "metrics": [
+            {"label": "X", "value": float("nan"),
+             "target": float("inf"), "max": float("nan")}]},
+        "funnel_string_values": {"type": "funnel", "stages": [
+            {"label": "A", "value": "lots"}, {"label": "B", "value": None},
+            {"label": "C", "value": 30}]},
+        "stacked_raw_values": {"type": "stacked_bars_100", "categories": [
+            {"id": "a", "label": "ONE", "segments": [
+                {"id": "s1", "label": "X", "value": 30},
+                {"id": "s2", "label": "Y", "value": 70}]},
+            {"id": "b", "label": "TWO", "segments": [
+                {"id": "s1", "label": "X", "value": 55},
+                {"id": "s2", "label": "Y", "value": 45}]}]},
+        "stacked_with_share": {"type": "stacked_bars_100", "categories": [
+            {"id": "a", "label": "ONE", "segments": [
+                {"id": "s1", "label": "X", "value": 1, "share": .5},
+                {"id": "s2", "label": "Y", "value": 1, "share": .5}]}]},
+        "scatter_nan_point": {"type": "scatter", "points": [
+            {"x": float("nan"), "y": 1}, {"x": 1, "y": float("inf")},
+            {"x": 5, "y": 5}], "x_domain": [0, 10], "y_domain": [0, 10]},
     }
 
     def test_all_edge_cases_render(self):

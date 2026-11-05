@@ -19,7 +19,7 @@ SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter",
              "stacked_bars_100"}
 
-_ENGINE_VERSION = 9
+_ENGINE_VERSION = 10
 _SUPERSAMPLE = 2
 
 
@@ -174,6 +174,15 @@ def _draw_card(ax, width: int, height: int, pal: dict) -> None:
     ax.add_patch(card)
 
 
+def _num(value, default: float = 0.0) -> float:
+    """Coerce manifest values to a finite float; NaN/inf/garbage -> default."""
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return default
+    return out if math.isfinite(out) else default
+
+
 def _fmt(value: float, decimals: int = 0) -> str:
     if decimals <= 0:
         return f"{value:,.0f}".replace(",", " ")
@@ -281,7 +290,7 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
     data = scene.get("bars") or scene.get("data") or []
     items = [{"label": str(i.get("label", "")),
-              "value": float(i.get("value", 0) or 0),
+              "value": _num(i.get("value", 0)),
               "suffix": str(i.get("suffix", "")),
               "prefix": str(i.get("prefix", ""))} for i in data]
     if not items:
@@ -339,7 +348,7 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
         return
     import numpy as np
     labels = [str(p.get("label", "")) for p in points]
-    values = [float(p.get("value", 0) or 0) for p in points]
+    values = [_num(p.get("value", 0)) for p in points]
     dom = scene.get("y_domain") or [min(values), max(values) or 1]
     lo, hi = float(dom[0]), float(dom[1])
     if hi <= lo:
@@ -443,7 +452,7 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
     running = 0.0
     for idx, st in enumerate(steps):
         kind = str(st.get("kind", "delta" if 0 < idx < len(steps) - 1 else "total"))
-        val = float(st.get("value", 0) or 0)
+        val = _num(st.get("value", 0))
         if idx == 0:
             start, end = 0.0, val
             running = val
@@ -511,9 +520,9 @@ def _draw_bullet(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
     metrics = scene.get("metrics") or scene.get("items") or []
     items = [{"label": str(m.get("label", "")),
-              "value": float(m.get("value", 0) or 0),
-              "target": float(m.get("target", 0) or 0),
-              "max": float(m.get("max", 1) or 1)} for m in metrics]
+              "value": _num(m.get("value", 0)),
+              "target": _num(m.get("target", 0)),
+              "max": abs(_num(m.get("max"), 1.0)) or 1.0} for m in metrics]
     if not items:
         return
     label_x = w * .24
@@ -561,7 +570,7 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
     matrix = scene.get("values") or []
     if not rows or not cols or not matrix:
         return
-    flat = [float(v) for row in matrix for v in row]
+    flat = [_num(v) for row in matrix for v in row]
     lo, hi = min(flat), max(flat)
     span = max(1e-6, hi - lo)
     left, right = w * .22, PLOT_R * w
@@ -571,8 +580,8 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
     prog = _stagger(t / dur, len(rows) * len(cols), start=.08, step=.012)
     idx = 0
     for r_i, row in enumerate(matrix):
-        for c_i, raw in enumerate(row):
-            val = float(raw)
+        for c_i, raw in enumerate(row[:len(cols)]):
+            val = _num(raw)
             frac = (val - lo) / span
             p = prog[idx]
             idx += 1
@@ -624,7 +633,7 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
     stages = scene.get("stages") or []
     items = [{"label": str(s.get("label", "")),
-              "value": float(s.get("value", 0) or 0)} for s in stages]
+              "value": _num(s.get("value", 0))} for s in stages]
     if len(items) < 2:
         return
     top_val = items[0]["value"] or 1
@@ -636,8 +645,10 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
         p = prog[i]
         share = item["value"] / top_val
         label_txt = f"{item['label']}  ·  {round(share * 100)}%"
-        # keep the bar wide enough for its centered label
-        min_w = max(_text_frac(label_txt, FS_VALUE, w) * 1.12,
+        # keep the bar wide enough for its centered label, capped at the frame
+        fs_lbl = _fit_fs(label_txt, FS_VALUE, (right - left) * .8,
+                         row_h * .6)
+        min_w = max(_text_frac(label_txt, fs_lbl, w) * 1.12,
                     (right - left) * .20)
         bar_w = min(right - left,
                     max(min_w, (right - left) * share)) * p
@@ -653,7 +664,7 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
             alpha=max(.15, .95 - i * .12), zorder=2))
         if p > .7:
             ax.text((left + right) / 2, y + bh / 2, label_txt,
-                    ha="center", va="center", fontsize=FS_VALUE,
+                    ha="center", va="center", fontsize=fs_lbl,
                     color="#ffffff", fontweight="bold")
         if i + 1 < len(items) and p > .9:
             sep_y = top + (i + 1) * row_h
@@ -664,10 +675,10 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
 
 def _draw_diverging(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
-    baseline = float(scene.get("baseline", 0) or 0)
+    baseline = _num(scene.get("baseline", 0))
     raw = scene.get("items") or scene.get("bars") or []
     items = [{"label": str(i.get("label", "")),
-              "delta": float(i.get("value", 0) or 0) - baseline}
+              "delta": _num(i.get("value", 0)) - baseline}
              for i in raw]
     if not items:
         return
@@ -742,7 +753,7 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
     prog = _stagger(t / dur, len(pts), start=.10, step=.05)
     dot_s = (w * .017) ** 2
     for i, pt in enumerate(pts):
-        xv, yv = float(pt.get("x", 0)), float(pt.get("y", 0))
+        xv, yv = _num(pt.get("x", 0)), _num(pt.get("y", 0))
         px = min(right, max(left, left + (xv - x0) / (x1 - x0) * pw))
         py = min(bottom, max(top, bottom - (yv - y0) / (y1 - y0) * ph))
         p = prog[i]
@@ -764,7 +775,7 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                        zorder=1)
     ax.add_patch(track)
     if isinstance(segments, list) and len(segments) >= 2:
-        vals = [max(0.0, float(s.get("value", 0) or 0)) for s in segments]
+        vals = [max(0.0, _num(s.get("value", 0))) for s in segments]
         total = sum(vals) or 1
         prog = _stagger(t / dur, len(segments), start=.12, step=.10)
         start_deg = 90.0
@@ -798,7 +809,7 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                     color=pal["muted"], alpha=la)
     else:
         pct = min(100.0, max(0.0,
-                   float(scene.get("value", scene.get("percent", 0)) or 0)))
+                   _num(scene.get("value", scene.get("percent", 0)))))
         p = _ease_out(min(1.0, max(0.0, (t / dur - .10) / .6)))
         sweep = 360 * (pct / 100.0) * p
         if sweep > .5:
@@ -809,12 +820,12 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
         # center number counts up
     count_p = _ease_out(min(1.0, max(0.0, (t / dur - .15) / .7)))
     if isinstance(segments, list) and len(segments) >= 2:
-        shown = sum(max(0.0, float(s.get("value", 0) or 0))
+        shown = sum(max(0.0, _num(s.get("value", 0)))
                     for s in segments)
         center_fmt = _fmt(shown * count_p)
     else:
         shown = min(100.0, max(0.0,
-                   float(scene.get("value", scene.get("percent", 0)) or 0)))
+                   _num(scene.get("value", scene.get("percent", 0)))))
         center_fmt = f"{shown * count_p:,.0f}%"
     ax.text(cx, cy, center_fmt, ha="center", va="center",
             fontsize=h * .075, color=pal["axis"], fontweight="bold",
@@ -835,7 +846,7 @@ def _draw_stacked(ax, scene, w, h, t, dur, pal, plt):
     for cat in categories:
         raw = [{"label": str(s.get("label", "")),
                 "share": s.get("share"),
-                "value": float(s.get("value", 0) or 0)}
+                "value": _num(s.get("value", 0))}
                for s in (cat.get("segments") or [])]
         total = sum(s["value"] for s in raw)
         segs = []

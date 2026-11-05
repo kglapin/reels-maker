@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-26",
+  "updated": "2026-11-24",
   "assets": {
     "media/stock/solar-field-synthetic.png": {
       "type": "clean_source",
@@ -31,6 +31,11 @@
       "type": "clean_source",
       "burned_in": [],
       "review_note": "Generated locally by tools/generate_motion_demo_assets.py; no third-party footage, logos, captions or claims. Synthetic motion background only."
+    },
+    "media/audio/synthetic-showcase-bed.mp3": {
+      "type": "clean_source",
+      "burned_in": [],
+      "review_note": "Generated locally by a deterministic sine/pad script then encoded to MP3 (no third-party audio); synthetic music bed for capability demo only."
     }
   }
 }

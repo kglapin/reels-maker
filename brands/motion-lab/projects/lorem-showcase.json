@@ -1,0 +1,801 @@
+{
+ "brand": "motion-lab",
+ "style": "editorial-premium",
+ "design_overrides": {
+  "body": 38
+ },
+ "video": {
+  "width": 720,
+  "height": 1280,
+  "fps": 30
+ },
+ "export": {
+  "profile": "review",
+  "codec": "libx264",
+  "crf": 20,
+  "preset": "medium"
+ },
+ "name": "motion-lab-lorem-showcase",
+ "scenes": [
+  {
+   "type": "statement",
+   "duration": 3.6,
+   "headline": "LOREM IPSUM",
+   "subtitle": "DOLOR SIT AMET · CAPABILITY REEL",
+   "decor": false,
+   "theme": "dark",
+   "typography_motion": "vertical-drift"
+  },
+  {
+   "type": "statement",
+   "duration": 3.6,
+   "headline": "CONSECTETUR",
+   "subtitle": "ADIPISCING ELIT · TYPOGRAPHY",
+   "decor": false,
+   "theme": "dark",
+   "typography_motion": "curtain-mask",
+   "transition_out": {
+    "type": "diagonal-wipe",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "spotlight",
+   "duration": 3.8,
+   "headline": "SED DO EIUSMOD",
+   "subtitle": "TEMPOR MAGNA ALIQUA",
+   "decor": false,
+   "theme": "dark",
+   "photo": "media/stock/solar-field-synthetic.png",
+   "photo_time": 0.0,
+   "video_layer": {
+    "path": "media/stock/energy-orbit-synthetic.mp4",
+    "x": 60,
+    "y": 700,
+    "w": 600,
+    "h": 320,
+    "mask": "rounded",
+    "radius": 20
+   },
+   "typography_motion": "pop-settle"
+  },
+  {
+   "type": "statement",
+   "duration": 3.6,
+   "decor": false,
+   "theme": "dark",
+   "headline": {
+    "runs": [
+     {
+      "text": "LOREM ",
+      "scale": 1.0,
+      "weight": "regular",
+      "color": "#F2F5F0"
+     },
+     {
+      "text": "IPSUM",
+      "scale": 1.15,
+      "weight": "bold",
+      "color": "#FFFFFF",
+      "effect": "negative"
+     }
+    ]
+   },
+   "subtitle": "NEGATIVE TEXT · INVERTED GLYPHS",
+   "typography_motion": "scale-focus"
+  },
+  {
+   "type": "announcement",
+   "duration": 3.6,
+   "headline": "CALENDAR",
+   "subtitle": "SCENE COMPOSITION",
+   "decor": false,
+   "theme": "dark",
+   "kicker": "DEMO",
+   "day": "24",
+   "calendar_label": "LOREM",
+   "typography_motion": "horizontal-wipe",
+   "transition_out": {
+    "type": "diagonal-wipe",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "deadline",
+   "duration": 3.6,
+   "headline": "TEMPORAL DESIGN",
+   "subtitle": "DEADLINE / TIMELINE",
+   "decor": false,
+   "theme": "dark",
+   "kicker": "",
+   "date": "24.11.2026",
+   "milestones": [
+    "DOLOR",
+    "SIT",
+    "AMET"
+   ],
+   "typography_motion": "lateral-slide"
+  },
+  {
+   "type": "urgency",
+   "duration": 3.6,
+   "headline": "PACE WITH PURPOSE",
+   "subtitle": "URGENCY WITHOUT CHAOS",
+   "decor": false,
+   "theme": "dark",
+   "typography_motion": "elastic-scale",
+   "transition_out": {
+    "type": "radial-reveal",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "quote",
+   "duration": 3.6,
+   "headline": "ONE IDEA PER SHOT",
+   "subtitle": "LOREM · CAPABILITY DEMO",
+   "decor": false,
+   "theme": "dark",
+   "typography_motion": "optical-tracking"
+  },
+  {
+   "type": "amount",
+   "duration": 3.6,
+   "headline": "COUNTERS + UNITS",
+   "subtitle": "ILLUSTRATIVE VALUE",
+   "decor": false,
+   "theme": "dark",
+   "value": 12800,
+   "kicker": "LOREM",
+   "visual": "battery",
+   "format": {
+    "suffix": " kWh",
+    "decimals": 0
+   },
+   "typography_motion": "stagger-cascade",
+   "transition_out": {
+    "type": "whip-pan",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "breakdown",
+   "duration": 8.0,
+   "headline": "COMPOSITION",
+   "subtitle": "MULTI-ROW VALUE BREAKDOWN",
+   "decor": false,
+   "theme": "dark",
+   "items": [
+    {
+     "label": "EIUSMOD",
+     "value": 5200
+    },
+    {
+     "label": "ULLAMCO",
+     "value": 3100
+    },
+    {
+     "label": "ADIPISCING",
+     "value": 4500
+    }
+   ],
+   "total": 12800,
+   "typography_motion": "depth-focus",
+   "allowed_overlaps": [
+    [
+     "kicker",
+     "total"
+    ]
+   ]
+  },
+  {
+   "type": "comparison",
+   "duration": 3.8,
+   "headline": "BEFORE / AFTER",
+   "subtitle": "COMPARISON CARDS",
+   "decor": false,
+   "theme": "dark",
+   "columns": [
+    {
+     "label": "BASELINE",
+     "value": 5400,
+     "suffix": " kWh"
+    },
+    {
+     "label": "OPTIMIZED",
+     "value": 9200,
+     "suffix": " kWh"
+    }
+   ],
+   "transition_out": {
+    "type": "zoom-through",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "donut",
+   "duration": 3.8,
+   "headline": "PROPORTION",
+   "subtitle": "SYNTHETIC SHARE",
+   "decor": false,
+   "theme": "dark",
+   "value": 68,
+   "suffix": "%",
+   "allowed_overlaps": [
+    [
+     "visual/chart",
+     "visual/percent"
+    ],
+    [
+     "visual/chart",
+     "visual/chart-label"
+    ]
+   ]
+  },
+  {
+   "type": "stats",
+   "duration": 3.8,
+   "headline": "MULTI-METRIC GRID",
+   "subtitle": "SYNTHETIC SAMPLE VALUES",
+   "decor": false,
+   "theme": "dark",
+   "stats": [
+    {
+     "label": "OUTPUT",
+     "value": 128,
+     "suffix": " kWh"
+    },
+    {
+     "label": "STORAGE",
+     "value": 64,
+     "suffix": " kWh"
+    },
+    {
+     "label": "UPTIME",
+     "value": 99,
+     "suffix": "%"
+    },
+    {
+     "label": "GROWTH",
+     "value": 18,
+     "suffix": "%"
+    }
+   ],
+   "typography_motion": "word-cascade"
+  },
+  {
+   "type": "checklist",
+   "duration": 3.8,
+   "headline": "CHECKLIST",
+   "subtitle": "STAGGERED ITEMS",
+   "decor": false,
+   "theme": "dark",
+   "items": [
+    "LOREM",
+    "IPSUM",
+    "DOLOR",
+    "SIT AMET"
+   ],
+   "typography_motion": "tracking-in"
+  },
+  {
+   "type": "cta",
+   "duration": 3.6,
+   "headline": "READY WHEN YOU ARE",
+   "subtitle": "LOREM IPSUM DEMO",
+   "decor": false,
+   "theme": "dark",
+   "button": "EXPLORE",
+   "typography_motion": "pop-settle",
+   "transition_out": {
+    "type": "color-takeover",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "energy",
+   "duration": 3.6,
+   "headline": "ENERGY FLOW",
+   "subtitle": "BUILT-IN VECTOR ICONS",
+   "decor": false,
+   "theme": "dark"
+  },
+  {
+   "type": "photo_carousel",
+   "duration": 4.0,
+   "headline": "MEDIA CAROUSEL",
+   "subtitle": "GENERATED STILL IMAGES",
+   "decor": false,
+   "theme": "dark",
+   "carousel": {
+    "direction": "horizontal",
+    "advance_seconds": 1.0,
+    "items": [
+     {
+      "image": "media/stock/solar-field-synthetic.png"
+     },
+     {
+      "image": "media/stock/battery-room-synthetic.png"
+     },
+     {
+      "image": "media/stock/wind-farm-synthetic.png"
+     },
+     {
+      "image": "media/stock/city-grid-synthetic.png"
+     }
+    ]
+   },
+   "transition_out": {
+    "type": "split-slide",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "photo_marquee",
+   "duration": 4.0,
+   "headline": "PHOTO MARQUEE",
+   "subtitle": "ALTERNATING ROW CHOREOGRAPHY",
+   "decor": false,
+   "theme": "dark",
+   "carousel": {
+    "items": [
+     {
+      "image": "media/stock/solar-field-synthetic.png"
+     },
+     {
+      "image": "media/stock/battery-room-synthetic.png"
+     },
+     {
+      "image": "media/stock/wind-farm-synthetic.png"
+     },
+     {
+      "image": "media/stock/city-grid-synthetic.png"
+     }
+    ]
+   }
+  },
+  {
+   "type": "polaroid_burst",
+   "duration": 4.0,
+   "headline": "POLAROID BURST",
+   "subtitle": "FRAME-QUANTIZED ENTRIES",
+   "decor": false,
+   "theme": "dark",
+   "polaroid_burst": {
+    "photos": [
+     "media/stock/solar-field-synthetic.png",
+     "media/stock/battery-room-synthetic.png",
+     "media/stock/wind-farm-synthetic.png",
+     "media/stock/city-grid-synthetic.png"
+    ],
+    "seed": 19,
+    "interval": 0.24,
+    "entry_duration": 0.2,
+    "flash_duration": 0.1,
+    "hold_after": 0.5
+   },
+   "transition_out": {
+    "type": "spin-zoom",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "table",
+   "duration": 3.8,
+   "headline": "DATA TABLE",
+   "subtitle": "ROW IDS + REORDER + CELL CHANGES",
+   "decor": false,
+   "theme": "dark",
+   "columns": [
+    {
+     "id": "system",
+     "label": "SYSTEM",
+     "width": 0.58,
+     "align": "left"
+    },
+    {
+     "id": "value",
+     "label": "VALUE",
+     "width": 0.42,
+     "align": "right"
+    }
+   ],
+   "rows": [
+    {
+     "id": "r1",
+     "values": {
+      "system": "ALPHA",
+      "value": "42 kWh"
+     }
+    },
+    {
+     "id": "r2",
+     "values": {
+      "system": "BETA",
+      "value": "28 kWh"
+     }
+    },
+    {
+     "id": "r3",
+     "values": {
+      "system": "GAMMA",
+      "value": "14 kWh"
+     }
+    }
+   ],
+   "highlight_rows": [
+    "r2"
+   ],
+   "animate_from_row_ids": [
+    "r3",
+    "r1",
+    "r2"
+   ]
+  },
+  {
+   "type": "bars",
+   "duration": 3.8,
+   "headline": "BAR CHART",
+   "subtitle": "ANIMATED RANKING",
+   "decor": false,
+   "theme": "dark",
+   "bars": [
+    {
+     "label": "ALPHA",
+     "value": 82
+    },
+    {
+     "label": "BETA",
+     "value": 64
+    },
+    {
+     "label": "GAMMA",
+     "value": 31
+    }
+   ],
+   "data_order": "descending",
+   "transition_out": {
+    "type": "pixel-dissolve",
+    "duration": 0.4,
+    "color": "#42D6A4",
+    "anchor": [
+     0.5,
+     0.5
+    ],
+    "direction": "left"
+   }
+  },
+  {
+   "type": "line_chart",
+   "duration": 3.8,
+   "headline": "LINE + AXES",
+   "subtitle": "SYNTHETIC DAILY OUTPUT",
+   "decor": false,
+   "theme": "dark",
+   "x_axis_type": "category",
+   "x_axis_label": "DAY",
+   "y_axis_label": "ENERGY (kWh)",
+   "y_domain": [
+    0,
+    100
+   ],
+   "points": [
+    {
+     "label": "MON",
+     "value": 24
+    },
+    {
+     "label": "TUE",
+     "value": 48
+    },
+    {
+     "label": "WED",
+     "value": 41
+    },
+    {
+     "label": "THU",
+     "value": 78
+    },
+    {
+     "label": "FRI",
+     "value": 68
+    }
+   ]
+  },
+  {
+   "type": "waterfall",
+   "duration": 3.8,
+   "headline": "WATERFALL",
+   "subtitle": "TOTAL CONSERVATION CHECK",
+   "decor": false,
+   "theme": "dark",
+   "steps": [
+    {
+     "id": "opening",
+     "label": "START",
+     "value": 40,
+     "kind": "opening"
+    },
+    {
+     "id": "gain",
+     "label": "GAIN",
+     "value": 24,
+     "kind": "delta"
+    },
+    {
+     "id": "use",
+     "label": "USE",
+     "value": -9,
+     "kind": "delta"
+    },
+    {
+     "id": "closing",
+     "label": "END",
+     "value": 55,
+     "kind": "total"
+    }
+   ]
+  },
+  {
+   "type": "bullet",
+   "duration": 3.8,
+   "headline": "TARGET TRACKING",
+   "subtitle": "BULLET CHART",
+   "decor": false,
+   "theme": "dark",
+   "metrics": [
+    {
+     "label": "OUTPUT",
+     "value": 78,
+     "target": 90,
+     "max": 100
+    },
+    {
+     "label": "STORAGE",
+     "value": 56,
+     "target": 70,
+     "max": 100
+    }
+   ]
+  },
+  {
+   "type": "heatmap",
+   "duration": 3.8,
+   "headline": "HEATMAP",
+   "subtitle": "SYNTHETIC HOURLY PROFILE",
+   "decor": false,
+   "theme": "dark",
+   "row_labels": [
+    "MON",
+    "TUE",
+    "WED",
+    "THU"
+   ],
+   "col_labels": [
+    "AM",
+    "NOON",
+    "PM"
+   ],
+   "values": [
+    [
+     16,
+     45,
+     28
+    ],
+    [
+     22,
+     64,
+     32
+    ],
+    [
+     30,
+     82,
+     41
+    ],
+    [
+     18,
+     58,
+     35
+    ]
+   ]
+  },
+  {
+   "type": "funnel",
+   "duration": 3.8,
+   "headline": "FUNNEL",
+   "subtitle": "MONOTONIC STAGE VALUES",
+   "decor": false,
+   "theme": "dark",
+   "stages": [
+    {
+     "id": "s1",
+     "label": "VISITS",
+     "value": 1000
+    },
+    {
+     "id": "s2",
+     "label": "INTEREST",
+     "value": 620
+    },
+    {
+     "id": "s3",
+     "label": "REQUESTS",
+     "value": 240
+    },
+    {
+     "id": "s4",
+     "label": "CONVERTED",
+     "value": 82
+    }
+   ]
+  },
+  {
+   "type": "chart_morph",
+   "duration": 8.0,
+   "headline": "TABLE → BAR MORPH",
+   "subtitle": "SHARED STABLE IDS",
+   "decor": false,
+   "theme": "dark",
+   "from_type": "table",
+   "transition_duration": 1.5,
+   "items": [
+    {
+     "id": "solar",
+     "label": "LOREM",
+     "from_index": 2,
+     "to_index": 0,
+     "from_value": 30,
+     "to_value": 82
+    },
+    {
+     "id": "store",
+     "label": "EIUSMOD",
+     "from_index": 1,
+     "to_index": 1,
+     "from_value": 55,
+     "to_value": 64
+    },
+    {
+     "id": "grid",
+     "label": "AMET",
+     "from_index": 0,
+     "to_index": 2,
+     "from_value": 90,
+     "to_value": 31
+    }
+   ],
+   "allowed_overlaps": [
+    [
+     "morph-row-0/morph-label-solar",
+     "morph-row-2/morph-label-grid"
+    ],
+    [
+     "morph-row-0/morph-val-solar",
+     "morph-row-2/morph-val-grid"
+    ],
+    [
+     "morph-row-1/morph-val-store",
+     "morph-row-2/morph-val-grid"
+    ]
+   ]
+  },
+  {
+   "type": "product_3d",
+   "duration": 4.0,
+   "headline": "PROCEDURAL 3D",
+   "subtitle": "SYNTHETIC PRISM + LIGHT RIG",
+   "decor": false,
+   "theme": "dark",
+   "product_3d": {
+    "mesh_path": "procedural-demo.obj",
+    "camera": {
+     "focal_length_mm": 55,
+     "distance": 3.8,
+     "yaw_deg": -22,
+     "turntable_deg_per_s": 12
+    },
+    "lighting": {
+     "key_light": {
+      "intensity": 1.0
+     },
+     "fill_light": {
+      "intensity": 0.45
+     },
+     "rim_light": {
+      "intensity": 0.7
+     }
+    },
+    "material": {
+     "color": "#42D6A4"
+    }
+   }
+  },
+  {
+   "type": "spotlight",
+   "duration": 3.8,
+   "headline": "MOTION OVER FOOTAGE",
+   "subtitle": "GENERATED CLIP",
+   "decor": false,
+   "theme": "dark",
+   "photo": "media/stock/wind-farm-synthetic.png",
+   "photo_time": 0.0,
+   "video_layer": {
+    "path": "media/stock/grid-flow-synthetic.mp4",
+    "x": 60,
+    "y": 700,
+    "w": 600,
+    "h": 320,
+    "mask": "rounded",
+    "radius": 18
+   }
+  },
+  {
+   "type": "statement",
+   "duration": 3.6,
+   "headline": "FINIS",
+   "subtitle": "LOREM IPSUM · END OF REEL",
+   "decor": false,
+   "theme": "dark",
+   "typography_motion": "scale-focus"
+  }
+ ],
+ "audio": {
+  "music": {
+   "file": "media/audio/synthetic-showcase-bed.mp3",
+   "volume": 0.5,
+   "fade_out": 2.0,
+   "ducking": "off"
+  }
+ },
+ "metadata": {
+  "description": "Synthetic capability reel: lorem ipsum copy, generated media, procedural music bed."
+ }
+}

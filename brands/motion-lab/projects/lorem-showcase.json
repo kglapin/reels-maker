@@ -260,7 +260,26 @@
      "visual/chart",
      "visual/chart-label"
     ]
-   ]
+   ],
+   "segments": [
+    {
+     "label": "ALPHA",
+     "value": 46
+    },
+    {
+     "label": "BETA",
+     "value": 30
+    },
+    {
+     "label": "GAMMA",
+     "value": 16
+    },
+    {
+     "label": "DELTA",
+     "value": 8
+    }
+   ],
+   "label": "MIX"
   },
   {
    "type": "stats",

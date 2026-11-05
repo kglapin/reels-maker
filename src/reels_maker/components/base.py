@@ -272,7 +272,8 @@ def animate_progress(node: Node, onset: float, duration: float,
 
 def stagger_children(group: Node, onset: float, duration: float, *,
                      step: float = 0.05, dy: float = 8.0,
-                     easing: str = "out-cubic") -> Node:
+                     easing: str = "out-cubic",
+                     exclude_kinds: tuple = ()) -> Node:
     """Fade-and-rise a chart's leaf children in sequence.
 
     shadcn/Tremor-style staggered assembly: each mark, label and rule enters
@@ -281,7 +282,8 @@ def stagger_children(group: Node, onset: float, duration: float, *,
     choreography); each child's resting opacity/dy is preserved as the track
     endpoint.
     """
-    leaves = [child for child in group.children if child.kind != "group"]
+    leaves = [child for child in group.children
+              if child.kind != "group" and child.kind not in exclude_kinds]
     count = len(leaves)
     if count == 0 or duration <= 0:
         return group
@@ -308,13 +310,15 @@ def stagger_children(group: Node, onset: float, duration: float, *,
 
 
 def animate_chart_stagger(plan: "BuiltScene", role: str = "chart",
-                          *, lead: float = .05) -> "BuiltScene":
+                          *, lead: float = .05,
+                          exclude_kinds: tuple = ()) -> "BuiltScene":
     """Apply ``stagger_children`` to a built chart group after ``_finish``."""
     entry = plan.choreography.entries.get(role)
     group = plan.elements.get(role)
     if entry is not None and group is not None:
         stagger_children(group, entry.onset + lead,
-                         max(.3, entry.duration * .85))
+                         max(.3, entry.duration * .85),
+                         exclude_kinds=exclude_kinds)
     return plan
 
 

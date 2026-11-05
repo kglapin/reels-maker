@@ -260,19 +260,83 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
     }
     radius = min(chart.w, chart.h) * .36
     cx, cy = chart.center_x, chart.center_y
-    from .chart_style import chart_colors
+    from .chart_style import chart_colors, series_color
     chart_theme = chart_colors(theme)
     track = Node(kind="ring", role="donut-track",
                  props={"cx": cx, "cy": cy, "r": radius,
                         "width": max(8, radius * .20),
                         "color": chart_theme["hairline"]},
                  opacity=.8)
-    ring = Node(kind="ring", role="chart",
+    ring_children: list[Node] = [track]
+    segments = scene.get("segments")
+    segment_nodes: list[Node] = []
+    if isinstance(segments, list) and 2 <= len(segments) <= 6:
+        # Multi-segment donut: each slice is a ring arc sweeping its share of
+        # the circle from the shared -90° start, in series colors.
+        parsed_segments = []
+        for seg_index, seg in enumerate(segments):
+            if not isinstance(seg, dict):
+                raise ValueError("donut segments must be objects")
+            seg_value = safe_number(seg.get("value"))
+            if seg_value <= 0:
+                raise ValueError("donut segment values must be positive")
+            parsed_segments.append({
+                "label": str(seg.get("label") or f"Segment {seg_index + 1}"),
+                "value": seg_value,
+            })
+        seg_total = sum(item["value"] for item in parsed_segments)
+        cumulative = 0.0
+        for seg_index, seg in enumerate(parsed_segments):
+            share = seg["value"] / seg_total
+            seg_node = Node(
+                kind="ring", role=f"donut-seg-{seg_index}",
                 props={"cx": cx, "cy": cy, "r": radius,
                        "width": max(8, radius * .20),
-                       "color": chart_theme["accent"],
-                       "progress": 0.0, "start_angle": -90},
-                qa_class="control")
+                       "color": series_color(chart_theme, seg_index),
+                       "progress": 0.0,
+                       "start_angle": -90 + 360 * cumulative},
+                qa_class="control",
+                meta={"stable_row_id": seg["label"], "share": share})
+            seg_node.track("prop.progress", Track([
+                Keyframe(0.0, 0.0, "linear"),
+                Keyframe(0.4 + seg_index * .15, 0.0, "linear"),
+                Keyframe(1.6 + seg_index * .15, share, "out-quart"),
+            ]))
+            ring_children.append(seg_node)
+            segment_nodes.append(seg_node)
+            cumulative += share
+        # Compact legend under the ring.
+        legend_top = cy + radius + ctx.tokens.px(18)
+        legend_row = ctx.tokens.px(30)
+        legend_w = chart.w / len(parsed_segments)
+        for seg_index, seg in enumerate(parsed_segments):
+            lx = chart.x + seg_index * legend_w
+            ring_children.append(Node(
+                kind="round", role=f"donut-legend-mark-{seg_index}",
+                props={"x": lx + legend_w * .5 - ctx.tokens.px(6),
+                       "y": legend_top + ctx.tokens.px(4),
+                       "w": ctx.tokens.px(12), "h": ctx.tokens.px(12),
+                       "r": ctx.tokens.px(3),
+                       "fill": series_color(chart_theme, seg_index)},
+                qa_class="decor"))
+            legend_lbl = text_node(
+                f"donut-legend-{seg_index}", seg["label"],
+                TextStyle(max(11, ctx.tokens.px(14)), chart_theme["muted"],
+                          "regular", align="center", line_height=1.0),
+                Rect(lx, legend_top + ctx.tokens.px(18), legend_w,
+                     ctx.tokens.px(24)),
+                ctx.fonts, align="center", valign="center", fit=True)
+            if legend_lbl:
+                ring_children.append(legend_lbl)
+        ring = segment_nodes[0] if segment_nodes else None
+    else:
+        ring = Node(kind="ring", role="chart",
+                    props={"cx": cx, "cy": cy, "r": radius,
+                           "width": max(8, radius * .20),
+                           "color": chart_theme["accent"],
+                           "progress": 0.0, "start_angle": -90},
+                    qa_class="control")
+        ring_children.append(ring)
     center_value = number_node(
         "percent", percent, Rect(cx - radius * .7, cy - radius * .30,
                                  radius * 1.4, radius * .56),
@@ -285,7 +349,7 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
         Rect(cx - radius * .8, cy + radius * .34, radius * 1.6,
              radius * .30), ctx.fonts, align="center", valign="center")
     visual = Node(kind="group", role="visual",
-                  children=[track, ring, center_value, label],
+                  children=[*ring_children, center_value, label],
                   qa_class="control")
     elements["visual"] = visual
     if subtitle:
@@ -300,10 +364,21 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
                    meta={"component": "donut", "value": percent})
     entry = plan.choreography.entries.get("visual")
     if entry:
+        segment_index = 0
         for child in plan.elements["visual"].children:
             if child.role == "chart":
                 animate_progress(child, entry.onset, entry.duration * 1.5,
                                  easing="out-quart")
+            elif child.role.startswith("donut-seg-"):
+                share = float(child.meta.get("share", 1.0))
+                onset = entry.onset + .15 + segment_index * .18
+                child.track("prop.progress", Track([
+                    Keyframe(0.0, 0.0, "linear"),
+                    Keyframe(onset, 0.0, "linear"),
+                    Keyframe(min(ctx.duration, onset + entry.duration * .9),
+                             share, "out-quart"),
+                ]))
+                segment_index += 1
             elif child.role == "percent":
                 animate_counter(child, percent, entry.onset,
                                 entry.duration * 1.5)

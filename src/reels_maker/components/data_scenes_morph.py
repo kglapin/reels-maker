@@ -87,11 +87,22 @@ def build_chart_morph(ctx: SceneContext, scene: dict) -> BuiltScene:
             Rect(chart.x, y, chart.w * .58, row_h * .42),
             ctx.fonts, align="left", valign="center", fit=True,
         )
+        bar_h = max(ctx.tokens.px(18), row_h * .38)
+        bar_y = y + row_h * .48
+        # Quiet full-width track behind the morphing bar — the settled state
+        # reads as a proper bar chart instead of a floating pill.
+        track_fill = mix(theme["ink"], theme["base"], .10)
+        track_node = Node(
+            kind="round", role=f"morph-track-{item['id']}",
+            props={"x": chart.x, "y": bar_y, "w": chart.w,
+                   "h": bar_h, "r": bar_h / 2, "fill": track_fill},
+            qa_class="decor",
+        )
         bar_node = Node(
             kind="round", role=f"morph-bar-{item['id']}",
-            props={"x": chart.x, "y": y + row_h * .48,
-                   "w": w_to, "h": max(ctx.tokens.px(18), row_h * .38),
-                   "r": ctx.tokens.px(8), "fill": theme["accent"]},
+            props={"x": chart.x, "y": bar_y,
+                   "w": w_to, "h": bar_h,
+                   "r": bar_h / 2, "fill": theme["accent"]},
             qa_class="decor",
         )
         bar_node.track("prop.w", Track([
@@ -113,7 +124,7 @@ def build_chart_morph(ctx: SceneContext, scene: dict) -> BuiltScene:
         ]))
         row_group = Node(
             kind="group", role=f"morph-row-{to_idx}",
-            children=[c for c in (lbl, bar_node, val_node) if c],
+            children=[c for c in (lbl, track_node, bar_node, val_node) if c],
             qa_class="control",
             meta={"stable_row_id": item["id"]},
         )

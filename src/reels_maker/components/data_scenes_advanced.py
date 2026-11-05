@@ -416,6 +416,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "label": str(st["label"]).strip(), "value": val})
     top_val = parsed[0]["value"]
     chart = layout.region("chart")
+    colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .08, chart.y + chart.h * .08,
                 chart.w * .84, chart.h * .80)
     row_h = plot.h / len(parsed)
@@ -446,6 +447,17 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
         )
         if lbl:
             children.append(lbl)
+        # Hairline rule between stages — quiet funnel segmentation instead of
+        # floating pills.
+        if idx + 1 < len(parsed):
+            sep_y = y + row_h
+            children.append(Node(
+                kind="line", role=f"funnel-sep-{idx}",
+                props={"x1": x_bar, "y1": sep_y,
+                       "x2": x_bar + w_bar, "y2": sep_y,
+                       "width": max(1.0, ctx.tokens.px(1)),
+                       "color": colors["hairline"]},
+                qa_class="decor"))
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
     plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
@@ -540,7 +552,9 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(link_node)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "sankey", "links": parsed_links,
                          "conserved_total": total_in})
+    # Nodes/labels assemble in stagger; links keep their own draw-on.
+    return animate_chart_stagger(plan, exclude_kinds=("path",))

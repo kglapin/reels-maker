@@ -23,6 +23,7 @@ from .geometry import (
     _text_ink_safe_area, _vertical_reels_content_zone, sample_geometry_frames,
 )
 from .models import Issue
+from .motion import audit_motion
 
 MIN_HOLD = .42
 MAX_READING_CPS = 22.0
@@ -179,6 +180,7 @@ def audit(project, built_scenes, timeline: Timeline, *,
             })
         issues.extend(scene_issues)
 
+    issues.extend(audit_motion(built_scenes, project))
     for finding in audit_typography_tokens(project.tokens):
         issues.append(Issue(
             finding["code"], finding["severity"], finding["message"],

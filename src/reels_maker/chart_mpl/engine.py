@@ -19,7 +19,7 @@ SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter",
              "stacked_bars_100"}
 
-_ENGINE_VERSION = 10
+_ENGINE_VERSION = 11
 _SUPERSAMPLE = 2
 
 
@@ -106,7 +106,9 @@ def _setup_matplotlib(fonts: dict):
             except Exception:
                 continue
     if families:
-        plt.rcParams["font.family"] = families[0]
+        # Pass the deduped family list so fontweight="bold" can resolve the
+        # bold face registered from the bold TTF, not just the first family.
+        plt.rcParams["font.family"] = list(dict.fromkeys(families))
     plt.rcParams.update({
         "text.parse_math": False,
         "axes.unicode_minus": False,

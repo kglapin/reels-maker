@@ -258,6 +258,23 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center"),
     }
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart, role="visual")
+        if seq is not None:
+            elements["visual"] = seq
+            if subtitle:
+                elements["body"] = text_node(
+                    "body", subtitle, body_style, layout.region("body"),
+                    ctx.fonts, align="center", valign="center")
+            specs = [_spec("headline", 6), _spec("visual", 10, "display",
+                                                 hint="scale-focus"),
+                     _spec("body", 4)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "donut", "engine": "mpl",
+                                 "value": percent})
     radius = min(chart.w, chart.h) * .40
     cx, cy = chart.center_x, chart.center_y
     from .chart_style import chart_colors, series_color

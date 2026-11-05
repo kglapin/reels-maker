@@ -1,0 +1,368 @@
+{
+ "brand": "motion-lab",
+ "style": "editorial-premium",
+ "design_overrides": {
+  "body": 38
+ },
+ "video": {
+  "width": 720,
+  "height": 1280,
+  "fps": 30
+ },
+ "export": {
+  "profile": "review",
+  "codec": "libx264",
+  "crf": 20,
+  "preset": "medium"
+ },
+ "name": "motion-lab-chart-preview-mpl",
+ "audio": {
+  "music": {
+   "file": "media/audio/synthetic-showcase-bed.mp3",
+   "volume": 0.5,
+   "fade_out": 2.0,
+   "ducking": "off"
+  }
+ },
+ "metadata": {
+  "description": "Synthetic capability reel: lorem ipsum copy, generated media, procedural music bed."
+ },
+ "scenes": [
+  {
+   "type": "donut",
+   "duration": 3.8,
+   "headline": "PROPORTION",
+   "subtitle": "SYNTHETIC SHARE",
+   "decor": false,
+   "theme": "dark",
+   "value": 68,
+   "suffix": "%",
+   "allowed_overlaps": [
+    [
+     "visual/chart",
+     "visual/percent"
+    ],
+    [
+     "visual/chart",
+     "visual/chart-label"
+    ]
+   ],
+   "segments": [
+    {
+     "label": "ALPHA",
+     "value": 46
+    },
+    {
+     "label": "BETA",
+     "value": 30
+    },
+    {
+     "label": "GAMMA",
+     "value": 16
+    },
+    {
+     "label": "DELTA",
+     "value": 8
+    }
+   ],
+   "label": "MIX",
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "table",
+   "duration": 3.8,
+   "headline": "DATA TABLE",
+   "subtitle": "ROW IDS + REORDER + CELL CHANGES",
+   "decor": false,
+   "theme": "dark",
+   "columns": [
+    {
+     "id": "system",
+     "label": "SYSTEM",
+     "width": 0.58,
+     "align": "left"
+    },
+    {
+     "id": "value",
+     "label": "VALUE",
+     "width": 0.42,
+     "align": "right"
+    }
+   ],
+   "rows": [
+    {
+     "id": "r1",
+     "values": {
+      "system": "ALPHA",
+      "value": "42 kWh"
+     }
+    },
+    {
+     "id": "r2",
+     "values": {
+      "system": "BETA",
+      "value": "28 kWh"
+     }
+    },
+    {
+     "id": "r3",
+     "values": {
+      "system": "GAMMA",
+      "value": "14 kWh"
+     }
+    }
+   ],
+   "highlight_rows": [
+    "r2"
+   ],
+   "animate_from_row_ids": [
+    "r3",
+    "r1",
+    "r2"
+   ]
+  },
+  {
+   "type": "bars",
+   "duration": 3.8,
+   "headline": "BAR CHART",
+   "subtitle": "ANIMATED RANKING",
+   "decor": false,
+   "theme": "dark",
+   "bars": [
+    {
+     "label": "ALPHA",
+     "value": 82
+    },
+    {
+     "label": "BETA",
+     "value": 64
+    },
+    {
+     "label": "GAMMA",
+     "value": 31
+    }
+   ],
+   "data_order": "descending",
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "line_chart",
+   "duration": 3.8,
+   "headline": "LINE + AXES",
+   "subtitle": "SYNTHETIC DAILY OUTPUT",
+   "decor": false,
+   "theme": "dark",
+   "x_axis_type": "category",
+   "x_axis_label": "DAY",
+   "y_axis_label": "ENERGY (kWh)",
+   "y_domain": [
+    0,
+    100
+   ],
+   "points": [
+    {
+     "label": "MON",
+     "value": 24
+    },
+    {
+     "label": "TUE",
+     "value": 48
+    },
+    {
+     "label": "WED",
+     "value": 41
+    },
+    {
+     "label": "THU",
+     "value": 78
+    },
+    {
+     "label": "FRI",
+     "value": 68
+    }
+   ],
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "waterfall",
+   "duration": 3.8,
+   "headline": "WATERFALL",
+   "subtitle": "TOTAL CONSERVATION CHECK",
+   "decor": false,
+   "theme": "dark",
+   "steps": [
+    {
+     "id": "opening",
+     "label": "START",
+     "value": 40,
+     "kind": "opening"
+    },
+    {
+     "id": "gain",
+     "label": "GAIN",
+     "value": 24,
+     "kind": "delta"
+    },
+    {
+     "id": "use",
+     "label": "USE",
+     "value": -9,
+     "kind": "delta"
+    },
+    {
+     "id": "closing",
+     "label": "END",
+     "value": 55,
+     "kind": "total"
+    }
+   ],
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "bullet",
+   "duration": 3.8,
+   "headline": "TARGET TRACKING",
+   "subtitle": "BULLET CHART",
+   "decor": false,
+   "theme": "dark",
+   "metrics": [
+    {
+     "label": "OUTPUT",
+     "value": 78,
+     "target": 90,
+     "max": 100
+    },
+    {
+     "label": "STORAGE",
+     "value": 56,
+     "target": 70,
+     "max": 100
+    }
+   ],
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "heatmap",
+   "duration": 3.8,
+   "headline": "HEATMAP",
+   "subtitle": "SYNTHETIC HOURLY PROFILE",
+   "decor": false,
+   "theme": "dark",
+   "row_labels": [
+    "MON",
+    "TUE",
+    "WED",
+    "THU"
+   ],
+   "col_labels": [
+    "AM",
+    "NOON",
+    "PM"
+   ],
+   "values": [
+    [
+     16,
+     45,
+     28
+    ],
+    [
+     22,
+     64,
+     32
+    ],
+    [
+     30,
+     82,
+     41
+    ],
+    [
+     18,
+     58,
+     35
+    ]
+   ],
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "funnel",
+   "duration": 3.8,
+   "headline": "FUNNEL",
+   "subtitle": "MONOTONIC STAGE VALUES",
+   "decor": false,
+   "theme": "dark",
+   "stages": [
+    {
+     "id": "s1",
+     "label": "VISITS",
+     "value": 1000
+    },
+    {
+     "id": "s2",
+     "label": "INTEREST",
+     "value": 620
+    },
+    {
+     "id": "s3",
+     "label": "REQUESTS",
+     "value": 240
+    },
+    {
+     "id": "s4",
+     "label": "CONVERTED",
+     "value": 82
+    }
+   ],
+   "chart_engine": "mpl"
+  },
+  {
+   "type": "chart_morph",
+   "duration": 8.0,
+   "headline": "TABLE → BAR MORPH",
+   "subtitle": "SHARED STABLE IDS",
+   "decor": false,
+   "theme": "dark",
+   "from_type": "table",
+   "transition_duration": 1.5,
+   "items": [
+    {
+     "id": "solar",
+     "label": "LOREM",
+     "from_index": 2,
+     "to_index": 0,
+     "from_value": 30,
+     "to_value": 82
+    },
+    {
+     "id": "store",
+     "label": "EIUSMOD",
+     "from_index": 1,
+     "to_index": 1,
+     "from_value": 55,
+     "to_value": 64
+    },
+    {
+     "id": "grid",
+     "label": "AMET",
+     "from_index": 0,
+     "to_index": 2,
+     "from_value": 90,
+     "to_value": 31
+    }
+   ],
+   "allowed_overlaps": [
+    [
+     "morph-row-0/morph-label-solar",
+     "morph-row-2/morph-label-grid"
+    ],
+    [
+     "morph-row-0/morph-val-solar",
+     "morph-row-2/morph-val-grid"
+    ],
+    [
+     "morph-row-1/morph-val-store",
+     "morph-row-2/morph-val-grid"
+    ]
+   ]
+  }
+ ]
+}

@@ -56,6 +56,18 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
     low, high = min(all_vals), max(all_vals)
     span = max(1e-6, high - low)
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "waterfall", "engine": "mpl"})
+
     colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .09, chart.y + chart.h * .10,
                 chart.w * .82, chart.h * .68)
@@ -135,6 +147,18 @@ def build_diverging_bar(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "value": val, "delta": delta})
     max_abs = max((abs(p["delta"]) for p in parsed), default=1.0) or 1.0
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "diverging_bar", "engine": "mpl"})
+
     plot = Rect(chart.x + chart.w * .24, chart.y + chart.h * .08,
                 chart.w * .70, chart.h * .80)
     mid_x = plot.center_x
@@ -187,6 +211,18 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "label": str(item["label"]).strip(),
                        "value": val, "target": target, "max": max_v})
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "bullet", "engine": "mpl"})
+
     colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .24, chart.y + chart.h * .12,
                 chart.w * .70, chart.h * .76)
@@ -259,6 +295,18 @@ def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
     low, high = min(flat), max(flat)
     span = max(1e-6, high - low)
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "heatmap", "engine": "mpl"})
+
     colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .20, chart.y + chart.h * .14,
                 chart.w * .74, chart.h * .66)
@@ -324,6 +372,18 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
     if x1 <= x0 or y1 <= y0:
         raise ValueError("scatter domains must have max > min")
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "scatter", "engine": "mpl"})
+
     colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .17, chart.y + chart.h * .12,
                 chart.w * .75, chart.h * .66)
@@ -416,6 +476,18 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "label": str(st["label"]).strip(), "value": val})
     top_val = parsed[0]["value"]
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "funnel", "engine": "mpl"})
+
     colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .08, chart.y + chart.h * .08,
                 chart.w * .84, chart.h * .80)

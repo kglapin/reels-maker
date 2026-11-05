@@ -66,6 +66,25 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center")}
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            if subtitle and layout.optional("body"):
+                elements["body"] = text_node(
+                    "body", subtitle, body_style, layout.region("body"),
+                    ctx.fonts, align="center", valign="center")
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "bars", "engine": "mpl",
+                                 "data": parsed, "data_order": data_order,
+                                 "row_ids": [item["id"] for item in parsed],
+                                 "data_provenance":
+                                     scene.get("data_provenance")})
     colors = chart_colors(theme)
     row_gap = max(ctx.tokens.px(26), chart.h * .045)
     inset_x = ctx.tokens.px(28)
@@ -378,6 +397,25 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     })
     chart = layout.region("chart")
     colors = chart_colors(theme)
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements["chart"] = seq
+            if subtitle and layout.optional("body"):
+                elements["body"] = text_node(
+                    "body", subtitle, body_style, layout.region("body"),
+                    ctx.fonts, align="center", valign="center")
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "line_chart", "engine": "mpl",
+                                 "data": parsed, "x_axis_type": x_axis_type,
+                                 "x_axis_label": x_axis_label,
+                                 "y_axis_label": y_axis_label,
+                                 "y_domain": [low, high]})
     plot = Rect(chart.x + chart.w * .21, chart.y + chart.h * .15,
                 chart.w * .74, chart.h * .59)
     elements: dict[str, Node] = {

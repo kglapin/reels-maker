@@ -97,6 +97,10 @@ def _press_track(presses: list[float]) -> Track:
         keys.append(Keyframe(min(hold, up), .92, "linear"))
         if up > min(hold, up):
             keys.append(Keyframe(up, 1.0, "out-cubic"))
+        else:
+            # When the next press arrives before the key could rise again,
+            # restore just after the dip so the key is not left dimmed.
+            keys.append(Keyframe(up + .01, 1.0, "out-cubic"))
     return Track(keys)
 
 
@@ -393,11 +397,14 @@ def build_note_editor(ctx: SceneContext, config: dict) -> list[Node]:
                                 title_style, content_x, title_y)
         title_start = min(enter + .10, max(0.0, ctx.duration - 2 / ctx.fps))
         title_remaining = max(1 / ctx.fps, ctx.duration - title_start)
+        title_low = min(1 / ctx.fps, title_remaining)
+        title_default = min(.85, max(.18,
+                                     len(render_units(title_block)) * .025))
         title_duration = min(title_remaining,
                              _number(config, "title_duration",
-                                     min(.85, max(.18, len(render_units(title_block)) * .025)),
-                                     min(1 / ctx.fps, title_remaining),
-                                     title_remaining))
+                                     min(max(title_default, title_low),
+                                         title_remaining),
+                                     title_low, title_remaining))
         title_node.track("prop.character_progress", typing_track(
             render_units(title_block), title_start, title_duration,
             profile=config.get("typing_profile", "human")))

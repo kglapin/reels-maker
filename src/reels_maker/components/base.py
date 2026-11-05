@@ -382,11 +382,11 @@ def character_accent_group(
         if cnode is not None:
             t0 = onset + idx * stagger
             t1 = t0 + 0.32
-            cnode.track("opacity", Track([
-                Keyframe(0.0, 0.0 if t0 > 0 else 1.0, "out-cubic"),
-                Keyframe(t0, 0.0, "out-cubic"),
-                Keyframe(t1, 1.0, "out-cubic"),
-            ]))
+            opacity_keys = [Keyframe(0.0, 0.0, "out-cubic")]
+            if t0 > 0:
+                opacity_keys.append(Keyframe(t0, 0.0, "out-cubic"))
+            opacity_keys.append(Keyframe(t1, 1.0, "out-cubic"))
+            cnode.track("opacity", Track(opacity_keys))
             cnode.track("dy", Track([
                 Keyframe(0.0, 18.0, "out-quart"),
                 Keyframe(t0, 18.0, "out-quart"),

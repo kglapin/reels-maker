@@ -224,6 +224,14 @@ metrics, and camera-canvas projects stay serial. Studio rendering uses
 location and `--no-cache` forces a full rebuild.
 Studio cache entries are scene-local and include resolved visual asset metadata.
 
+Inside each scene frame the renderer also reuses raster work automatically:
+settled scene subtrees are sampled once (`BuiltScene.at` memoization),
+settled nodes can be cached as sprites (`reuse_node_sprites`), transformed
+leaves and tile-safe groups render through padded local tiles instead of
+full-canvas layers, and negative rich text inverts only its glyph bounding
+box. All reuse paths are covered by pixel-parity tests; see
+`docs/RENDER_BENCHMARKS.md` for the measured numbers.
+
 Do not assume `brand.json` font-family guidance automatically installs or
 embeds a font. The renderer resolves `branding.font_family` /
 `identity.typography.primary` to an installed `<Family>-Regular.ttf` /

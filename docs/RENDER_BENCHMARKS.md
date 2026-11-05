@@ -47,3 +47,35 @@ synthetic cold Studio measurement from 20.12 s to 12.47 s (about 38%). Decoded
 MP4 frame hashes remain exact between cold and warm cache runs; the new
 full-canvas-vs-local-layer parity test also checks pixel identity for scaled,
 rotated text and vector nodes.
+
+## Scene-renderer reuse paths (2026-11)
+
+`SceneRenderer` now reuses raster work at several levels, all verified
+pixel-identical against the uncached paths:
+
+- `BuiltScene.at()` memoizes settled subtrees: once every track on a top-level
+  node has ended (and the subtree has no video/sequence/mesh3d or negative
+  text), it is sampled once and shared by later frames instead of deep-copying
+  and re-interpolating the whole graph per frame.
+- `RenderOptions.reuse_node_sprites` rasterizes a settled node into a tile once
+  and alpha-composites it on later frames (two sightings required, so
+  one-off samples never pay the tile cost).
+- `_draw_local_layer` renders transformed leaves **and tile-safe groups**
+  (static leaf descendants only — no clip, reveal, media, shadows on rounds,
+  animated descendants, or negative text) into a padded local tile instead of
+  allocating and BICUBIC-resampling a full supersampled canvas.
+- `_draw_negative_text` restricts glyph-mask inversion to the union ink
+  bounding box rather than three full-canvas passes; measured ~11% faster on a
+  720×1280 photo scene with negative headline at supersample 1
+  (17.9 → 15.8 ms/frame).
+- Per-render stat caching avoids repeated `path.stat()` calls for sequence
+  frames, photo backgrounds and stills; image caches are bounded by decoded
+  bytes (256/512 MB budgets) instead of entry counts.
+- `render_studio(..., jobs=N)` / `studio-render --jobs N` encodes independent
+  scene segments concurrently; each worker gets its own `SceneRenderer` with
+  cache budgets scaled by `min(1, 4/jobs)` to bound memory.
+
+Pixel-parity coverage lives in `tests/test_render_performance.py`
+(`SettledFrameReuseTests`, `NodeSpriteReuseTests`, `LocalLayerParityTests`,
+`GroupLocalLayerTests`, `NegativeTextCropTests`) and the exact-pixel golden
+strips under `tests/fixtures/studio-golden/`.

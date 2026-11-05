@@ -245,7 +245,13 @@ def _load_video_frame_cached(path: str, mtime: float, quantized_time: float) -> 
     ]
     started = perf_counter()
     try:
-        proc = subprocess.run(cmd, capture_output=True, check=False)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, check=False,
+                                  timeout=30)
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError(
+                f"FFmpeg timed out decoding {path} at {quantized_time:.3f}s"
+            ) from exc
         if proc.returncode != 0 or not proc.stdout:
             raise ValueError(
                 f"Could not decode video frame from {path} at {quantized_time:.3f}s")

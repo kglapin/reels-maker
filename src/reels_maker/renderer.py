@@ -252,20 +252,21 @@ def render(project: Project, *, root: Path = ROOT,
             return part, cached, indices
 
         # Independent scenes encode concurrently. Duplicate shots are encoded once.
+        from .renderers.studio_cache import _publish_cache_segment
         encode_started = perf_counter()
         with ThreadPoolExecutor(max_workers=min(jobs, max(1, len(pending)))) as pool:
             futures = [pool.submit(encode_task, item) for item in pending.values()]
             for future in as_completed(futures):
                 part, cached, indices = future.result()
                 if cache:
-                    # Atomic publication avoids half-written cache objects.
-                    os.replace(part, cached)
+                    # Atomic publication avoids half-written cache objects and
+                    # works when the cache lives on another filesystem.
+                    _publish_cache_segment(part, cached)
                     part = cached
                 for i in indices:
                     parts[i] = part
         encode_seconds = round(perf_counter() - encode_started, 4)
         encoded = len(pending)
-        hits = len(parts) - encoded
         silent = scratch / "silent.mp4"
         mux_started = perf_counter()
         if any(t["type"] != "cut" for t in transitions):

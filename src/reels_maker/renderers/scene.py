@@ -82,7 +82,9 @@ class SceneRenderer:
         self._framed_images: OrderedDict[tuple, Image.Image] = OrderedDict()
         self._framed_image_bytes = 0
         self._framed_image_budget = 128 * 1024 * 1024
-        self._settled_frame_times: dict[int, float | None] = {}
+        # Values pin the BuiltScene so its id() cannot be recycled by a
+        # different scene while a cache entry still references it.
+        self._settled_frame_times: dict[int, tuple[object, float | None]] = {}
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
         self._settled_frame_budget = 128 * 1024 * 1024
@@ -121,10 +123,11 @@ class SceneRenderer:
     def _settled_frame_time(self, scene: BuiltScene) -> float | None:
         """Find when a scene becomes time-invariant, or return None if it never does."""
         key = id(scene)
-        if key in self._settled_frame_times:
-            return self._settled_frame_times[key]
+        entry = self._settled_frame_times.get(key)
+        if entry is not None:
+            return entry[1]
         if scene.background.get("kind", "solid") not in ("solid", "gradient"):
-            self._settled_frame_times[key] = None
+            self._settled_frame_times[key] = (scene, None)
             return None
         pending = list(scene.nodes)
         seen: set[int] = set()
@@ -135,7 +138,7 @@ class SceneRenderer:
                 continue
             seen.add(id(node))
             if node.kind in ("video", "mesh3d", "sequence"):
-                self._settled_frame_times[key] = None
+                self._settled_frame_times[key] = (scene, None)
                 return None
             pending.extend(node.children or [])
             if node.tracks:
@@ -145,7 +148,7 @@ class SceneRenderer:
         if transition and transition != "cut":
             settled_at = max(
                 settled_at, float(scene.meta.get("transition_duration", .30)))
-        self._settled_frame_times[key] = settled_at
+        self._settled_frame_times[key] = (scene, settled_at)
         return settled_at
 
     def _remember_settled_frame(self, key: int, image: Image.Image) -> None:

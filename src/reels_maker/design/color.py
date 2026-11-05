@@ -88,32 +88,34 @@ def ensure_contrast(ink: tuple[int, int, int],
     """Return ``ink`` or a darker/lighter variant that passes ``minimum``.
 
     Brand accent colours are preserved whenever they already pass. Only small
-    text is adjusted; the caller chooses ``minimum`` from type size. A pure
-    black/white fallback is always guaranteed to pass because the ratio
-    between black and white is 21:1.
+    text is adjusted; the caller chooses ``minimum`` from type size. When no
+    direction is given, the search aims toward whichever pole (black or white)
+    contrasts more with the backdrop — a mid-luminance background can defeat a
+    naive luminance guess. If even the best pole cannot reach ``minimum``, the
+    higher-contrast pole is returned rather than an unverified colour.
     """
     if not 1 <= minimum <= 21:
         raise ValueError("Contrast target must be between 1 and 21")
     if meets_contrast(ink, background, minimum):
         return ink
+    black, white = (0, 0, 0), (255, 255, 255)
     if direction is None:
-        # Choose the direction that can actually reach the target against this
-        # backdrop. A saturated brand accent can have low luminance yet still
-        # need to be lightened on a deep panel, not darkened into it.
-        direction = "lighten" if relative_luminance(background) < .5 else "darken"
+        direction = ("lighten" if contrast_ratio(white, background)
+                     > contrast_ratio(black, background) else "darken")
     if direction not in ("darken", "lighten"):
         raise ValueError("direction must be darken or lighten")
-    target = (0, 0, 0) if direction == "darken" else (255, 255, 255)
+    target = black if direction == "darken" else white
     # Search along a perceptual mix for the closest passing colour. This is
     # deterministic and avoids abrupt pure-black typography on deep panels.
     for step in range(1, 101):
         candidate = mix(ink, target, step / 100)
         if meets_contrast(candidate, background, minimum):
             return candidate
-    # Pure black or white always passes 4.5:1 on the opposite backdrop; the
-    # fallback is explicit rather than returning an unverified colour.
-    opposite = (0, 0, 0) if direction == "lighten" else (255, 255, 255)
-    return opposite
+    # The mix never reached the target — possible on mid-luminance backdrops
+    # or an explicit direction that cannot satisfy ``minimum``. Return the
+    # pole with the best achievable contrast.
+    return white if contrast_ratio(white, background) \
+        >= contrast_ratio(black, background) else black
 
 
 def best_text_colour(background: tuple[int, int, int],

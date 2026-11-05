@@ -20,7 +20,7 @@ from typing import Callable
 from fractions import Fraction
 
 from ..audio_mix import mux_audio
-from ..ffmpeg import RenderError, require_tool
+from ..ffmpeg import RenderError, drain_stderr, require_tool
 from ..spec import Project
 from ..studio import PROFILES, StudioProject
 from .scene import RenderOptions, SceneRenderer
@@ -146,6 +146,7 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
     process = subprocess.Popen(command, stdin=subprocess.PIPE,
                                stdout=subprocess.DEVNULL,
                                stderr=subprocess.PIPE)
+    stderr_text = drain_stderr(process)
     written = 0
     render_seconds = 0.0
     frame_write_seconds = 0.0
@@ -189,11 +190,13 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                     )
                     process.stdin.write(raw_frame)
                 except (BrokenPipeError, OSError) as exc:
-                    stderr = process.stderr.read().decode("utf-8", "replace") \
-                        if process.stderr else ""
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait()
                     raise RenderError(
                         f"FFmpeg stopped while writing frame "
-                        f"{frames_done + written}: {stderr[-2000:]}") from exc
+                        f"{frames_done + written}: "
+                        f"{stderr_text()[-2000:]}") from exc
                 frame_write_seconds += perf_counter() - write_started
                 written += 1
                 if progress and (written % max(1, project.fps) == 0
@@ -203,12 +206,12 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                               "scene": built.index + 1})
         finally:
             if process.stdin:
-                process.stdin.close()
-            stderr = process.stderr.read().decode("utf-8", "replace") \
-                if process.stderr else ""
+                try:
+                    process.stdin.close()
+                except OSError:
+                    pass
             code = process.wait()
-            if process.stderr:
-                process.stderr.close()
+            stderr = stderr_text()
         if code:
             raise RenderError(f"FFmpeg exited {code}: {stderr[-4000:]}")
         if written != timing.frames:

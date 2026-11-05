@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .brand import apply_brand
 from .cards import draw_card
-from .ffmpeg import RenderError, execute, probe, require_tool
+from .ffmpeg import RenderError, drain_stderr, execute, probe, require_tool
 from .media import preflight as inspect_media
 from .paths import ROOT
 from .spec import Project
@@ -172,14 +172,15 @@ def _encode_studio_overlay(source: Path, scene: dict, project: Project,
     process = subprocess.Popen(args, stdin=subprocess.PIPE,
                                stdout=subprocess.DEVNULL,
                                stderr=subprocess.PIPE)
+    stderr_text = drain_stderr(process)
     try:
         for frame in range(frames):
             overlay = renderer.render_overlay(built, frame / fps)
             process.stdin.write(overlay.tobytes("raw", "RGBA"))
         process.stdin.close()
-        stderr = process.stderr.read().decode("utf-8", "replace")
         if process.wait():
-            raise RenderError("Studio overlay FFmpeg error: " + stderr[-2000:])
+            raise RenderError(
+                "Studio overlay FFmpeg error: " + stderr_text()[-2000:])
     except Exception:
         if process.poll() is None:
             process.kill()
@@ -238,8 +239,9 @@ def render(project: Project, *, root: Path = ROOT,
             if key not in pending:
                 scratch_scene = scratch / f"scene-{i}"
                 scratch_scene.mkdir()
-            pending[key] = (source, scene, scratch_scene, cached, [])
-            pending[key][-1].append(i)
+                pending[key] = (source, scene, scratch_scene, cached, [i])
+            else:
+                pending[key][-1].append(i)
 
         def encode_task(task):
             source, scene, scene_dir, cached, indices = task

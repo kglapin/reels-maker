@@ -246,7 +246,7 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
     elif key == "tracking-in":
         node.track("opacity", Track([
             Keyframe(onset, 0.0, "out-cubic"),
-            Keyframe(onset + .2, 0.92, "out-cubic")]))
+            Keyframe(onset + .2, 1.0, "out-cubic")]))
         node.track("prop.tracking_offset", Track([
             Keyframe(onset, tokens.px(14), "out-expo"),
             Keyframe(end, 0.0, "out-expo")]))

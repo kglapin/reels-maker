@@ -2,11 +2,41 @@
 import json
 import shutil
 import subprocess
+import threading
 from pathlib import Path
+from typing import Callable
 
 
 class RenderError(RuntimeError):
     pass
+
+
+def drain_stderr(process: subprocess.Popen) -> Callable[[], str]:
+    """Drain ``process.stderr`` on a daemon thread; return a text getter.
+
+    FFmpeg writes periodic progress and warnings to stderr. If the pipe buffer
+    fills while the parent is still streaming raw frames to the child's stdin,
+    both sides deadlock. Call the returned getter only after the process has
+    exited or been killed, when the read loop has reached EOF.
+    """
+    chunks: list[bytes] = []
+
+    def collect() -> None:
+        stream = process.stderr
+        if stream is None:
+            return
+        for chunk in iter(lambda: stream.read(65536), b""):
+            chunks.append(chunk)
+
+    thread = threading.Thread(target=collect, name="ffmpeg-stderr-drain",
+                              daemon=True)
+    thread.start()
+
+    def text() -> str:
+        thread.join()
+        return b"".join(chunks).decode("utf-8", "replace")
+
+    return text
 
 
 def require_tool(name: str) -> str:

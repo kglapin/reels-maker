@@ -25,7 +25,7 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
     headline = _headline(scene) or "PORÓWNANIE"
     subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     data = scene.get("bars") or scene.get("data") or [
-        {"label": "DZIŚ", "value": 32}, {"label": "Z MAGAZYNEM", "value": 78}]
+        {"label": "WARIANT A", "value": 32}, {"label": "WARIANT B", "value": 78}]
     if not isinstance(data, list) or not data:
         raise ValueError("bars requires a nonempty data list")
     if len(data) > 12:

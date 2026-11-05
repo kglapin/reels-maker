@@ -52,9 +52,8 @@ def build_amount(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     value = safe_number(scene.get("value", 16000))
     fmt = _fmt(scene)
-    kicker = str(scene.get("kicker", "DOTACJA DO"))
-    subtitle = str(scene.get("subtitle") or _subtitle(scene)
-                   or "NA MAGAZYN ENERGII")
+    kicker = str(scene.get("kicker", "WYNIK"))
+    subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     has_visual = scene.get("visual", "battery") != "none"
     headline_copy = format_value(value, fmt)
     width = ctx.layout.safe.w
@@ -120,9 +119,9 @@ def build_breakdown(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     items = scene.get("items")
     if not isinstance(items, list) or not items:
-        items = [{"label": "MAGAZYN ENERGII", "value": 16000},
-                 {"label": "MAGAZYN CIEPŁA", "value": 1000},
-                 {"label": "PREMIA UE", "value": 2000}]
+        items = [{"label": "KATEGORIA A", "value": 3000},
+                 {"label": "KATEGORIA B", "value": 2000},
+                 {"label": "KATEGORIA C", "value": 1000}]
     parsed = []
     for item in items:
         if not isinstance(item, dict):
@@ -241,9 +240,8 @@ def _progress_child(node: Node, role: str, entry, target: float = 1.0) -> None:
 def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     percent = safe_number(scene.get("value", scene.get("percent", 30)))
-    headline = _headline(scene) or "MAGAZYN ENERGII"
-    subtitle = str(scene.get("subtitle") or _subtitle(scene)
-                   or "DO 30% KOSZTÓW")
+    headline = _headline(scene) or "UDZIAŁY"
+    subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
                                         align="center", balance=True)
@@ -314,8 +312,8 @@ def build_comparison(ctx: SceneContext, scene: dict) -> BuiltScene:
     headline = _headline(scene) or "PORÓWNANIE"
     columns = scene.get("columns")
     if not isinstance(columns, list) or len(columns) != 2:
-        columns = [{"label": "NET-BILLING", "value": 16000},
-                   {"label": "NET-METERING", "value": 8000}]
+        columns = [{"label": "WARIANT A", "value": 60},
+                   {"label": "WARIANT B", "value": 40}]
     parsed = [{"label": str(item.get("label", "")),
                "value": safe_number(item.get("value", 0)),
                "suffix": str(item.get("suffix", scene.get("suffix", " zł"))),
@@ -406,7 +404,7 @@ def build_heat(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     value = safe_number(scene.get("value", 1000))
     fmt = _fmt(scene)
-    headline = _headline(scene) or "MAGAZYN CIEPŁA"
+    headline = _headline(scene) or "WYNIK"
     subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "kicker", theme["ink"],
@@ -515,10 +513,10 @@ def build_stats(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     headline = _headline(scene) or "LICZBY, KTÓRE MAJĄ ZNACZENIE"
     stats = scene.get("stats") or [
-        {"label": "DOTACJA", "value": 16000, "suffix": " zł"},
-        {"label": "PREMIA UE", "value": 2000, "suffix": " zł"},
-        {"label": "MAGAZYN", "value": 30, "suffix": "%"},
-        {"label": "TERMIN", "value": 2027, "suffix": ""},
+        {"label": "WSKAŹNIK A", "value": 42, "suffix": "%"},
+        {"label": "WSKAŹNIK B", "value": 18, "suffix": "%"},
+        {"label": "WSKAŹNIK C", "value": 7, "suffix": ""},
+        {"label": "WSKAŹNIK D", "value": 2027, "suffix": ""},
     ]
     if not isinstance(stats, list) or len(stats) != 4:
         raise ValueError("stat-grid requires exactly four stats")

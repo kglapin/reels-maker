@@ -26,7 +26,7 @@ def build_announcement(ctx: SceneContext, scene: dict) -> BuiltScene:
         headline_copy = _headline(scene)
         runs = _runs(scene, ctx.tokens, theme["ink"], theme["accent"])
     else:
-        headline_copy = str(lines or "NABÓR\nOTWARTY")
+        headline_copy = str(lines or "SZCZEGÓŁY\nOFERTY")
         runs = None
     subtitle = str(scene.get("subtitle") or _subtitle(scene)
                    or "INFORMACJE O PROGRAMIE")
@@ -110,10 +110,9 @@ def _calendar_card(ctx: SceneContext, region: Rect, day: str, month: str,
 
 def build_deadline(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
-    kicker = str(scene.get("kicker", "NABÓR DO"))
-    date = str(scene.get("date") or _headline(scene) or "1.10.2027")
-    subtitle = str(scene.get("subtitle") or _subtitle(scene)
-                   or "LUB DO WYCZERPANIA BUDŻETU")
+    kicker = str(scene.get("kicker", "TERMIN"))
+    date = str(scene.get("date") or _headline(scene) or "—")
+    subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     width = ctx.layout.safe.w
     kicker_style = resolve_text_style(ctx.tokens, "kicker", theme["accent"], align="center")
     date_style = resolve_text_style(ctx.tokens, "display", theme["ink"],
@@ -154,9 +153,9 @@ def build_deadline(ctx: SceneContext, scene: dict) -> BuiltScene:
 def _timeline_graphic(ctx: SceneContext, region: Rect,
                       milestones, theme: dict) -> list[Node]:
     labels = milestones if isinstance(milestones, list) and milestones else [
-        {"label": "START NABORU", "value": "2026"},
+        {"label": "START", "value": "—"},
         {"label": "DZIŚ", "value": "—"},
-        {"label": "TERMIN", "value": "1.10.2027"},
+        {"label": "TERMIN", "value": "—"},
     ]
     y = region.center_y
     # One label column per milestone; centres sit half a column inside the
@@ -207,7 +206,7 @@ def _timeline_graphic(ctx: SceneContext, region: Rect,
 
 def build_urgency(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
-    headline = _headline(scene) or "NIE ZWLEKAJ"
+    headline = _headline(scene) or "DZIAŁAJ TERAZ"
     subtitle = str(scene.get("subtitle") or _subtitle(scene) or "")
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "display", theme["ink"],
@@ -264,7 +263,7 @@ def build_urgency(ctx: SceneContext, scene: dict) -> BuiltScene:
 
 def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
-    headline = _headline(scene) or "ZADZWOŃ LUB NAPISZ"
+    headline = _headline(scene) or "SKONTAKUJ SIĘ"
     phone = str(scene.get("phone", "CONTACT"))
     line_one = str(scene.get("line_one", "SPRAWDŹ DOTACJĘ"))
     line_two = str(scene.get("line_two", ""))
@@ -420,10 +419,10 @@ def build_statement(ctx: SceneContext, scene: dict) -> BuiltScene:
 
 def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
-    headline = _headline(scene) or "CO ZYSKUJESZ"
-    items = scene.get("items") or ["Nadwyżki zostają w domu",
-                                   "Ochrona przed blackoutem",
-                                   "Niższe rachunki"]
+    headline = _headline(scene) or "KOLEJNE KROKI"
+    items = scene.get("items") or ["Pierwsza kluczowa korzyść",
+                                   "Druga kluczowa korzyść",
+                                   "Trzecia kluczowa korzyść"]
     if not isinstance(items, list) or not items:
         raise ValueError("checklist items must be a nonempty list")
     width = ctx.layout.safe.w
@@ -474,7 +473,7 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
 
 def build_energy(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
-    headline = _headline(scene) or "OD ENERGII DO DOMU"
+    headline = _headline(scene) or "KROK PO KROKU"
     subtitle = _subtitle(scene) or ""
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],

@@ -414,7 +414,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
 
 def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render a total-conserving Sankey / energy flow diagram with animated links (DM-103)."""
-    theme, layout, elements = _data_panel_scaffold(ctx, scene, "PRZEPŁYW ENERGII")
+    theme, layout, elements = _data_panel_scaffold(ctx, scene, "PRZEPŁYW")
     links = scene.get("links")
     if not isinstance(links, list) or not 1 <= len(links) <= 8:
         raise ValueError("sankey requires 1..8 explicit source->target links")

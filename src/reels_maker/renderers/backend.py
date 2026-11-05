@@ -66,11 +66,12 @@ class _StudioBackend:
     name = "studio"
 
     def render(self, project: Any, options: BackendOptions) -> RenderReport:
-        if options.jobs is not None or options.title_engine is not None:
+        if options.title_engine is not None:
             raise RenderError(
-                "jobs and title_engine options belong to the classic backend")
+                "title_engine option belongs to the classic backend")
         from .studio import render_studio
 
+        kwargs = {"jobs": options.jobs} if options.jobs is not None else {}
         return render_studio(
             project,
             output=options.output,
@@ -79,6 +80,7 @@ class _StudioBackend:
             cache_dir=options.cache_dir,
             cache=options.cache,
             progress=options.progress,
+            **kwargs,
         )
 
 

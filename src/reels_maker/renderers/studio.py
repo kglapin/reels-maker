@@ -200,6 +200,7 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                 frame_write_seconds += perf_counter() - write_started
                 written += 1
                 if progress and (written % max(1, project.fps) == 0
+                                 or written == timing.frames
                                  or frames_done + written == total_frames):
                     progress({"frames": frames_done + written,
                               "total": total_frames,
@@ -234,15 +235,21 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
 def render_studio(project: StudioProject, *, output: str | Path | None = None,
                   profile: str | None = None, supersample: int | None = None,
                   cache_dir: str | Path | None = None, cache: bool = True,
+                  jobs: int = 1,
                   progress: Callable[[dict], None] | None = None) -> dict:
     """Render a studio project and return a JSON-friendly delivery report.
 
     Per-scene H.264 caching is enabled by default under
     .cache/reels-maker/studio. Set cache=False to disable it, or pass
-    cache_dir to select a different cache directory.
+    cache_dir to select a different cache directory. ``jobs`` controls
+    concurrent scene encodes (1 = sequential, max 8); the Camera Canvas
+    renderer always stays sequential because it shares one world surface.
     """
     if profile and profile not in PROFILES:
         raise RenderError(f"Unknown export profile {profile!r}")
+    if (isinstance(jobs, bool) or not isinstance(jobs, int)
+            or jobs < 1 or jobs > 8):
+        raise RenderError("jobs must be an integer between 1 and 8")
     overall_started = perf_counter()
     effective_profile = profile or project.export.get("profile")
     if effective_profile in PROFILES and (
@@ -258,7 +265,9 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     build_seconds = perf_counter() - build_started
     if supersample is None:
         supersample = 2 if project.height >= 1600 else 1
-    if any("camera_canvas" in scene for scene in project.scenes):
+    uses_camera_canvas = any("camera_canvas" in scene
+                             for scene in project.scenes)
+    if uses_camera_canvas:
         from .camera_canvas import CameraCanvasRenderer
         renderer = CameraCanvasRenderer(project)
     else:
@@ -297,9 +306,10 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
     cache_setup_seconds = perf_counter() - cache_setup_started
     started = perf_counter()
     try:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import threading
         from ..segment_assembly import join_segments
-        parts: list[Path] = []
-        frames_done = 0
+        parts: list[Path | None] = [None] * len(built)
         cache_hits = 0
         encodes = 0
         scene_encoding_seconds = 0.0
@@ -308,8 +318,10 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         video_decode_seconds = 0.0
         video_decode_calls = 0
         video_decoded_frames = 0
-        scene_timings = []
+        timing_entries: dict[int, dict] = {}
         scene_loop_started = perf_counter()
+
+        work_items = []
         for index, (scene, timing, item) in enumerate(
                 zip(project.scenes, timeline.scenes, built)):
             scene_started = perf_counter()
@@ -323,58 +335,135 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                     and cached.stat().st_size > 0:
                 # The concat demuxer reads cache objects directly; no full-file
                 # copy is needed on a warm render.
-                part = cached
+                parts[index] = cached
                 cache_hits += 1
-                scene_timings.append({
+                timing_entries[index] = {
                     "scene": item.index + 1, "cache_hit": True,
-                    "elapsed_seconds": round(perf_counter() - scene_started, 4),
-                })
-            else:
-                scene_metrics = {}
-                from .canvas import collect_video_decode_metrics
-                encode_started = perf_counter()
-                with collect_video_decode_metrics() as video_metrics:
-                    encoded = _encode_studio_scene(
-                        project, renderer, item, timing, part,
-                        codec=codec, crf=crf, preset=preset,
-                        frames_done=frames_done,
-                        total_frames=timeline.total_frames,
-                        progress=progress,
-                        next_scene=next_scene,
-                        transition=scene.get("transition_out"),
-                        metrics=scene_metrics)
-                encode_seconds = perf_counter() - encode_started
-                scene_encoding_seconds += encode_seconds
-                frame_render_seconds += scene_metrics.get(
-                    "frame_render_seconds", 0.0)
-                frame_pipe_write_seconds += scene_metrics.get(
-                    "frame_pipe_write_seconds", 0.0)
-                video_decode_seconds += video_metrics["video_decode_seconds"]
-                video_decode_calls += video_metrics["video_decode_calls"]
-                video_decoded_frames += video_metrics["video_decoded_frames"]
-                encodes += 1
-                if encoded != timing.frames:  # defensive; encoder raises first
-                    raise RenderError(
-                        f"Scene {item.index + 1}: encoded {encoded} of "
-                        f"{timing.frames} frames")
-                if cached is not None:
-                    # Atomic publication avoids half-written cache objects.
-                    _publish_cache_segment(part, cached)
-                    part = cached
-                scene_timings.append({
-                    "scene": item.index + 1, "cache_hit": False,
-                    "elapsed_seconds": round(perf_counter() - scene_started, 4),
-                    "encode_seconds": round(encode_seconds, 4),
-                    "frame_render_seconds": round(
-                        scene_metrics.get("frame_render_seconds", 0.0), 4),
-                    "video_decode_calls": video_metrics["video_decode_calls"],
-                    "video_decoded_frames": video_metrics["video_decoded_frames"],
-                    "video_decode_seconds": round(
-                        video_metrics["video_decode_seconds"], 4),
-                    "frames": scene_metrics.get("frames_rendered", 0),
-                })
-            frames_done += timing.frames
-            parts.append(part)
+                    "elapsed_seconds": round(
+                        perf_counter() - scene_started, 4),
+                }
+                continue
+            work_items.append({
+                "index": index, "scene": scene, "timing": timing,
+                "item": item, "next_scene": next_scene, "part": part,
+                "cached": cached,
+                "transition": scene.get("transition_out"),
+            })
+
+        effective_jobs = 1 if uses_camera_canvas else jobs
+        renderer_local = threading.local()
+        progress_lock = threading.Lock()
+        progress_written: dict[int, int] = {}
+
+        def worker_renderer():
+            """One SceneRenderer per worker thread; its caches are not
+            thread-safe and settled-sample memoization is per scene."""
+            current = getattr(renderer_local, "renderer", None)
+            if current is None:
+                current = SceneRenderer(
+                    project.width, project.height, project.tokens,
+                    project.fonts,
+                    options=RenderOptions(supersample=supersample))
+                renderer_local.renderer = current
+            return current
+
+        def report_progress(update: dict, slot: int) -> None:
+            # update["frames"] counts frames rendered inside this scene.
+            with progress_lock:
+                progress_written[slot] = int(update["frames"])
+                done = sum(progress_written.values())
+            if progress is not None:
+                progress({"frames": done,
+                          "total": timeline.total_frames,
+                          "scene": update.get("scene")})
+
+        def encode_work(work: dict) -> dict:
+            from .canvas import collect_video_decode_metrics
+            slot = work["index"]
+            timing = work["timing"]
+            scene_metrics: dict = {}
+            encode_started = perf_counter()
+            slot_progress = (lambda update: report_progress(update, slot)
+                             if progress is not None else None)
+            with collect_video_decode_metrics() as video_metrics:
+                encoded = _encode_studio_scene(
+                    project,
+                    worker_renderer() if effective_jobs > 1 else renderer,
+                    work["item"], timing, work["part"],
+                    codec=codec, crf=crf, preset=preset,
+                    frames_done=0,
+                    total_frames=timeline.total_frames,
+                    progress=slot_progress,
+                    next_scene=work["next_scene"],
+                    transition=work["transition"],
+                    metrics=scene_metrics)
+            encode_seconds = perf_counter() - encode_started
+            if encoded != timing.frames:  # defensive; encoder raises first
+                raise RenderError(
+                    f"Scene {work['item'].index + 1}: encoded {encoded} of "
+                    f"{timing.frames} frames")
+            return {
+                "encode_seconds": encode_seconds,
+                "frame_render_seconds": scene_metrics.get(
+                    "frame_render_seconds", 0.0),
+                "frame_pipe_write_seconds": scene_metrics.get(
+                    "frame_pipe_write_seconds", 0.0),
+                "video_decode_seconds": video_metrics[
+                    "video_decode_seconds"],
+                "video_decode_calls": video_metrics["video_decode_calls"],
+                "video_decoded_frames": video_metrics[
+                    "video_decoded_frames"],
+                "frames": scene_metrics.get("frames_rendered", 0),
+            }
+
+        results: dict[int, dict] = {}
+        if effective_jobs > 1 and len(work_items) > 1:
+            with ThreadPoolExecutor(
+                    max_workers=min(effective_jobs, len(work_items))) as pool:
+                futures = {pool.submit(encode_work, work): work
+                           for work in work_items}
+                for future in as_completed(futures):
+                    work = futures[future]
+                    results[work["index"]] = future.result()
+        else:
+            for work in work_items:
+                results[work["index"]] = encode_work(work)
+
+        work_by_index = {work["index"]: work for work in work_items}
+        for index in sorted(results):
+            work = work_by_index[index]
+            result = results[index]
+            scene_started = perf_counter()
+            part = work["part"]
+            if work["cached"] is not None:
+                # Atomic publication avoids half-written cache objects.
+                _publish_cache_segment(part, work["cached"])
+                part = work["cached"]
+            parts[index] = part
+            encodes += 1
+            scene_encoding_seconds += result["encode_seconds"]
+            frame_render_seconds += result["frame_render_seconds"]
+            frame_pipe_write_seconds += result["frame_pipe_write_seconds"]
+            video_decode_seconds += result["video_decode_seconds"]
+            video_decode_calls += result["video_decode_calls"]
+            video_decoded_frames += result["video_decoded_frames"]
+            timing_entries[index] = {
+                "scene": work["item"].index + 1, "cache_hit": False,
+                "elapsed_seconds": round(
+                    perf_counter() - scene_started, 4),
+                "encode_seconds": round(result["encode_seconds"], 4),
+                "frame_render_seconds": round(
+                    result["frame_render_seconds"], 4),
+                "video_decode_calls": result["video_decode_calls"],
+                "video_decoded_frames": result["video_decoded_frames"],
+                "video_decode_seconds": round(
+                    result["video_decode_seconds"], 4),
+                "frames": result["frames"],
+            }
+
+        parts = [part for part in parts if part is not None]
+        scene_timings = [timing_entries[index]
+                         for index in sorted(timing_entries)]
         scene_loop_seconds = perf_counter() - scene_loop_started
         join_started = perf_counter()
         join_segments(parts, silent, scratch, max_frames=timeline.total_frames)
@@ -431,6 +520,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         "export_quality": export_quality,
         "cache_hits": cache_hits,
         "cache_misses": encodes,
+        "jobs": 1 if uses_camera_canvas else jobs,
         "cache_signature": (cache_signature[:12] if cache_signature else None),
         "icon_provenance": _icon_provenance(built),
         "scenes": [scene.to_dict() for scene in built],

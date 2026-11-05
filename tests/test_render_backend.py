@@ -64,11 +64,18 @@ class RenderBackendContractTests(unittest.TestCase):
             cache_dir="cache", cache=False, progress=progress)
         self.assertIs(result, report)
 
+    def test_studio_adapter_forwards_jobs_when_set(self):
+        with patch("reels_maker.renderers.studio.render_studio",
+                   return_value={"ok": True}) as render:
+            render_with_backend(
+                "studio", object(), BackendOptions(jobs=4))
+        self.assertEqual(render.call_args.kwargs["jobs"], 4)
+
     def test_engine_specific_options_fail_before_backend_execution(self):
         with self.assertRaisesRegex(RenderError, "require the Studio backend"):
             render_with_backend("legacy", object(), BackendOptions(profile="preview"))
-        with self.assertRaisesRegex(RenderError, "belong to the classic backend"):
-            render_with_backend("studio", object(), BackendOptions(jobs=2))
+        with self.assertRaisesRegex(RenderError, "classic backend"):
+            render_with_backend("studio", object(), BackendOptions(title_engine="studio"))
 
 
 if __name__ == "__main__":

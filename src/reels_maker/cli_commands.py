@@ -101,7 +101,8 @@ def handle_commands(args) -> int:
             BackendOptions(output=str(output_path), profile=args.profile,
                            supersample=args.supersample,
                            cache_dir=args.cache_dir,
-                           cache=not args.no_cache))
+                           cache=not args.no_cache,
+                           jobs=getattr(args, "jobs", None)))
         # Store the actual output path in result for downstream use
         result['output_path'] = str(output_path)
     elif args.command == "studio-inspect":

@@ -59,6 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Override the default Studio segment cache directory")
     studio.add_argument("--no-cache", action="store_true",
                         help="Disable the Studio segment cache")
+    studio.add_argument("--jobs", type=int, default=1,
+                        help="Concurrent scene encodes (default: 1; max 8)")
     studio.add_argument("--json", action="store_true")
     studio.add_argument("--status", choices=("accepted", "in-progress"),
                         default="accepted",

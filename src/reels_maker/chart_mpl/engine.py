@@ -18,7 +18,7 @@ from ..components.chart_style import chart_colors
 SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter"}
 
-_ENGINE_VERSION = 4
+_ENGINE_VERSION = 5
 _SUPERSAMPLE = 2
 
 
@@ -251,7 +251,7 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     max_v = max(i["value"] for i in items) or 1
     label_x = (PLOT_L - .015) * w
     left, right = PLOT_L * w, PLOT_R * w
-    top, bottom = PLOT_T, h * .92
+    top, bottom = PLOT_T * h, h * .90
     track_h = min(h * .075, (bottom - top) / n * .34)
     progresses = _stagger(t / dur, n, start=.10, step=.06)
     for i, item in enumerate(items):
@@ -296,7 +296,7 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
     if hi <= lo:
         hi = lo + 1
     left, right = PLOT_L * w, PLOT_R * w
-    top, bottom = PLOT_T, h * .84
+    top, bottom = PLOT_T * h, PLOT_B * h
     pw, ph = right - left, bottom - top
     xs = np.linspace(left, right, len(values))
     ys = bottom - (np.array(values) - lo) / (hi - lo) * ph
@@ -384,7 +384,7 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
     hi += span * .12
     span = hi - lo
     left, right = w * .08, PLOT_R * w
-    top, bottom = h * .10, h * .85
+    top, bottom = h * .10, PLOT_B * h
     slot = (right - left) / len(parsed)
     bar_w = slot * .58
     prog = _stagger(t / dur, len(parsed), start=.08, step=.08)
@@ -442,7 +442,7 @@ def _draw_bullet(ax, scene, w, h, t, dur, pal, plt):
     for i, item in enumerate(items):
         p = prog[i]
         y = top + i * row_h
-        track_h = min(h * .075, row_h * .5)
+        track_h = min(h * .10, row_h * .55)
         ty = y + (row_h - track_h) / 2
         ax.add_patch(mpatches.Rectangle((left, ty), right - left, track_h,
                                    facecolor=pal["grid"], edgecolor="none",
@@ -627,7 +627,7 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
     x0, x1 = float(xd[0]), float(xd[1])
     y0, y1 = float(yd[0]), float(yd[1])
     left, right = PLOT_L * w, PLOT_R * w
-    top, bottom = PLOT_T, h * .85
+    top, bottom = PLOT_T * h, PLOT_B * h
     pw, ph = right - left, bottom - top
     for i in range(5):
         gy = bottom - ph * i / 4
@@ -658,8 +658,8 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
 
 def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
-    cx, cy = w / 2, h * .46
-    radius = min(w, h) * .36
+    cx, cy = w / 2, h * .44
+    radius = min(w, h) * .33
     width_pt = radius * .26
     segments = scene.get("segments")
     track = mpatches.Circle((cx, cy), radius, fill=False,

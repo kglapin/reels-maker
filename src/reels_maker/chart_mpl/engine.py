@@ -19,7 +19,7 @@ SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter",
              "stacked_bars_100"}
 
-_ENGINE_VERSION = 11
+_ENGINE_VERSION = 12
 _SUPERSAMPLE = 2
 
 
@@ -821,20 +821,23 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
             ax.add_patch(wedge)
         # center number counts up
     count_p = _ease_out(min(1.0, max(0.0, (t / dur - .15) / .7)))
-    if isinstance(segments, list) and len(segments) >= 2:
+    explicit = _num(scene.get("value", scene.get("percent", 0)))
+    if explicit:
+        # matches the native builder: the headline percent metric stays in
+        # the center even when the ring is segmented
+        center_fmt = f"{min(100.0, max(0.0, explicit)) * count_p:,.0f}%"
+    elif isinstance(segments, list) and len(segments) >= 2:
         shown = sum(max(0.0, _num(s.get("value", 0)))
                     for s in segments)
         center_fmt = _fmt(shown * count_p)
     else:
-        shown = min(100.0, max(0.0,
-                   _num(scene.get("value", scene.get("percent", 0)))))
-        center_fmt = f"{shown * count_p:,.0f}%"
+        center_fmt = "0%"
     ax.text(cx, cy, center_fmt, ha="center", va="center",
             fontsize=h * .075, color=pal["axis"], fontweight="bold",
             zorder=3)
     label = str(scene.get("label", ""))
     if label:
-        ax.text(cx, cy - radius * .34, _clip(label.upper(), FS_LABEL,
+        ax.text(cx, cy + radius * .34, _clip(label.upper(), FS_LABEL,
                 .5, w), ha="center",
                 va="center", fontsize=FS_LABEL, color=pal["muted"],
                 fontweight="bold")

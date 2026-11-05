@@ -16,9 +16,10 @@ from pathlib import Path
 from ..components.chart_style import chart_colors
 
 SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
-             "funnel", "donut", "diverging_bar", "scatter"}
+             "funnel", "donut", "diverging_bar", "scatter",
+             "stacked_bars_100"}
 
-_ENGINE_VERSION = 6
+_ENGINE_VERSION = 7
 _SUPERSAMPLE = 2
 
 
@@ -257,8 +258,8 @@ def _clip(text: str, fs_pt: float, max_frac: float, w: float) -> str:
     text = str(text)
     if _text_frac(text, fs_pt, w) <= max_frac:
         return text
-    budget = max(1, int(max_frac * w / (fs_pt * 0.55 * (100 / 72))) - 1)
-    return text[:budget].rstrip() + "…"
+    budget = max(1, int(max_frac * w / (fs_pt * 0.55 * (100 / 72))) - 3)
+    return text[:budget].rstrip() + "..."
 
 
 def _fit_fs(text: str, fs_max: float, box_w: float, box_h: float) -> float:
@@ -396,8 +397,11 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
             fontsize=FS_VALUE, color=pal["accent"], fontweight="bold",
             path_effects=[pe.withStroke(linewidth=3.5,
                                         foreground=pal["plot"])])
+    xlab_budget = max(.03, (right - left) / len(labels) * .8 / w)
     for i, lab in enumerate(labels):
-        ax.text(xs[i], bottom + h * XLABEL_DY, lab, va="top", ha="center",
+        ax.text(xs[i], bottom + h * XLABEL_DY,
+                _clip(lab, FS_LABEL, xlab_budget, w),
+                va="top", ha="center",
                 fontsize=FS_LABEL, color=pal["muted"],
                 rotation=0)
     # axis titles from the manifest (native builders render these too)
@@ -477,7 +481,9 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
                 f"{sign}{_fmt(abs(item['value']))}",
                 ha="center", va="bottom", fontsize=FS_VALUE,
                 color=pal["axis"], fontweight="bold", alpha=va)
-        ax.text(x + bar_w / 2, bottom + h * XLABEL_DY, item["label"],
+        xlab_budget = max(.03, slot * .8 / w)
+        ax.text(x + bar_w / 2, bottom + h * XLABEL_DY,
+                _clip(item["label"], FS_LABEL, xlab_budget, w),
                 ha="center", va="top", fontsize=FS_LABEL,
                 color=pal["muted"], fontweight="bold")
 
@@ -582,8 +588,10 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
                         ha="center", va="center", fontsize=fs,
                         color=tx_col, fontweight="bold")
     # headers
+    col_budget = max(.03, cw * .8 / w)
     for c_i, lab in enumerate(cols):
-        ax.text(left + c_i * cw + cw / 2, top - h * .015, str(lab),
+        ax.text(left + c_i * cw + cw / 2, top - h * .015,
+                _clip(lab, FS_TICK, col_budget, w),
                 ha="center", va="bottom", fontsize=FS_TICK,
                 color=pal["muted"], fontweight="bold")
     for r_i, lab in enumerate(rows):
@@ -800,6 +808,82 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
                 fontweight="bold")
 
 
+def _draw_stacked(ax, scene, w, h, t, dur, pal, plt):
+    """100% normalized horizontal stacked bars with a percent axis."""
+    from matplotlib import patches as mpatches
+    categories = scene.get("categories") or []
+    parsed = []
+    for cat in categories:
+        segs = [{"label": str(s.get("label", "")),
+                 "share": float(s.get("share", 0) or 0)}
+                for s in (cat.get("segments") or [])]
+        if segs:
+            parsed.append({"label": str(cat.get("label", "")),
+                           "segments": segs})
+    if not parsed:
+        return
+    n = len(parsed)
+    label_x = w * .22
+    left, right = w * .25, PLOT_R * w
+    top, bottom = h * .13, h * .78   # legend zone reserved below
+    row_h = (bottom - top) / n
+    bar_h = min(h * .11, row_h * .55)
+    # percent grid + ticks
+    for i in range(5):
+        gx = left + (right - left) * i / 4
+        ax.plot([gx, gx], [top, bottom], color=pal["grid"],
+                linewidth=max(1, w * .0015), zorder=1)
+        ax.text(gx, bottom + h * .015, f"{i * 25}%", va="top", ha="center",
+                fontsize=FS_TICK, color=pal["muted"])
+    prog = _stagger(t / dur, n, start=.10, step=.12)
+    n_seg = max(len(c["segments"]) for c in parsed)
+    for r_i, cat in enumerate(parsed):
+        p = prog[r_i]
+        y = top + r_i * row_h + (row_h - bar_h) / 2
+        ax.text(label_x, y + bar_h / 2,
+                _clip(cat["label"], FS_LABEL, label_x - w * .04, w),
+                va="center", ha="right", fontsize=FS_LABEL,
+                color=pal["axis"], fontweight="bold")
+        x = left
+        seg_w_total = right - left
+        for s_i, seg in enumerate(cat["segments"]):
+            share = min(1.0, max(0.0, seg["share"]))
+            sw = seg_w_total * share * p
+            if sw <= 1:
+                x += seg_w_total * share
+                continue
+            color = pal["series"][s_i % len(pal["series"])]
+            ax.add_patch(mpatches.Rectangle(
+                (x, y), sw, bar_h, facecolor=color, edgecolor="none",
+                zorder=2))
+            x += seg_w_total * share
+        if p > .85:
+            ax.text(right + w * .008, y + bar_h / 2,
+                    f"{round(sum(min(1.0, max(0.0, s['share'])) for s in cat['segments']) * 100)}%",
+                    va="center", ha="left", fontsize=FS_VALUE,
+                    color=pal["axis"], fontweight="bold")
+    # legend — segment labels are consistent across categories per the
+    # builder contract, so dedupe preserving first-seen order
+    seen = []
+    for cat in parsed:
+        for s in cat["segments"]:
+            if s["label"] not in seen:
+                seen.append(s["label"])
+    lw = w * .86 / max(1, len(seen))
+    la = min(1.0, max(0.0, (prog[-1] - .5) / .4)) if prog else 1.0
+    for i, lab in enumerate(seen):
+        lx = w * .07 + i * lw
+        ax.add_patch(mpatches.FancyBboxPatch(
+            (lx, h * .87), w * .018, h * .026,
+            boxstyle="round,pad=0,rounding_size=4",
+            facecolor=pal["series"][i % len(pal["series"])],
+            edgecolor="none", alpha=la, zorder=2))
+        ax.text(lx + w * .026, h * .883,
+                _clip(lab, FS_LABEL, max(.04, lw / w - .05), w),
+                va="center", ha="left", fontsize=FS_LABEL,
+                color=pal["muted"], alpha=la)
+
+
 _DRAWERS = {
     "bars": _draw_bars,
     "line_chart": _draw_line_chart,
@@ -810,6 +894,7 @@ _DRAWERS = {
     "diverging_bar": _draw_diverging,
     "scatter": _draw_scatter,
     "donut": _draw_donut,
+    "stacked_bars_100": _draw_stacked,
 }
 
 

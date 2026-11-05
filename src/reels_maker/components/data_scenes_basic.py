@@ -239,6 +239,30 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
         "body": _measure(subtitle, body_style, width, ctx),
     })
     chart = layout.region("chart")
+    if scene.get("chart_engine") == "mpl":
+        from ..chart_mpl.engine import sequence_node
+        seq = sequence_node(ctx, scene, theme, chart)
+        if seq is not None:
+            elements: dict[str, Node] = {
+                "headline": text_node("headline", headline, title_style,
+                                      layout.region("headline"), ctx.fonts,
+                                      align="center", valign="center"),
+                "chart": seq,
+            }
+            if subtitle and layout.optional("body"):
+                elements["body"] = text_node(
+                    "body", subtitle, body_style, layout.region("body"),
+                    ctx.fonts, align="center", valign="center")
+            specs = [_spec("headline", 7), _spec("chart", 9, "control"),
+                     _spec("body", 3)]
+            return _finish(ctx, scene, layout,
+                           _background(ctx, scene, theme), elements, specs,
+                           decor=_decor(ctx, scene, theme),
+                           meta={"component": "stacked_bars_100",
+                                 "engine": "mpl",
+                                 "normalization":
+                                     "segment value / explicit category total",
+                                 "data": parsed_categories})
     chart_theme = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .23, chart.y + chart.h * .15,
                 chart.w * .75, chart.h * .62)

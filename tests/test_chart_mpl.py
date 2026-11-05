@@ -50,7 +50,7 @@ class TextFitTests(unittest.TestCase):
 
     def test_clip_long_text_ellipsized(self):
         out = _clip("GENERACJA ENERGII", 26, .1, 1204)
-        self.assertTrue(out.endswith("…"))
+        self.assertTrue(out.endswith("..."))
         self.assertLess(_text_frac(out, 26, 1204), .11)
 
     def test_fit_fs_scales_to_box(self):

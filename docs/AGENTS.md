@@ -22,7 +22,9 @@ Brand manifests inherit `brand.json` defaults. Media paths resolve inside
 `brands/<slug>/`; other brands cannot be accessed using relative traversal.
 Catalog defaults to inexpensive file discovery, `--probe` inspects metadata.
 A scene is encoded only on a cache miss; independent scenes may encode
-concurrently. Use unique output filenames for concurrent agent jobs.
+concurrently. `studio-render` accepts `--jobs 1..8` (default `1`) for
+parallel scene-segment encodes; camera-canvas projects stay serial.
+Use unique output filenames for concurrent agent jobs.
 
 No videos or large assets should be copied into Python source code. Source media
 must remain accessible locally to FFmpeg; a GitHub code connector alone does

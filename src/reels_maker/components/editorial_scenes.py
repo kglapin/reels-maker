@@ -7,13 +7,13 @@ from ..core.scene_graph import Node
 from ..design.color import ensure_contrast, mix
 from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
-from ..textkit.typesetter import TextStyle, typeset
+from ..textkit.typesetter import TextStyle, typeset, typeset_runs
 from . import icons
 from .base import (BuiltScene, SceneContext, image_node, panel_node,
                    resolve_text_style, rich_text_node, text_node)
 from .scene_support import (
     _background, _card_fill, _decor, _external_icon, _finish, _headline,
-    _measure, _runs, _spec, _subtitle, _text_elements, _theme,
+    _measure, _runs, _spec, _subtitle, _text_elements, _theme, tokens_line,
 )
 
 
@@ -354,17 +354,28 @@ def build_spotlight(ctx: SceneContext, scene: dict) -> BuiltScene:
             "from": "#101A14", "to": "#1E3326"}}
     theme = _theme(ctx, scene)
     width = ctx.layout.safe.w
+    align = str(scene.get("align") or "left")
+    # Measure with the same role/line-height _text_elements will render, so
+    # the allocated region matches the real rich-text block.
     headline_style = resolve_text_style(ctx.tokens, "hero", theme["ink"],
-                                        balance=True)
+                                        align=align, balance=False,
+                                        line_height=tokens_line(ctx))
+    runs = _runs(scene, ctx.tokens, theme["ink"], theme["accent"])
+    if runs:
+        block = typeset_runs(runs, headline_style, width, ctx.fonts)
+        headline_measure = (block.width, block.height)
+    else:
+        headline_measure = _measure(_headline(scene), headline_style,
+                                    width, ctx)
     body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
                                     line_height=1.32)
     measurements = {
-        "headline": _measure(_headline(scene), headline_style, width, ctx),
+        "headline": headline_measure,
         "body": _measure(_subtitle(scene), body_style, width, ctx),
     }
     layout = ctx.layout.layout("spotlight", measurements)
     elements = _text_elements(ctx, scene, layout, theme,
-                              headline_role="hero")
+                              headline_role="hero", align=align)
     specs = [_spec("kicker", 3), _spec("headline", 9, "display"),
              _spec("body", 4)]
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),

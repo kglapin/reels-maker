@@ -1,6 +1,7 @@
 """MD-09 acceptance: per-scene studio cache, invalidation and recovery."""
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -84,6 +85,46 @@ class StudioRenderCacheTests(unittest.TestCase):
                               cache_dir=cache, supersample=1)
             self.assertEqual(output.read_bytes(), previous)
             self.assertEqual(list(base.glob(".reels-studio-*")), [])
+
+    def test_parallel_jobs_render_identical_frames(self):
+        """jobs>1 must produce the same decoded frames as serial render."""
+        if FFMPEG is None:
+            self.skipTest("ffmpeg not available")
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            manifest = base / "parallel.json"
+            manifest.write_text(json.dumps({
+                "name": "parallel-equiv",
+                "video": {"width": 360, "height": 640, "fps": 20},
+                "scenes": [
+                    {"type": "statement", "duration": 1.0,
+                     "headline": "RÓWNOLEGLE"},
+                    {"type": "amount", "duration": .8, "value": 12000,
+                     "visual": "none", "kicker": "TEST", "subtitle": "PODPIS"},
+                    {"type": "cta", "duration": .9, "headline": "KONTAKT",
+                     "phone": "+00 000 000 000", "line_one": "TAG",
+                     "website": "example.org"},
+                    {"type": "checklist", "duration": 1.0,
+                     "items": ["pierwszy", "drugi"]},
+                ],
+                "export": {"profile": "preview"},
+            }), encoding="utf-8")
+            serial = render_studio(load_studio(manifest, root=base),
+                                   output=base / "serial.mp4",
+                                   cache=False, supersample=1, jobs=1)
+            parallel = render_studio(load_studio(manifest, root=base),
+                                     output=base / "parallel.mp4",
+                                     cache=False, supersample=1, jobs=3)
+            self.assertEqual(serial["frames"], parallel["frames"])
+            self.assertEqual(parallel["jobs"], 3)
+            digests = []
+            for name in ("serial", "parallel"):
+                result = subprocess.run(
+                    [FFMPEG, "-v", "error", "-i", str(base / f"{name}.mp4"),
+                     "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                    capture_output=True, check=True)
+                digests.append(hashlib.sha256(result.stdout).hexdigest())
+            self.assertEqual(digests[0], digests[1])
 
     def test_full_resolution_smoke_at_final_profile(self):
         with tempfile.TemporaryDirectory() as directory:

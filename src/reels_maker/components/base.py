@@ -100,8 +100,15 @@ def rich_text_node(role: str, runs: Iterable[Run], style: TextStyle,
     # Rich run scales and per-word tracking can make ink exceed the column even
     # when the total line box fits vertically. Shrink to satisfy both hard
     # dimensions instead of leaving a headline that Studio QA must later reject.
+    # Negative runs have a 32px floor in the typesetter; stop shrinking there
+    # and let the region check report the real problem.
+    negative_scales = [run.scale for run in runs if run.effect == "negative"]
+    negative_floor = (32.0 / max(negative_scales) if negative_scales else 0.0)
     while (block.height > rect.h + .5 or block.overflow) and style.size > 10:
-        style = TextStyle(**{**style.__dict__, "size": int(style.size * .94)})
+        shrunk = int(style.size * .94)
+        if shrunk < max(10.0, negative_floor):
+            break
+        style = TextStyle(**{**style.__dict__, "size": shrunk})
         block = typeset_runs(runs, style, max(4.0, rect.w), fonts)
     if block.height > rect.h + .5 or block.overflow:
         raise ValueError("Rich headline exceeds its region; shorten the copy")

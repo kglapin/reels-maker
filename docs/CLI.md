@@ -217,8 +217,11 @@ metadata and settings, cached, and assembled by stream-copy. FFmpeg only encodes
 cache misses. Audio is encoded separately and multiplexed without re-encoding
 video. Scene frame counts are computed from cumulative cut points.
 Use `--jobs 1..8` based on available CPU and memory for classic video
-renders. Studio rendering uses `.cache/reels-maker/studio/` by default;
-`--cache-dir` selects another location and `--no-cache` forces a full rebuild.
+renders. `studio-render --jobs 1..8` encodes independent scene segments
+concurrently (default `1`); each worker owns a private renderer and decode
+metrics, and camera-canvas projects stay serial. Studio rendering uses
+`.cache/reels-maker/studio/` by default; `--cache-dir` selects another
+location and `--no-cache` forces a full rebuild.
 Studio cache entries are scene-local and include resolved visual asset metadata.
 
 Do not assume `brand.json` font-family guidance automatically installs or

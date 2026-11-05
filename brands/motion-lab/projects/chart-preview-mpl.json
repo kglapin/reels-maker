@@ -315,9 +315,83 @@
    "chart_engine": "mpl"
   },
   {
+   "type": "stacked_bars_100",
+   "duration": 3.8,
+   "headline": "MIX 100%",
+   "subtitle": "SHARE BY SOURCE",
+   "decor": false,
+   "theme": "dark",
+   "chart_engine": "mpl",
+   "categories": [
+    {
+     "id": "solar",
+     "label": "SOLAR",
+     "segments": [
+      {
+       "id": "grid",
+       "label": "GRID",
+       "value": 42
+      },
+      {
+       "id": "pv",
+       "label": "PV",
+       "value": 38
+      },
+      {
+       "id": "stor",
+       "label": "STORAGE",
+       "value": 20
+      }
+     ]
+    },
+    {
+     "id": "wind",
+     "label": "WIND",
+     "segments": [
+      {
+       "id": "grid",
+       "label": "GRID",
+       "value": 55
+      },
+      {
+       "id": "pv",
+       "label": "PV",
+       "value": 20
+      },
+      {
+       "id": "stor",
+       "label": "STORAGE",
+       "value": 25
+      }
+     ]
+    },
+    {
+     "id": "hydro",
+     "label": "HYDRO",
+     "segments": [
+      {
+       "id": "grid",
+       "label": "GRID",
+       "value": 30
+      },
+      {
+       "id": "pv",
+       "label": "PV",
+       "value": 10
+      },
+      {
+       "id": "stor",
+       "label": "STORAGE",
+       "value": 60
+      }
+     ]
+    }
+   ]
+  },
+  {
    "type": "chart_morph",
    "duration": 8.0,
-   "headline": "TABLE → BAR MORPH",
+   "headline": "TABLE \u2192 BAR MORPH",
    "subtitle": "SHARED STABLE IDS",
    "decor": false,
    "theme": "dark",

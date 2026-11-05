@@ -365,16 +365,38 @@ def number(image: Image.Image, value: float, rect: tuple[float, float, float, fl
         font = fonts.get(size, "bold")
         ascent, descent = font.getmetrics()
         text_height = ascent + descent
+    digit_advance = max(font.getlength(str(digit)) for digit in "0123456789")
     if align == "left":
         start = x
     elif align == "right":
         start = x + w - width
     else:
-        start = x + (w - width) / 2
+        # Centre the inked pixels, not the advance boxes: a trailing unit such
+        # as the superscript in "m²" advances a full em but inks only a sliver,
+        # which pushed centred numbers visibly off axis.
+        cursor = 0.0
+        ink_left, ink_right = 0.0, 0.0
+        seen = False
+        for character in text:
+            if not character.isspace():
+                bounds = font.getmask(character).getbbox()
+                if bounds is not None:
+                    if seen:
+                        ink_left = min(ink_left, cursor + bounds[0])
+                        ink_right = max(ink_right, cursor + bounds[2])
+                    else:
+                        ink_left = cursor + bounds[0]
+                        ink_right = cursor + bounds[2]
+                        seen = True
+            cursor += (digit_advance if character.isdigit()
+                       else font.getlength(character))
+        if seen:
+            start = x + (w - (ink_right - ink_left)) / 2 - ink_left
+        else:
+            start = x + (w - width) / 2
     baseline = y + (h - text_height) / 2 + ascent
     draw = ImageDraw.Draw(image, "RGBA")
     alpha = int(round(255 * opacity))
-    digit_advance = max(font.getlength(str(digit)) for digit in "0123456789")
     cursor = start + tracking_offset
     for character in text:
         advance = digit_advance if character.isdigit() else font.getlength(character)

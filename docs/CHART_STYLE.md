@@ -27,6 +27,27 @@ Avoid tiny legends, unnecessary axes, gradients that imply another quantity,
 3D decoration and invented annotations. Inspect full-resolution stills and
 motion strips at phone scale; automated QA is not creative approval.
 
+## Optional Matplotlib engine (`chart_engine: "mpl"`)
+
+Scenes may opt into a raster chart engine backed by Matplotlib
+(`pip install .[charts]`). It renders a deterministic PNG frame sequence per
+scene (2x supersample, transparent background, content-hashed disk cache) and
+injects it as a `sequence` node, so headlines, backgrounds, transitions and
+audio stay on the native pipeline. Any failure — missing matplotlib, unknown
+type, frame error — falls back to the native builders.
+
+Supported types: `line_chart`, `bars`, `waterfall`, `bullet`, `heatmap`,
+`funnel`, `diverging_bar`, `scatter`, `donut`, `stacked_bars_100`.
+`table` and `chart_morph` remain native-only. Bump `_ENGINE_VERSION` in
+`src/reels_maker/chart_mpl/engine.py` whenever drawer output changes so stale
+cached frames are invalidated.
+
+The engine uses the same visual grammar (plot card, muted grid, categorical
+series palette, direct values) expressed through shared type-scale constants
+(`FS_TICK/FS_LABEL/FS_VALUE/FS_MICRO`) and the Cartesian frame
+(`PLOT_L/PLOT_R/PLOT_T/PLOT_B`). Keep new drawers consistent with those
+constants; do not introduce per-scene pixel constants.
+
 ## Icons are a separate asset choice
 
 Built-in vector icon primitives remain an offline fallback. To use upstream

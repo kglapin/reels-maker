@@ -19,7 +19,7 @@ SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter",
              "stacked_bars_100"}
 
-_ENGINE_VERSION = 7
+_ENGINE_VERSION = 9
 _SUPERSAMPLE = 2
 
 
@@ -286,6 +286,13 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
               "prefix": str(i.get("prefix", ""))} for i in data]
     if not items:
         return
+    order = scene.get("data_order", "source")
+    if order in ("ascending", "descending"):
+        indexed = list(enumerate(items))
+        indexed.sort(key=(lambda pair: (-pair[1]["value"], pair[0]))
+                     if order == "descending" else
+                     (lambda pair: (pair[1]["value"], pair[0])))
+        items = [item for _, item in indexed]
     n = len(items)
     max_v = max(max(i["value"] for i in items), 0.0) or 1
     label_x = (PLOT_L - .015) * w
@@ -340,7 +347,19 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
     left, right = PLOT_L * w, PLOT_R * w
     top, bottom = PLOT_T * h, PLOT_B * h
     pw, ph = right - left, bottom - top
-    xs = np.linspace(left, right, len(values))
+    if scene.get("x_axis_type") == "date":
+        # position by elapsed days like the native builder, not evenly
+        try:
+            import datetime as _dt
+            ordinals = [_dt.date.fromisoformat(lab.strip()[:10]).toordinal()
+                        for lab in labels]
+            span = max(ordinals) - min(ordinals) or 1
+            xs = np.array([left + (o - min(ordinals)) / span * pw
+                           for o in ordinals])
+        except (ValueError, TypeError):
+            xs = np.linspace(left, right, len(values))
+    else:
+        xs = np.linspace(left, right, len(values))
     ys = np.clip(bottom - (np.array(values) - lo) / (hi - lo) * ph,
                  top, bottom)
     # grid + ticks
@@ -814,9 +833,17 @@ def _draw_stacked(ax, scene, w, h, t, dur, pal, plt):
     categories = scene.get("categories") or []
     parsed = []
     for cat in categories:
-        segs = [{"label": str(s.get("label", "")),
-                 "share": float(s.get("share", 0) or 0)}
-                for s in (cat.get("segments") or [])]
+        raw = [{"label": str(s.get("label", "")),
+                "share": s.get("share"),
+                "value": float(s.get("value", 0) or 0)}
+               for s in (cat.get("segments") or [])]
+        total = sum(s["value"] for s in raw)
+        segs = []
+        for s in raw:
+            share = s["share"]
+            share = (float(share) if share is not None
+                     else (s["value"] / total if total > 0 else 0.0))
+            segs.append({"label": s["label"], "share": share})
         if segs:
             parsed.append({"label": str(cat.get("label", "")),
                            "segments": segs})

@@ -259,14 +259,19 @@ def typeset(text: str, style: TextStyle, max_width: float,
         space = _token_width(font, " ", style.tracking)
         width = sum(widths) + space * (len(group) - 1)
         max_seen = max(max_seen, width)
+        # Glyphs are drawn without letter-spacing, so subtract the measured
+        # tracking before aligning; otherwise centred copy sits left by half
+        # the tracking advance and right-aligned copy never reaches the edge.
+        ink_width = width - style.tracking * sum(
+            max(0, len(word) - 1) for word in group)
         if style.align == "center":
-            x = (max_width - width) / 2
+            x = (max_width - ink_width) / 2
         elif style.align == "right":
-            x = max_width - width
+            x = max_width - ink_width
         else:
             x = 0.0
         ascent, descent = font.getmetrics()
-        height = round(max(style.size * style.line_height, ascent + descent))
+        height = round(style.size * style.line_height)
         words = []
         for word, word_width in zip(group, widths):
             words.append(Word(word, x, word_width, font_path, 0,
@@ -388,15 +393,17 @@ def typeset_runs(runs: Iterable[Run], style: TextStyle, max_width: float,
             running += width
         row_width = running
         max_seen = max(max_seen, row_width)
+        ink_width = row_width - style.tracking * sum(
+            max(0, len(item[0]) - 1) for item in row if not item[0].isspace())
         if style.align == "center":
-            offset = max(0.0, (max_width - row_width) / 2)
+            offset = max(0.0, (max_width - ink_width) / 2)
         elif style.align == "right":
-            offset = max(0.0, max_width - row_width)
+            offset = max(0.0, max_width - ink_width)
         else:
             offset = 0.0
         ascent = max(item[1].getmetrics()[0] for item in visible)
         descent = max(item[1].getmetrics()[1] for item in visible)
-        height = max(round(style.size * style.line_height), ascent + descent)
+        height = round(style.size * style.line_height)
         words = []
         path = fonts.path("bold")
         for item, position, width in widths_with_space:

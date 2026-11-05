@@ -9,7 +9,8 @@ from ..layout.engine import Rect
 from ..motionkit.keyframes import Keyframe, Track
 from ..textkit.typesetter import TextStyle
 from .chart_style import (
-    axis_style, chart_card, chart_colors, grid_width, mark_width, value_style,
+    alpha, area_points, axis_style, chart_card, chart_colors, grid_width,
+    mark_width, series_color, smooth_points, value_style,
 )
 from .base import (
     BuiltScene, SceneContext, animate_progress, format_value, number_node,
@@ -78,7 +79,7 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
         label = text_node(f"bar-label-{index}", item["label"], label_style,
                           Rect(plot.x, y, plot.w * .70, row_h * .40), ctx.fonts,
                           valign="center")
-        value_color = colors["accent"] if index == 0 else colors["axis"]
+        value_color = colors["accent"]
         value_style_ = value_style(ctx.tokens, colors, color=value_color)
         value_text = format_value(item["value"], {
             "suffix": item.get("suffix", ""),
@@ -99,8 +100,10 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                           "h": track_h, "r": track_h / 2,
                           "fill": value_color, "progress": 1.0},
                    qa_class="decor")
+        # Leading bar carries full emphasis; followers recede slightly —
+        # a quiet ranked hierarchy rather than equal-weight blocks.
         if index > 0:
-            bar.opacity = .72
+            bar.opacity = .82
         group = Node(kind="group", role=f"bar-row-{index}",
                      children=[child for child in (label, base, bar, value)
                                if child], qa_class="control",
@@ -403,12 +406,24 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     y_points = [plot.bottom - (item["value"] - low) / (high - low) * plot.h
                 for item in parsed]
     x_points = [plot.x + fraction * plot.w for fraction in x_values]
-    for index in range(len(parsed) - 1):
-        children.append(Node(kind="line", role=f"series-segment-{index}",
-                             props={"x1": x_points[index], "y1": y_points[index],
-                                    "x2": x_points[index + 1], "y2": y_points[index + 1],
-                                     "width": mark_width(ctx.tokens),
-                                     "color": colors["accent"]}, qa_class="decor"))
+    # Smooth Catmull-Rom series with a soft area fill and a draw-on reveal —
+    # the standard shadcn/Tremor line-chart grammar instead of jointed
+    # straight segments.
+    raw_points = list(zip(x_points, y_points))
+    line_pts = (smooth_points(raw_points) if len(raw_points) >= 3
+                else raw_points)
+    series_fill = alpha(colors["accent"], .14)
+    children.append(Node(
+        kind="path", role="series-area",
+        props={"points": area_points(line_pts, plot.bottom),
+               "color": series_fill, "width": 1, "fill": True,
+               "progress": 0.0},
+        qa_class="decor"))
+    children.append(Node(
+        kind="path", role="series-line",
+        props={"points": line_pts, "color": colors["accent"],
+               "width": mark_width(ctx.tokens) * 1.6, "progress": 0.0},
+        qa_class="decor"))
     point_radius = max(4, ctx.tokens.px(8))
     label_style = axis_style(ctx.tokens, colors, align="center")
     x_label_y = plot.bottom + ctx.tokens.px(12)
@@ -467,10 +482,18 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
                                       align="center", valign="center")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"),
              _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "line_chart", "data": parsed,
                          "x_axis_type": x_axis_type,
                          "x_axis_label": x_axis_label,
                          "y_axis_label": y_axis_label,
                          "y_domain": [low, high]})
+    entry = plan.choreography.entries.get("chart")
+    if entry:
+        for child in plan.elements["chart"].children:
+            if child.role in ("series-line", "series-area"):
+                animate_progress(child, entry.onset + ctx.duration * .08,
+                                 max(.45, entry.duration * 1.1),
+                                 easing="out-quart")
+    return plan

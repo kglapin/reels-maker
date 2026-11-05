@@ -64,13 +64,15 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
     children: list[Node] = [chart_card("waterfall-chart-surface", chart,
                                        ctx.tokens, theme)]
     lbl_style = axis_style(ctx.tokens, colors, align="center", weight="bold")
+    val_style = TextStyle(max(12, ctx.tokens.px(15)), colors["axis"],
+                          "bold", align="center", line_height=1.0)
     for idx, item in enumerate(parsed):
         x = plot.x + idx * slot_w + (slot_w - bar_w) / 2
         y_top = plot.bottom - (max(item["start"], item["end"]) - low) / span * plot.h
         y_bot = plot.bottom - (min(item["start"], item["end"]) - low) / span * plot.h
         h = max(ctx.tokens.px(4), y_bot - y_top)
         fill = (colors["axis"] if item["kind"] in ("opening", "total")
-                else (colors["series"][3] if item["value"] >= 0
+                else (colors["series"][2] if item["value"] >= 0
                       else ensure_contrast(ctx.tokens.palette.danger,
                                            colors["plot"], 3.0)))
         children.append(Node(
@@ -79,6 +81,28 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
                    "r": ctx.tokens.px(4), "fill": fill},
             qa_class="decor", meta={"stable_row_id": item["id"], "value": item["value"]},
         ))
+        # Connector: running-level bridge from this bar's top edge to the next
+        # slot — the visual cue that makes a waterfall read as a bridge.
+        if idx + 1 < len(parsed):
+            level_y = plot.bottom - (item["end"] - low) / span * plot.h
+            next_x = plot.x + (idx + 1) * slot_w + (slot_w - bar_w) / 2
+            children.append(Node(
+                kind="line", role=f"waterfall-connector-{idx}",
+                props={"x1": x + bar_w, "y1": level_y,
+                       "x2": next_x, "y2": level_y,
+                       "width": max(1.0, ctx.tokens.px(1.2)),
+                       "color": colors["hairline"]},
+                qa_class="decor"))
+        val_text = format_value(item["value"], {"decimals": 0,
+                                                "thousands": " "})
+        if item["kind"] == "delta" and item["value"] != 0:
+            val_text = ("+" if item["value"] > 0 else "−") + val_text.lstrip("+-−")
+        val = text_node(f"waterfall-value-{idx}", val_text, val_style,
+                        Rect(x, y_top - ctx.tokens.px(30), bar_w,
+                             ctx.tokens.px(26)),
+                        ctx.fonts, align="center", valign="bottom", fit=True)
+        if val:
+            children.append(val)
         lbl = text_node(f"waterfall-label-{idx}", item["label"], lbl_style,
                         Rect(plot.x + idx * slot_w, plot.bottom + ctx.tokens.px(6),
                              slot_w, max(20.0, ctx.tokens.px(28))),

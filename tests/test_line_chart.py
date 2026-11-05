@@ -40,15 +40,19 @@ class LineChartTests(unittest.TestCase):
     def test_builds_explicit_axes_domain_and_vector_series(self):
         built = build_scene(self.context(), self.scene())
         group = built.elements["chart"]
-        segments = [node for node in group.children
-                    if node.role.startswith("series-segment-")]
+        line = [node for node in group.children
+                if node.role == "series-line"]
+        area = [node for node in group.children
+                if node.role == "series-area"]
         points = [node for node in group.children
                   if node.role.startswith("series-point-")]
         ticks = [node for node in group.children
                  if node.role.startswith("y-tick-")]
-        self.assertEqual(len(segments), 2)
+        self.assertEqual(len(line), 1)
+        self.assertEqual(len(area), 1)
         self.assertEqual(len(points), 3)
         self.assertEqual(len(ticks), 5)
+        self.assertGreater(len(line[0].props["points"]), len(points))
         self.assertEqual(built.meta["y_domain"], [0.0, 100.0])
         self.assertEqual(built.meta["x_axis_type"], "date")
         child_roles = {node.role for node in group.children}
@@ -58,7 +62,8 @@ class LineChartTests(unittest.TestCase):
         self.assertIn("latest-value", child_roles)
         self.assertEqual(len([role for role in child_roles
                               if role.startswith("series-core-")]), 3)
-        self.assertLess(segments[0].props["x1"], segments[0].props["x2"])
+        self.assertLess(line[0].props["points"][0][0],
+                        line[0].props["points"][-1][0])
         # Day 2 is absent; day 3 is two thirds across the date scale, not at a
         # categorical equal spacing inferred from the number of records.
         x0 = points[0].props["cx"]

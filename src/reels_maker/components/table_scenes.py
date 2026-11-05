@@ -99,13 +99,23 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     }
     table_children: list[Node] = []
     header_y = table_region.y
+    # shadcn-style header: quiet surface fill with a hairline rule below,
+    # uppercase muted labels — not a solid accent slab.
+    header_fill = mix(theme["surface"], theme["base"], .10)
     table_children.append(panel_node(
         "table-header", Rect(outer_x, header_y, table_width, header_height),
-        ctx.tokens, fill=theme["accent"], radius="sm", shadow=False))
+        ctx.tokens, fill=header_fill, radius="sm", shadow=False))
+    table_children.append(Node(
+        kind="line", role="table-header-rule",
+        props={"x1": outer_x, "y1": header_y + header_height,
+               "x2": outer_x + table_width, "y2": header_y + header_height,
+               "width": max(1.0, ctx.tokens.px(1.5)),
+               "color": mix(theme["ink"], theme["surface"], .30)},
+        qa_class="decor"))
     header_style = TextStyle(
-        max(12, ctx.tokens.px(17)),
-        ensure_contrast(theme["base"], theme["accent"], 4.5),
-        "bold", uppercase=False, line_height=1.0)
+        max(12, ctx.tokens.px(15)),
+        ensure_contrast(theme["muted"], header_fill, 4.5),
+        "bold", uppercase=True, tracking=ctx.tokens.px(2), line_height=1.0)
     cell_size = max(12, min(ctx.tokens.px(20), row_height * .52))
     x = outer_x
     for column in parsed_columns:

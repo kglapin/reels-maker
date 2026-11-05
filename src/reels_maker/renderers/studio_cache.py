@@ -16,6 +16,26 @@ from ..studio import StudioProject
 STUDIO_CACHE_SCHEMA = 4
 
 
+def _engine_fingerprint() -> str:
+    """Fingerprint the installed engine sources for cache invalidation.
+
+    Scene cache keys hash the manifest and assets but not renderer code, so a
+    visual/logic change (new chart grammar, fixed easing) would otherwise keep
+    serving stale encoded segments from a warm cache. Hashing package file
+    stats once per render keeps keys honest at negligible cost.
+    """
+    package_root = Path(__file__).resolve().parents[1]
+    entries = []
+    for path in sorted(package_root.rglob("*.py")):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        entries.append((str(path.relative_to(package_root)), stat.st_size,
+                        stat.st_mtime_ns))
+    return hashlib.sha256(repr(entries).encode("utf-8")).hexdigest()
+
+
 _ASSET_PATH_FIELDS = frozenset({
     "asset", "file", "image", "logo", "mesh_path", "path", "photo", "video",
     "photo_source", "photos", "video_source",
@@ -74,6 +94,7 @@ def _cache_settings_signature(project: StudioProject, profile: str | None,
         "brand": project.brand,
         "tokens": project.tokens.to_dict(),
         "fonts": font_signature,
+        "engine": _engine_fingerprint(),
     })
 
 

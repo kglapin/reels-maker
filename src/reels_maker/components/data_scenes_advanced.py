@@ -64,7 +64,7 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
     children: list[Node] = [chart_card("waterfall-chart-surface", chart,
                                        ctx.tokens, theme)]
     lbl_style = axis_style(ctx.tokens, colors, align="center", weight="bold")
-    val_style = TextStyle(max(12, ctx.tokens.px(15)), colors["axis"],
+    val_style = TextStyle(max(15, ctx.tokens.px(24)), colors["axis"],
                           "bold", align="center", line_height=1.0)
     for idx, item in enumerate(parsed):
         x = plot.x + idx * slot_w + (slot_w - bar_w) / 2
@@ -78,7 +78,7 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"waterfall-bar-{idx}",
             props={"x": x, "y": y_top, "w": bar_w, "h": h,
-                   "r": ctx.tokens.px(4), "fill": fill},
+                   "r": ctx.tokens.px(6), "fill": fill},
             qa_class="decor", meta={"stable_row_id": item["id"], "value": item["value"]},
         ))
         # Connector: running-level bridge from this bar's top edge to the next
@@ -90,7 +90,7 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
                 kind="line", role=f"waterfall-connector-{idx}",
                 props={"x1": x + bar_w, "y1": level_y,
                        "x2": next_x, "y2": level_y,
-                       "width": max(1.0, ctx.tokens.px(1.2)),
+                       "width": max(1.0, ctx.tokens.px(1.5)),
                        "color": colors["hairline"]},
                 qa_class="decor"))
         val_text = format_value(item["value"], {"decimals": 0,
@@ -98,14 +98,14 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
         if item["kind"] == "delta" and item["value"] != 0:
             val_text = ("+" if item["value"] > 0 else "−") + val_text.lstrip("+-−")
         val = text_node(f"waterfall-value-{idx}", val_text, val_style,
-                        Rect(x, y_top - ctx.tokens.px(30), bar_w,
-                             ctx.tokens.px(26)),
+                        Rect(x, y_top - ctx.tokens.px(44), bar_w,
+                             ctx.tokens.px(38)),
                         ctx.fonts, align="center", valign="bottom", fit=True)
         if val:
             children.append(val)
         lbl = text_node(f"waterfall-label-{idx}", item["label"], lbl_style,
                         Rect(plot.x + idx * slot_w, plot.bottom + ctx.tokens.px(6),
-                             slot_w, max(20.0, ctx.tokens.px(28))),
+                             slot_w, max(28.0, ctx.tokens.px(40))),
                         ctx.fonts, align="center", valign="top", fit=True)
         if lbl:
             children.append(lbl)
@@ -144,7 +144,7 @@ def build_diverging_bar(ctx: SceneContext, scene: dict) -> BuiltScene:
              props={"x1": mid_x, "y1": plot.y, "x2": mid_x, "y2": plot.bottom,
                     "width": 2, "color": theme["ink"]}, qa_class="decor")
     ]
-    lbl_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "bold", align="right")
+    lbl_style = TextStyle(max(15, ctx.tokens.px(24)), theme["ink"], "bold", align="right")
     for idx, item in enumerate(parsed):
         y = plot.y + idx * row_h
         w_bar = (abs(item["delta"]) / max_abs) * (plot.w * .46)
@@ -153,7 +153,7 @@ def build_diverging_bar(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"diverging-bar-{idx}",
             props={"x": x_bar, "y": y + row_h * .22, "w": max(2.0, w_bar),
-                   "h": row_h * .56, "r": ctx.tokens.px(5), "fill": fill},
+                   "h": row_h * .56, "r": ctx.tokens.px(9), "fill": fill},
             qa_class="decor", meta={"stable_row_id": item["id"], "delta": item["delta"]},
         ))
         lbl = text_node(f"diverging-label-{idx}", item["label"], lbl_style,
@@ -192,22 +192,22 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
                 chart.w * .70, chart.h * .76)
     row_h = plot.h / len(parsed)
     children: list[Node] = []
-    lbl_style = TextStyle(max(12, ctx.tokens.px(16)), theme["ink"], "bold", align="right")
+    lbl_style = TextStyle(max(15, ctx.tokens.px(24)), theme["ink"], "bold", align="right")
     for idx, item in enumerate(parsed):
         y = plot.y + idx * row_h
-        track_h = min(ctx.tokens.px(32), row_h * .55)
+        track_h = min(ctx.tokens.px(44), row_h * .60)
         ty = y + (row_h - track_h) / 2
         children.append(Node(
             kind="round", role=f"bullet-range-{idx}",
             props={"x": plot.x, "y": ty, "w": plot.w, "h": track_h,
-                   "r": ctx.tokens.px(6), "fill": mix(theme["base"], theme["ink"], .15)},
+                   "r": ctx.tokens.px(10), "fill": mix(theme["base"], theme["ink"], .15)},
             qa_class="decor",
         ))
         val_w = min(plot.w, plot.w * (item["value"] / item["max"]))
         children.append(Node(
             kind="round", role=f"bullet-actual-{idx}",
             props={"x": plot.x, "y": ty + track_h * .22, "w": max(2.0, val_w),
-                   "h": track_h * .56, "r": ctx.tokens.px(4), "fill": theme["accent"]},
+                   "h": track_h * .56, "r": ctx.tokens.px(8), "fill": theme["accent"]},
             qa_class="decor", meta={"stable_row_id": item["id"]},
         ))
         tx = plot.x + min(plot.w, plot.w * (item["target"] / item["max"]))
@@ -215,16 +215,16 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
             kind="line", role=f"bullet-target-{idx}",
             props={"x1": tx, "y1": ty - ctx.tokens.px(4),
                    "x2": tx, "y2": ty + track_h + ctx.tokens.px(4),
-                   "width": max(2, ctx.tokens.px(4)), "color": theme["ink"]},
+                   "width": max(3, ctx.tokens.px(6)), "color": theme["ink"]},
             qa_class="decor",
         ))
         val_lbl = text_node(
             f"bullet-value-{idx}",
             format_value(item["value"], {"decimals": 0, "thousands": " "}),
-            TextStyle(max(12, ctx.tokens.px(15)), colors["axis"], "bold",
+            TextStyle(max(15, ctx.tokens.px(24)), colors["axis"], "bold",
                       align="right", line_height=1.0),
-            Rect(plot.right - ctx.tokens.px(96), ty,
-                 ctx.tokens.px(92), track_h),
+            Rect(plot.right - ctx.tokens.px(130), ty,
+                 ctx.tokens.px(126), track_h),
             ctx.fonts, align="right", valign="center")
         if val_lbl:
             children.append(val_lbl)
@@ -288,16 +288,16 @@ def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
             children.append(Node(
                 kind="round", role=f"heatmap-cell-{r_idx}-{c_idx}",
                 props={"x": cx, "y": cy, "w": cw - ctx.tokens.px(4),
-                       "h": ch - ctx.tokens.px(5), "r": ctx.tokens.px(6), "fill": fill},
+                       "h": ch - ctx.tokens.px(7), "r": ctx.tokens.px(9), "fill": fill},
                 qa_class="decor",
             ))
             value_text = text_node(
                 f"heatmap-value-{r_idx}-{c_idx}",
                 format_value(val, {"decimals": 0, "thousands": " "}),
-                TextStyle(max(12, ctx.tokens.px(15)),
+                TextStyle(max(14, ctx.tokens.px(22)),
                           ensure_contrast(theme["ink"], fill, 4.5),
                           "bold", align="center", line_height=1.0),
-                Rect(cx, cy, cw - ctx.tokens.px(4), ch - ctx.tokens.px(5)),
+                Rect(cx, cy, cw - ctx.tokens.px(6), ch - ctx.tokens.px(8)),
                 ctx.fonts, align="center", valign="center")
             if value_text:
                 children.append(value_text)
@@ -348,16 +348,16 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
             format_value(y0 + (y1 - y0) * fraction,
                          {"decimals": 0, "thousands": " "}),
             axis_style(ctx.tokens, colors, align="right"),
-            Rect(chart.x, y - ctx.tokens.px(13),
-                 plot.x - chart.x - ctx.tokens.px(6), ctx.tokens.px(26)),
+            Rect(chart.x, y - ctx.tokens.px(20),
+                 plot.x - chart.x - ctx.tokens.px(8), ctx.tokens.px(40)),
             ctx.fonts, align="right", valign="center")
         x_tick = text_node(
             f"scatter-x-tick-{tick_index}",
             format_value(x0 + (x1 - x0) * fraction,
                          {"decimals": 0, "thousands": " "}),
             axis_style(ctx.tokens, colors),
-            Rect(x - plot.w * .08, plot.bottom + ctx.tokens.px(4),
-                 plot.w * .16, ctx.tokens.px(26)),
+            Rect(x - plot.w * .08, plot.bottom + ctx.tokens.px(6),
+                 plot.w * .16, ctx.tokens.px(40)),
             ctx.fonts, align="center", valign="center")
         children.extend(node for node in (y_tick, x_tick) if node)
     children.extend((
@@ -369,7 +369,7 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
                     "width": max(1.0, ctx.tokens.px(1.5)), "color": colors["axis"]}, qa_class="decor"),
     ))
     parsed = []
-    r = max(5, ctx.tokens.px(9))
+    r = max(7, ctx.tokens.px(14))
     for idx, pt in enumerate(pts):
         if not isinstance(pt, dict):
             raise ValueError(f"scatter point {idx} must be an object")
@@ -421,7 +421,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                 chart.w * .84, chart.h * .80)
     row_h = plot.h / len(parsed)
     children: list[Node] = []
-    lbl_size = max(12, ctx.tokens.px(16))
+    lbl_size = max(15, ctx.tokens.px(26))
     for idx, item in enumerate(parsed):
         share = item["value"] / top_val
         w_bar = max(plot.w * .18, plot.w * share)
@@ -430,7 +430,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"funnel-stage-{idx}",
             props={"x": x_bar, "y": y + row_h * .12, "w": w_bar,
-                   "h": row_h * .72, "r": ctx.tokens.px(8),
+                   "h": row_h * .72, "r": ctx.tokens.px(14),
                    "fill": mix(theme["accent"], theme["surface"], idx * .15)},
             qa_class="decor", meta={"stable_row_id": item["id"], "share": round(share, 4)},
         ))
@@ -455,7 +455,7 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
                 kind="line", role=f"funnel-sep-{idx}",
                 props={"x1": x_bar, "y1": sep_y,
                        "x2": x_bar + w_bar, "y2": sep_y,
-                       "width": max(1.0, ctx.tokens.px(1)),
+                       "width": max(1.0, ctx.tokens.px(1.5)),
                        "color": colors["hairline"]},
                 qa_class="decor"))
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
@@ -495,7 +495,7 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
     left_x, right_x = plot.x, plot.right - plot.w * .22
     node_w = plot.w * .22
     children: list[Node] = []
-    lbl_size = max(12, ctx.tokens.px(15))
+    lbl_size = max(14, ctx.tokens.px(24))
     src_centers: dict[str, float] = {}
     dst_centers: dict[str, float] = {}
     src_h = plot.h / len(sources)
@@ -507,7 +507,7 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"sankey-src-{idx}",
             props={"x": left_x, "y": y + src_h * .12, "w": node_w,
-                   "h": src_h * .76, "r": ctx.tokens.px(6), "fill": theme["accent"]},
+                   "h": src_h * .76, "r": ctx.tokens.px(10), "fill": theme["accent"]},
             qa_class="decor",
         ))
         lbl = text_node(f"sankey-src-label-{idx}", s_name, source_style,
@@ -522,7 +522,7 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
         children.append(Node(
             kind="round", role=f"sankey-dst-{idx}",
             props={"x": right_x, "y": y + dst_h * .12, "w": node_w,
-                   "h": dst_h * .76, "r": ctx.tokens.px(6), "fill": theme["surface"]},
+                   "h": dst_h * .76, "r": ctx.tokens.px(10), "fill": theme["surface"]},
             qa_class="decor",
         ))
         target_style = TextStyle(
@@ -541,7 +541,7 @@ def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
         mid_x = (x1 + x2) / 2
         pts = [(x1, y1), (mid_x, y1 * .65 + y2 * .35),
                (mid_x, y1 * .35 + y2 * .65), (x2, y2)]
-        stroke_w = max(2.0, ctx.tokens.px(18) * (link["value"] / total_in))
+        stroke_w = max(3.0, ctx.tokens.px(26) * (link["value"] / total_in))
         link_node = Node(
             kind="path", role=f"sankey-link-{idx}",
             props={"points": pts, "width": stroke_w,

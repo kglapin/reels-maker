@@ -258,13 +258,13 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center"),
     }
-    radius = min(chart.w, chart.h) * .36
+    radius = min(chart.w, chart.h) * .40
     cx, cy = chart.center_x, chart.center_y
     from .chart_style import chart_colors, series_color
     chart_theme = chart_colors(theme)
     track = Node(kind="ring", role="donut-track",
                  props={"cx": cx, "cy": cy, "r": radius,
-                        "width": max(8, radius * .20),
+                        "width": max(10, radius * .24),
                         "color": chart_theme["hairline"]},
                  opacity=.8)
     ring_children: list[Node] = [track]
@@ -291,7 +291,7 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
             seg_node = Node(
                 kind="ring", role=f"donut-seg-{seg_index}",
                 props={"cx": cx, "cy": cy, "r": radius,
-                       "width": max(8, radius * .20),
+                       "width": max(10, radius * .24),
                        "color": series_color(chart_theme, seg_index),
                        "progress": 0.0,
                        "start_angle": -90 + 360 * cumulative},
@@ -321,7 +321,7 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
                 qa_class="decor"))
             legend_lbl = text_node(
                 f"donut-legend-{seg_index}", seg["label"],
-                TextStyle(max(11, ctx.tokens.px(14)), chart_theme["muted"],
+                TextStyle(max(14, ctx.tokens.px(20)), chart_theme["muted"],
                           "regular", align="center", line_height=1.0),
                 Rect(lx, legend_top + ctx.tokens.px(18), legend_w,
                      ctx.tokens.px(24)),
@@ -332,7 +332,7 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
     else:
         ring = Node(kind="ring", role="chart",
                     props={"cx": cx, "cy": cy, "r": radius,
-                           "width": max(8, radius * .20),
+                           "width": max(10, radius * .24),
                            "color": chart_theme["accent"],
                            "progress": 0.0, "start_angle": -90},
                     qa_class="control")
@@ -342,7 +342,7 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
                                  radius * 1.4, radius * .56),
         ctx.tokens, fmt={"suffix": "%", "thousands": ""},
         size_role="hero", color=theme["accent"], align="center")
-    label_style = TextStyle(max(14, ctx.tokens.px(24)), theme["muted"], "bold",
+    label_style = TextStyle(max(16, ctx.tokens.px(30)), theme["muted"], "bold",
                             align="center", uppercase=True, tracking=1)
     label = text_node("chart-label", str(scene.get(
         "label", "KOSZTÓW")), label_style,

@@ -87,10 +87,10 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
     table_region = layout.region("chart")
     outer_x = table_region.x + table_region.w * .02
     table_width = table_region.w * .96
-    header_height = min(ctx.tokens.px(46), table_region.h * .12)
+    header_height = min(ctx.tokens.px(58), table_region.h * .14)
     rows_height = table_region.h - header_height - ctx.tokens.px(8)
     row_height = rows_height / len(parsed_rows)
-    if row_height < ctx.tokens.px(30):
+    if row_height < ctx.tokens.px(44):
         raise ValueError("table rows do not fit safely in the available region")
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
@@ -109,14 +109,14 @@ def build_table(ctx: SceneContext, scene: dict) -> BuiltScene:
         kind="line", role="table-header-rule",
         props={"x1": outer_x, "y1": header_y + header_height,
                "x2": outer_x + table_width, "y2": header_y + header_height,
-               "width": max(1.0, ctx.tokens.px(1.5)),
+               "width": max(1.0, ctx.tokens.px(2)),
                "color": mix(theme["ink"], theme["surface"], .30)},
         qa_class="decor"))
     header_style = TextStyle(
-        max(12, ctx.tokens.px(15)),
+        max(14, ctx.tokens.px(20)),
         ensure_contrast(theme["muted"], header_fill, 4.5),
         "bold", uppercase=True, tracking=ctx.tokens.px(2), line_height=1.0)
-    cell_size = max(12, min(ctx.tokens.px(20), row_height * .52))
+    cell_size = max(14, min(ctx.tokens.px(26), row_height * .56))
     x = outer_x
     for column in parsed_columns:
         cell_width = table_width * column["width"]

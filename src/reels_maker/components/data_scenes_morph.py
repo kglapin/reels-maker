@@ -77,17 +77,17 @@ def build_chart_morph(ctx: SceneContext, scene: dict) -> BuiltScene:
         dy_start = (from_idx - to_idx) * slot_step
         w_from = (
             chart.w * .94 if from_is_table
-            else max(ctx.tokens.px(18), chart.w * (item["from_value"] / max_val))
+            else max(ctx.tokens.px(24), chart.w * (item["from_value"] / max_val))
         )
-        w_to = max(ctx.tokens.px(18), chart.w * (item["to_value"] / max_val))
+        w_to = max(ctx.tokens.px(24), chart.w * (item["to_value"] / max_val))
 
-        label_style = TextStyle(max(12, ctx.tokens.px(20)), theme["ink"], "bold")
+        label_style = TextStyle(max(15, ctx.tokens.px(30)), theme["ink"], "bold")
         lbl = text_node(
             f"morph-label-{item['id']}", item["label"], label_style,
             Rect(chart.x, y, chart.w * .58, row_h * .42),
             ctx.fonts, align="left", valign="center", fit=True,
         )
-        bar_h = max(ctx.tokens.px(18), row_h * .38)
+        bar_h = max(ctx.tokens.px(24), row_h * .44)
         bar_y = y + row_h * .48
         # Quiet full-width track behind the morphing bar — the settled state
         # reads as a proper bar chart instead of a floating pill.

@@ -54,21 +54,23 @@ def chart_card(role: str, rect: Rect, tokens, theme: dict):
 
 
 def axis_style(tokens, colors: dict, *, align="center", weight="regular"):
-    return TextStyle(max(12, tokens.px(15)), colors["muted"], weight,
+    # Chart chrome must read at arm's length on a phone: axis ticks sit only
+    # ~10% below body copy size in most premium chart systems.
+    return TextStyle(max(16, tokens.px(26)), colors["muted"], weight,
                      align=align, line_height=1.0)
 
 
 def value_style(tokens, colors: dict, *, align="right", color=None):
-    return TextStyle(max(13, tokens.px(18)), color or colors["axis"], "bold",
+    return TextStyle(max(18, tokens.px(32)), color or colors["axis"], "bold",
                      align=align, line_height=1.0)
 
 
 def grid_width(tokens) -> float:
-    return max(1.0, tokens.px(1))
+    return max(1.0, tokens.px(1.5))
 
 
 def mark_width(tokens) -> float:
-    return max(2.0, tokens.px(3.5))
+    return max(3.0, tokens.px(6))
 
 
 def series_color(colors: dict, index: int = 0):

@@ -13,8 +13,9 @@ from .chart_style import (
     mark_width, series_color, smooth_points, value_style,
 )
 from .base import (
-    BuiltScene, SceneContext, animate_chart_stagger, animate_progress,
-    format_value, number_node, resolve_text_style, safe_number, text_node,
+    BuiltScene, SceneContext, animate_chart_stagger, animate_counter,
+    animate_progress, format_value, number_node, resolve_text_style,
+    safe_number, text_node,
 )
 from .scene_support import (
     _background, _data_panel_scaffold, _decor, _finish, _headline,
@@ -66,28 +67,30 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                               align="center", valign="center")}
     chart = layout.region("chart")
     colors = chart_colors(theme)
-    row_gap = max(ctx.tokens.px(18), chart.h * .035)
-    inset_x = ctx.tokens.px(20)
-    plot = Rect(chart.x + inset_x, chart.y + ctx.tokens.px(14),
-                chart.w - 2 * inset_x, chart.h - ctx.tokens.px(28))
+    row_gap = max(ctx.tokens.px(26), chart.h * .045)
+    inset_x = ctx.tokens.px(28)
+    plot = Rect(chart.x + inset_x, chart.y + ctx.tokens.px(20),
+                chart.w - 2 * inset_x, chart.h - ctx.tokens.px(40))
     row_h = (plot.h - row_gap * (len(parsed) - 1)) / len(parsed)
-    track_h = max(8.0, min(ctx.tokens.px(14), row_h * .17))
+    track_h = max(14.0, min(ctx.tokens.px(30), row_h * .30))
     for index, item in enumerate(parsed):
         y = plot.y + index * (row_h + row_gap)
-        label_style = TextStyle(max(9, int(round(ctx.tokens.px(22)))), colors["axis"], "bold",
+        label_style = TextStyle(max(14, int(round(ctx.tokens.px(30)))),
+                                colors["axis"], "bold",
                                 uppercase=True, tracking=.35, line_height=1.0)
         label = text_node(f"bar-label-{index}", item["label"], label_style,
-                          Rect(plot.x, y, plot.w * .70, row_h * .40), ctx.fonts,
+                          Rect(plot.x, y, plot.w * .62, row_h * .44), ctx.fonts,
                           valign="center")
         value_color = colors["accent"]
-        value_style_ = value_style(ctx.tokens, colors, color=value_color)
-        value_text = format_value(item["value"], {
-            "suffix": item.get("suffix", ""),
-            "prefix": item.get("prefix", ""), "thousands": " "})
-        value = text_node(
-            f"bar-value-{index}", value_text, value_style_,
-            Rect(plot.x + plot.w * .70, y, plot.w * .30, row_h * .40),
-            ctx.fonts, align="right", valign="center")
+        value = number_node(
+            f"bar-value-{index}", item["value"],
+            Rect(plot.x + plot.w * .62, y, plot.w * .38, row_h * .44),
+            ctx.tokens,
+            fmt={"prefix": item.get("prefix", ""),
+                 "suffix": item.get("suffix", ""), "thousands": " "},
+            size_role="body", color=value_color, align="right")
+        if value is not None:
+            value.props["size"] = max(22, ctx.tokens.px(38))
         track_y = y + row_h * .57
         base = Node(kind="round", role=f"bar-track-{index}",
                     props={"x": plot.x, "y": track_y,
@@ -136,6 +139,13 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
                     animate_progress(child, entry.onset,
                                      max(.3, entry.duration * 1.4),
                                      easing="out-quart")
+                elif child.role == f"bar-value-{index}":
+                    # Values count up as the bar lands — the signature
+                    # data-reveal move of premium chart reels.
+                    animate_counter(child, item["value"],
+                                    entry.onset + entry.duration * .45,
+                                    max(.3, entry.duration * .8),
+                                    easing="out-quart")
     return plan
 
 def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
@@ -217,7 +227,7 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
     colors = list(chart_theme["series"][:len(segment_specs)])
     children: list[Node] = [chart_card("stacked-chart-surface", chart,
                                        ctx.tokens, theme)]
-    category_style = TextStyle(max(12, ctx.tokens.px(18)),
+    category_style = TextStyle(max(14, ctx.tokens.px(24)),
                                chart_theme["axis"], "bold")
     for row_index, category in enumerate(parsed_categories):
         y = plot.y + row_index * row_height
@@ -413,7 +423,7 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     raw_points = list(zip(x_points, y_points))
     line_pts = (smooth_points(raw_points) if len(raw_points) >= 3
                 else raw_points)
-    series_fill = alpha(colors["accent"], .14)
+    series_fill = alpha(colors["accent"], .20)
     children.append(Node(
         kind="path", role="series-area",
         props={"points": area_points(line_pts, plot.bottom),
@@ -425,7 +435,7 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
         props={"points": line_pts, "color": colors["accent"],
                "width": mark_width(ctx.tokens) * 1.6, "progress": 0.0},
         qa_class="decor"))
-    point_radius = max(4, ctx.tokens.px(8))
+    point_radius = max(6, ctx.tokens.px(14))
     label_style = axis_style(ctx.tokens, colors, align="center")
     x_label_y = plot.bottom + ctx.tokens.px(12)
     x_boundaries = [plot.x]
@@ -448,7 +458,7 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
             f"x-label-{index}", item["label"], label_style,
             Rect(x_boundaries[index], x_label_y,
                  x_boundaries[index + 1] - x_boundaries[index],
-                 ctx.tokens.px(32)),
+                 ctx.tokens.px(44)),
             ctx.fonts, align="center", valign="top")
         if point_label:
             children.append(point_label)
@@ -456,15 +466,15 @@ def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
         "latest-value",
         format_value(parsed[-1]["value"], {"decimals": decimals,
                                            "thousands": " "}),
-        TextStyle(max(14, ctx.tokens.px(19)), colors["accent"], "bold",
+        TextStyle(max(18, ctx.tokens.px(30)), colors["accent"], "bold",
                   align="right", line_height=1.0),
-        Rect(plot.right - ctx.tokens.px(138),
-             max(plot.y + ctx.tokens.px(2), y_points[-1] - ctx.tokens.px(38)),
-             ctx.tokens.px(128), ctx.tokens.px(30)),
+        Rect(plot.right - ctx.tokens.px(180),
+             max(plot.y + ctx.tokens.px(2), y_points[-1] - ctx.tokens.px(48)),
+             ctx.tokens.px(170), ctx.tokens.px(40)),
         ctx.fonts, align="right", valign="center")
     if latest_label:
         children.append(latest_label)
-    title_style = TextStyle(max(13, ctx.tokens.px(17)), colors["axis"], "bold",
+    title_style = TextStyle(max(16, ctx.tokens.px(24)), colors["axis"], "bold",
                             align="center")
     x_title = text_node("x-axis-title", x_axis_label.strip(), title_style,
                         Rect(plot.x, chart.bottom - ctx.tokens.px(34),

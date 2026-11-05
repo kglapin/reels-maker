@@ -1,6 +1,7 @@
 """Studio output probing, delivery verification and format matrix rendering."""
 from __future__ import annotations
 
+import subprocess
 from fractions import Fraction
 from pathlib import Path
 
@@ -41,6 +42,48 @@ def probe_output(path: Path) -> dict:
     }
 
 
+def _luma_series(path: Path, *, width: int = 16,
+                 height: int = 16) -> list[float]:
+    """Mean luminance per frame, decoded at thumbnail size for flash checks."""
+    from ..ffmpeg import require_tool
+    completed = subprocess.run(
+        [require_tool("ffmpeg"), "-v", "error", "-i", str(path),
+         "-vf", f"scale={width}:{height},format=gray",
+         "-f", "rawvideo", "-"],
+        capture_output=True, check=False)
+    if completed.returncode:
+        raise RenderError(
+            f"Cannot decode {path} for flash check: "
+            f"{completed.stderr.decode('utf-8', 'replace')[-800:]}")
+    data = completed.stdout
+    stride = width * height
+    count = len(data) // stride
+    return [sum(data[i * stride:(i + 1) * stride]) / (stride * 255.0)
+            for i in range(count)]
+
+
+def _flash_check(path: Path) -> dict:
+    """Advisory blink detection on the encoded file.
+
+    A hard cut produces a monotonic luminance step; a blink reverses
+    direction within a frame or two. Only reversals where both deltas
+    exceed the threshold count, so ordinary scene changes stay silent.
+    """
+    luma = _luma_series(path)
+    if len(luma) < 3:
+        return {"status": "pass", "frames": len(luma), "blink_frames": 0,
+                "max_delta": 0.0}
+    threshold = 0.20
+    deltas = [luma[i + 1] - luma[i] for i in range(len(luma) - 1)]
+    blink_frames = sum(
+        1 for i in range(1, len(deltas))
+        if (deltas[i - 1] > threshold and deltas[i] < -threshold)
+        or (deltas[i - 1] < -threshold and deltas[i] > threshold))
+    return {"status": "warn" if blink_frames else "pass",
+            "frames": len(luma), "blink_frames": blink_frames,
+            "max_delta": round(max(abs(d) for d in deltas), 4)}
+
+
 def _verify_studio_output(path: Path, project: StudioProject,
                           timeline) -> dict:
     metadata = probe_output(path)
@@ -71,6 +114,7 @@ def _verify_studio_output(path: Path, project: StudioProject,
     if not expects_audio and metadata["audio_streams"]:
         raise RenderError("Silent studio project unexpectedly contains audio")
     return {"status": "pass", **metadata,
+            "flash_check": _flash_check(path),
             "expected_frames": timeline.total_frames,
             "expected_duration": timeline.duration}
 

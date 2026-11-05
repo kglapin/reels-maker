@@ -267,10 +267,14 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         supersample = 2 if project.height >= 1600 else 1
     uses_camera_canvas = any("camera_canvas" in scene
                              for scene in project.scenes)
+    effective_jobs = 1 if uses_camera_canvas else jobs
+    # Parallel workers each build their own renderer inside the pool; the
+    # shared instance is only needed for serial encodes.
+    renderer = None
     if uses_camera_canvas:
         from .camera_canvas import CameraCanvasRenderer
         renderer = CameraCanvasRenderer(project)
-    else:
+    elif effective_jobs == 1:
         renderer = SceneRenderer(
             project.width, project.height, project.tokens, project.fonts,
             options=RenderOptions(supersample=supersample))
@@ -350,7 +354,9 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                 "transition": scene.get("transition_out"),
             })
 
-        effective_jobs = 1 if uses_camera_canvas else jobs
+        # Each worker owns ~512MB of image caches; scale budgets down as the
+        # pool grows so jobs=8 cannot pin several GB of RAM.
+        worker_cache_scale = min(1.0, 4.0 / max(effective_jobs, 1))
         renderer_local = threading.local()
         progress_lock = threading.Lock()
         progress_written: dict[int, int] = {}
@@ -363,7 +369,8 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                 current = SceneRenderer(
                     project.width, project.height, project.tokens,
                     project.fonts,
-                    options=RenderOptions(supersample=supersample))
+                    options=RenderOptions(supersample=supersample),
+                    cache_scale=worker_cache_scale)
                 renderer_local.renderer = current
             return current
 
@@ -376,6 +383,14 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
                 progress({"frames": done,
                           "total": timeline.total_frames,
                           "scene": update.get("scene")})
+
+        # Warm-cache scenes encode nothing, but their frames still count
+        # toward the reported total.
+        for cache_index, cache_entry in timing_entries.items():
+            if cache_entry.get("cache_hit"):
+                report_progress({"frames": timeline.scenes[cache_index].frames,
+                                 "scene": cache_entry["scene"]},
+                                cache_index)
 
         def encode_work(work: dict) -> dict:
             from .canvas import collect_video_decode_metrics
@@ -520,7 +535,7 @@ def render_studio(project: StudioProject, *, output: str | Path | None = None,
         "export_quality": export_quality,
         "cache_hits": cache_hits,
         "cache_misses": encodes,
-        "jobs": 1 if uses_camera_canvas else jobs,
+        "jobs": effective_jobs,
         "cache_signature": (cache_signature[:12] if cache_signature else None),
         "icon_provenance": _icon_provenance(built),
         "scenes": [scene.to_dict() for scene in built],

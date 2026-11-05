@@ -706,5 +706,39 @@ class StudioRenderIntegrationTests(unittest.TestCase):
             self.assertLess(timings[1], 1.0)
 
 
+class FlashCheckTests(unittest.TestCase):
+    def _ffmpeg(self):
+        exe = shutil.which("ffmpeg")
+        if exe is None:
+            self.skipTest("ffmpeg not available")
+        return exe
+
+    def test_flash_check_warns_on_encoded_blink_and_passes_on_static(self):
+        from reels_maker.renderers.studio_output import _flash_check
+        exe = self._ffmpeg()
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            blink = base / "blink.mp4"
+            subprocess.run([
+                exe, "-v", "error", "-y",
+                "-f", "lavfi", "-i", "color=black:size=64x64:rate=12",
+                "-vf", r"geq=lum='if(mod(N\,2)\,235\,16)':cb=128:cr=128",
+                "-frames:v", "24", "-pix_fmt", "yuv420p", str(blink),
+            ], check=True, capture_output=True)
+            still = base / "still.mp4"
+            subprocess.run([
+                exe, "-v", "error", "-y",
+                "-f", "lavfi", "-i",
+                "color=0x506070:size=64x64:rate=12:duration=2",
+                "-pix_fmt", "yuv420p", str(still),
+            ], check=True, capture_output=True)
+            blink_result = _flash_check(blink)
+            self.assertEqual(blink_result["status"], "warn")
+            self.assertGreater(blink_result["blink_frames"], 0)
+            still_result = _flash_check(still)
+            self.assertEqual(still_result["status"], "pass")
+            self.assertEqual(still_result["blink_frames"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

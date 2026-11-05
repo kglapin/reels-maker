@@ -64,9 +64,12 @@ class RenderOptions:
 
 class SceneRenderer:
     def __init__(self, width: int, height: int, tokens: DesignTokens,
-                 fonts: FontBook, *, options: RenderOptions | None = None):
+                 fonts: FontBook, *, options: RenderOptions | None = None,
+                 cache_scale: float = 1.0):
         if width < 2 or height < 2:
             raise ValueError("Canvas must be at least 2x2 pixels")
+        if not 0.0 < cache_scale <= 1.0:
+            raise ValueError("cache_scale must be in (0, 1]")
         self.width, self.height = width, height
         self.tokens = tokens
         self.fonts = fonts
@@ -78,16 +81,16 @@ class SceneRenderer:
         self._backgrounds: dict[tuple, Image.Image] = {}
         self._sources: OrderedDict[object, Image.Image] = OrderedDict()
         self._source_bytes = 0
-        self._source_byte_budget = 256 * 1024 * 1024
+        self._source_byte_budget = int(256 * 1024 * 1024 * cache_scale)
         self._framed_images: OrderedDict[tuple, Image.Image] = OrderedDict()
         self._framed_image_bytes = 0
-        self._framed_image_budget = 128 * 1024 * 1024
+        self._framed_image_budget = int(128 * 1024 * 1024 * cache_scale)
         # Values pin the BuiltScene so its id() cannot be recycled by a
         # different scene while a cache entry still references it.
         self._settled_frame_times: dict[int, tuple[object, float | None]] = {}
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
-        self._settled_frame_budget = 128 * 1024 * 1024
+        self._settled_frame_budget = int(128 * 1024 * 1024 * cache_scale)
         # Resolved-path -> (mtime_ns, size) signatures. Media cannot change
         # mid-render, so stat once per renderer instead of once per frame.
         self._path_stats: dict[str, tuple[int, int]] = {}

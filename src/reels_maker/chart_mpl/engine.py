@@ -18,7 +18,7 @@ from ..components.chart_style import chart_colors
 SUPPORTED = {"line_chart", "bars", "waterfall", "bullet", "heatmap",
              "funnel", "donut", "diverging_bar", "scatter"}
 
-_ENGINE_VERSION = 2
+_ENGINE_VERSION = 4
 _SUPERSAMPLE = 2
 
 
@@ -207,6 +207,36 @@ def _render_all(kind: str, scene: dict, theme: dict, width: int,
 
 # -- individual drawers -------------------------------------------------------
 # All coordinates are in pixel units of the 2x frame. `t` is scene seconds.
+#
+# Shared geometry + type scale. Frames render at 2x and display at 0.5x, so a
+# font size in points maps to screen px as ``pt * 100/72 * 0.5 ≈ pt * 0.694`` —
+# independent of region size. These constants therefore hold the same visual
+# size in every chart scene and match the native builders' axis/value roles.
+FS_TICK = 23      # ~16px — axis ticks, grid labels, headers
+FS_LABEL = 26     # ~18px — category labels, legend, cell headers
+FS_VALUE = 30     # ~21px — data values, latest-point callouts
+FS_MICRO = 21     # ~15px — secondary annotations
+
+# Cartesian plot frame (fractions of frame w/h). Left gutter reserves room for
+# right-aligned axis labels; right/top/bottom keep clear of the card edge.
+PLOT_L, PLOT_R, PLOT_T, PLOT_B = .17, .95, .11, .86
+# X-axis category labels sit just below PLOT_B.
+XLABEL_DY = .028
+
+
+def _text_frac(text: str, fs_pt: float, w: float) -> float:
+    """Rough rendered width of ``text`` as a fraction of frame width."""
+    return len(str(text)) * fs_pt * 0.55 * (100 / 72) / max(1.0, w)
+
+
+def _clip(text: str, fs_pt: float, max_frac: float, w: float) -> str:
+    """Truncate ``text`` with an ellipsis so it fits ``max_frac`` of width."""
+    text = str(text)
+    if _text_frac(text, fs_pt, w) <= max_frac:
+        return text
+    budget = max(1, int(max_frac * w / (fs_pt * 0.55 * (100 / 72))) - 1)
+    return text[:budget].rstrip() + "…"
+
 
 def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
     from matplotlib import patches as mpatches
@@ -219,9 +249,9 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
         return
     n = len(items)
     max_v = max(i["value"] for i in items) or 1
-    left, right = w * .04, w * .97
-    top, bottom = h * .10, h * .93
-    label_w = (right - left) * .60
+    label_x = (PLOT_L - .015) * w
+    left, right = PLOT_L * w, PLOT_R * w
+    top, bottom = PLOT_T, h * .92
     track_h = min(h * .075, (bottom - top) / n * .34)
     progresses = _stagger(t / dur, n, start=.10, step=.06)
     for i, item in enumerate(items):
@@ -241,15 +271,15 @@ def _draw_bars(ax, scene, w, h, t, dur, pal, plt):
                 boxstyle=f"round,pad=0,rounding_size={track_h / 2}",
                 facecolor=pal["accent"], edgecolor="none", zorder=2,
                 alpha=.55 + .45 * (1 if i == 0 else .82)))
-        fs = h * .032
-        ax.text(left, y + track_h * .5, item["label"].upper(),
-                va="center", ha="left", fontsize=fs,
+        ax.text(label_x, y + track_h * .5,
+                _clip(item["label"].upper(), FS_LABEL, label_x - w * .035, w),
+                va="center", ha="right", fontsize=FS_LABEL,
                 color=pal["axis"], fontweight="bold",
                 transform=ax.transData)
         shown = item["value"] * p
         txt = item["prefix"] + _fmt(shown) + item["suffix"]
         ax.text(right, y + track_h * .5, txt, va="center", ha="right",
-                fontsize=fs * 1.15, color=pal["accent"],
+                fontsize=FS_VALUE, color=pal["accent"],
                 fontweight="bold")
 
 
@@ -265,19 +295,20 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
     lo, hi = float(dom[0]), float(dom[1])
     if hi <= lo:
         hi = lo + 1
-    left, right = w * .10, w * .97
-    top, bottom = h * .10, h * .86
+    left, right = PLOT_L * w, PLOT_R * w
+    top, bottom = PLOT_T, h * .84
     pw, ph = right - left, bottom - top
     xs = np.linspace(left, right, len(values))
     ys = bottom - (np.array(values) - lo) / (hi - lo) * ph
     # grid + ticks
+    tick_fs = FS_TICK
     for i in range(5):
         gy = bottom - ph * i / 4
         ax.plot([left, right], [gy, gy], color=pal["grid"],
                 linewidth=max(1, w * .0018), zorder=1)
         tick = lo + (hi - lo) * i / 4
-        ax.text(left - w * .012, gy, _fmt(tick), va="center", ha="right",
-                fontsize=h * .026, color=pal["muted"])
+        ax.text(left - w * .015, gy, _fmt(tick), va="center", ha="right",
+                fontsize=tick_fs, color=pal["muted"])
     # draw-on progress
     p = _ease_out(min(1.0, max(0.0, (t / dur - .10) / .55)))
     n_pts = max(2, int(round(len(xs) * p)))
@@ -306,22 +337,23 @@ def _draw_line_chart(ax, scene, w, h, t, dur, pal, plt):
     # area fill with vertical alpha gradient feel: two fills
     ax.fill_between(xd, yd, bottom, color=pal["accent"], alpha=.16,
                     zorder=2)
-    ax.plot(xd, yd, color=pal["accent"], linewidth=max(2.5, w * .008),
+    ax.plot(xd, yd, color=pal["accent"], linewidth=max(2.0, w * .005),
             solid_capstyle="round", zorder=3)
-    # dots at revealed points
+    # dots at revealed points (scatter s is in pt^2: ~17px frame diameter)
+    dot_s = (w * .017) ** 2
     for x, y in zip(xs[:n_pts], ys[:n_pts]):
-        ax.scatter([x], [y], s=w * .0016, color=pal["plot"],
-                   edgecolors=pal["accent"], linewidths=max(1.5, w * .003),
+        ax.scatter([x], [y], s=dot_s, color=pal["plot"],
+                   edgecolors=pal["accent"], linewidths=max(1.2, w * .002),
                    zorder=4)
-        ax.scatter([x], [y], s=w * .0007, color=pal["accent"], zorder=5)
+        ax.scatter([x], [y], s=dot_s * .32, color=pal["accent"], zorder=5)
     # latest value label
     lv = values[-1] * min(1.0, p * 1.15)
     ax.text(right, min(ys[-1], bottom) - h * .03,
             _fmt(values[-1]), va="bottom", ha="right",
-            fontsize=h * .034, color=pal["accent"], fontweight="bold")
+            fontsize=FS_VALUE, color=pal["accent"], fontweight="bold")
     for i, lab in enumerate(labels):
-        ax.text(xs[i], bottom + h * .02, lab, va="top", ha="center",
-                fontsize=h * .024, color=pal["muted"],
+        ax.text(xs[i], bottom + h * XLABEL_DY, lab, va="top", ha="center",
+                fontsize=FS_LABEL, color=pal["muted"],
                 rotation=0)
 
 
@@ -351,8 +383,8 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
     lo -= span * .08
     hi += span * .12
     span = hi - lo
-    left, right = w * .07, w * .98
-    top, bottom = h * .08, h * .90
+    left, right = w * .08, PLOT_R * w
+    top, bottom = h * .10, h * .85
     slot = (right - left) / len(parsed)
     bar_w = slot * .58
     prog = _stagger(t / dur, len(parsed), start=.08, step=.08)
@@ -386,10 +418,10 @@ def _draw_waterfall(ax, scene, w, h, t, dur, pal, plt):
             "−" if item["kind"] == "delta" and item["value"] < 0 else "")
         ax.text(x + bar_w / 2, y_top - h * .015,
                 f"{sign}{_fmt(abs(item['value']))}",
-                ha="center", va="bottom", fontsize=h * .028,
+                ha="center", va="bottom", fontsize=FS_VALUE,
                 color=pal["axis"], fontweight="bold")
-        ax.text(x + bar_w / 2, bottom + h * .015, item["label"],
-                ha="center", va="top", fontsize=h * .026,
+        ax.text(x + bar_w / 2, bottom + h * XLABEL_DY, item["label"],
+                ha="center", va="top", fontsize=FS_LABEL,
                 color=pal["muted"], fontweight="bold")
 
 
@@ -402,8 +434,9 @@ def _draw_bullet(ax, scene, w, h, t, dur, pal, plt):
               "max": float(m.get("max", 1) or 1)} for m in metrics]
     if not items:
         return
-    left, right = w * .26, w * .97
-    top, bottom = h * .10, h * .92
+    label_x = w * .24
+    left, right = w * .27, PLOT_R * w
+    top, bottom = h * .12, h * .90
     row_h = (bottom - top) / len(items)
     prog = _stagger(t / dur, len(items), start=.10, step=.09)
     for i, item in enumerate(items):
@@ -426,12 +459,13 @@ def _draw_bullet(ax, scene, w, h, t, dur, pal, plt):
             ax.plot([tx, tx], [ty - h * .01, ty + track_h + h * .01],
                     color=pal["axis"], linewidth=max(2, w * .005),
                     zorder=3)
-            ax.text(right + w * .005, ty + track_h / 2,
+            ax.text(right, ty + track_h / 2,
                     _fmt(item["value"] * min(1.0, p)),
-                    va="center", ha="left", fontsize=h * .030,
+                    va="center", ha="right", fontsize=FS_VALUE,
                     color=pal["accent"], fontweight="bold")
-        ax.text(left - w * .015, ty + track_h / 2, item["label"],
-                va="center", ha="right", fontsize=h * .028,
+        ax.text(label_x, ty + track_h / 2,
+                _clip(item["label"], FS_LABEL, label_x - w * .04, w),
+                va="center", ha="right", fontsize=FS_LABEL,
                 color=pal["axis"], fontweight="bold")
 
 
@@ -445,8 +479,8 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
     flat = [float(v) for row in matrix for v in row]
     lo, hi = min(flat), max(flat)
     span = max(1e-6, hi - lo)
-    left, right = w * .22, w * .98
-    top, bottom = h * .10, h * .94
+    left, right = w * .22, PLOT_R * w
+    top, bottom = h * .13, h * .93
     cw = (right - left) / len(cols)
     ch = (bottom - top) / len(rows)
     prog = _stagger(t / dur, len(rows) * len(cols), start=.08, step=.012)
@@ -480,16 +514,17 @@ def _draw_heatmap(ax, scene, w, h, t, dur, pal, plt):
                 lum = sum(mixc) / 3
                 tx_col = "#ffffff" if lum < 140 else "#111111"
                 ax.text(cx + cw_px / 2, cy + ch_px / 2, _fmt(val),
-                        ha="center", va="center", fontsize=h * .030,
+                        ha="center", va="center", fontsize=FS_VALUE,
                         color=tx_col, fontweight="bold")
     # headers
     for c_i, lab in enumerate(cols):
         ax.text(left + c_i * cw + cw / 2, top - h * .015, str(lab),
-                ha="center", va="bottom", fontsize=h * .026,
+                ha="center", va="bottom", fontsize=FS_TICK,
                 color=pal["muted"], fontweight="bold")
     for r_i, lab in enumerate(rows):
-        ax.text(left - w * .015, top + r_i * ch + ch / 2, str(lab),
-                ha="right", va="center", fontsize=h * .026,
+        ax.text(left - w * .015, top + r_i * ch + ch / 2,
+                _clip(lab, FS_TICK, left - w * .05, w),
+                ha="right", va="center", fontsize=FS_TICK,
                 color=pal["muted"], fontweight="bold")
 
 
@@ -501,14 +536,18 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
     if len(items) < 2:
         return
     top_val = items[0]["value"] or 1
-    left, right = w * .10, w * .90
-    top, bottom = h * .08, h * .94
+    left, right = w * .08, w * .92
+    top, bottom = h * .10, h * .92
     row_h = (bottom - top) / len(items)
     prog = _stagger(t / dur, len(items), start=.08, step=.10)
     for i, item in enumerate(items):
         p = prog[i]
         share = item["value"] / top_val
-        bar_w = max((right - left) * .16, (right - left) * share) * p
+        label_txt = f"{item['label']}  ·  {round(share * 100)}%"
+        # keep the bar wide enough for its centered label
+        min_w = max(_text_frac(label_txt, FS_VALUE, w) * 1.12,
+                    (right - left) * .20)
+        bar_w = max(min_w, (right - left) * share) * p
         x = (left + right) / 2 - bar_w / 2
         y = top + i * row_h + row_h * .10
         bh = row_h * .72
@@ -520,9 +559,8 @@ def _draw_funnel(ax, scene, w, h, t, dur, pal, plt):
             facecolor=pal["accent"], edgecolor="none", alpha=.95 - i * .12,
             zorder=2))
         if p > .7:
-            ax.text((left + right) / 2, y + bh / 2,
-                    f"{item['label']}  ·  {round(share * 100)}%",
-                    ha="center", va="center", fontsize=h * .032,
+            ax.text((left + right) / 2, y + bh / 2, label_txt,
+                    ha="center", va="center", fontsize=FS_VALUE,
                     color="#ffffff", fontweight="bold")
         if i + 1 < len(items) and p > .9:
             sep_y = top + (i + 1) * row_h
@@ -541,8 +579,9 @@ def _draw_diverging(ax, scene, w, h, t, dur, pal, plt):
     if not items:
         return
     max_abs = max(abs(i["delta"]) for i in items) or 1
-    left, right = w * .26, w * .97
-    top, bottom = h * .08, h * .94
+    label_x = w * .22
+    left, right = w * .25, PLOT_R * w
+    top, bottom = h * .12, h * .90
     mid_x = (left + right) / 2
     half = (right - left) / 2 * .94
     row_h = (bottom - top) / len(items)
@@ -561,8 +600,20 @@ def _draw_diverging(ax, scene, w, h, t, dur, pal, plt):
             (x0, y + (row_h - bar_h) / 2), max(2.0, bar_w), bar_h,
             boxstyle=f"round,pad=0,rounding_size={bar_h * .5}",
             facecolor=color, edgecolor="none", zorder=3))
-        ax.text(left - w * .015, y + row_h / 2, item["label"],
-                va="center", ha="right", fontsize=h * .028,
+        cy = y + row_h / 2
+        if bar_w > w * .02:
+            if item["delta"] >= 0:
+                ax.text(x0 + bar_w + w * .008, cy,
+                        f"+{_fmt(item['delta'])}", va="center", ha="left",
+                        fontsize=FS_VALUE, color=pal["axis"],
+                        fontweight="bold")
+            else:
+                ax.text(x0 - w * .008, cy, f"−{_fmt(abs(item['delta']))}",
+                        va="center", ha="right", fontsize=FS_VALUE,
+                        color=pal["axis"], fontweight="bold")
+        ax.text(label_x, cy,
+                _clip(item["label"], FS_LABEL, label_x - w * .04, w),
+                va="center", ha="right", fontsize=FS_LABEL,
                 color=pal["axis"], fontweight="bold")
 
 
@@ -575,8 +626,8 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
     yd = scene.get("y_domain") or [0, 1]
     x0, x1 = float(xd[0]), float(xd[1])
     y0, y1 = float(yd[0]), float(yd[1])
-    left, right = w * .14, w * .97
-    top, bottom = h * .08, h * .92
+    left, right = PLOT_L * w, PLOT_R * w
+    top, bottom = PLOT_T, h * .85
     pw, ph = right - left, bottom - top
     for i in range(5):
         gy = bottom - ph * i / 4
@@ -585,13 +636,14 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
                 linewidth=max(1, w * .0015), zorder=1)
         ax.plot([gx, gx], [top, bottom], color=pal["grid"],
                 linewidth=max(1, w * .0015), zorder=1)
-        ax.text(left - w * .012, gy, _fmt(y0 + (y1 - y0) * i / 4),
-                va="center", ha="right", fontsize=h * .024,
+        ax.text(left - w * .015, gy, _fmt(y0 + (y1 - y0) * i / 4),
+                va="center", ha="right", fontsize=FS_TICK,
                 color=pal["muted"])
-        ax.text(gx, bottom + h * .015, _fmt(x0 + (x1 - x0) * i / 4),
-                va="top", ha="center", fontsize=h * .024,
+        ax.text(gx, bottom + h * XLABEL_DY, _fmt(x0 + (x1 - x0) * i / 4),
+                va="top", ha="center", fontsize=FS_TICK,
                 color=pal["muted"])
     prog = _stagger(t / dur, len(pts), start=.10, step=.05)
+    dot_s = (w * .017) ** 2
     for i, pt in enumerate(pts):
         xv, yv = float(pt.get("x", 0)), float(pt.get("y", 0))
         px = left + (xv - x0) / (x1 - x0) * pw
@@ -599,8 +651,8 @@ def _draw_scatter(ax, scene, w, h, t, dur, pal, plt):
         p = prog[i]
         if p <= 0:
             continue
-        ax.scatter([px], [py], s=w * .0022 * p, color=pal["accent"],
-                   edgecolors=pal["plot"], linewidths=max(1.5, w * .003),
+        ax.scatter([px], [py], s=dot_s * p, color=pal["accent"],
+                   edgecolors=pal["plot"], linewidths=max(1.2, w * .002),
                    zorder=3)
 
 
@@ -632,17 +684,19 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
             start_deg -= 360 * share
         # legend
         n = len(segments)
-        lw = w / n
+        lw = w * .88 / n
+        label_budget = max(.04, lw / w - .055)
         for i, seg in enumerate(segments):
-            lx = w * .06 + i * (w * .88 / n)
+            lx = w * .06 + i * lw
             from matplotlib.patches import FancyBboxPatch
             ax.add_patch(FancyBboxPatch(
-                (lx, h * .86), w * .02, h * .028,
+                (lx, h * .855), w * .02, h * .030,
                 boxstyle="round,pad=0,rounding_size=4",
                 facecolor=pal["series"][i % len(pal["series"])],
                 edgecolor="none", zorder=2))
-            ax.text(lx + w * .028, h * .874, str(seg.get("label", "")),
-                    va="center", ha="left", fontsize=h * .026,
+            ax.text(lx + w * .028, h * .87, _clip(seg.get("label", ""),
+                    FS_LABEL, label_budget, w),
+                    va="center", ha="left", fontsize=FS_LABEL,
                     color=pal["muted"])
     else:
         pct = float(scene.get("value", scene.get("percent", 0)) or 0)
@@ -661,8 +715,9 @@ def _draw_donut(ax, scene, w, h, t, dur, pal, plt):
             zorder=3)
     label = str(scene.get("label", ""))
     if label:
-        ax.text(cx, cy - radius * .34, label.upper(), ha="center",
-                va="center", fontsize=h * .028, color=pal["muted"],
+        ax.text(cx, cy - radius * .34, _clip(label.upper(), FS_LABEL,
+                .5, w), ha="center",
+                va="center", fontsize=FS_LABEL, color=pal["muted"],
                 fontweight="bold")
 
 

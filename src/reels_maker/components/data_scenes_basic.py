@@ -28,6 +28,8 @@ def build_bars(ctx: SceneContext, scene: dict) -> BuiltScene:
         {"label": "DZIŚ", "value": 32}, {"label": "Z MAGAZYNEM", "value": 78}]
     if not isinstance(data, list) or not data:
         raise ValueError("bars requires a nonempty data list")
+    if len(data) > 12:
+        raise ValueError("bars supports at most 12 rows; aggregate or split the data")
     parsed = [{"id": str(item.get("id") or item.get("label") or f"bar-{idx}"),
                "label": str(item.get("label", "")),
                "value": safe_number(item.get("value", 0)),

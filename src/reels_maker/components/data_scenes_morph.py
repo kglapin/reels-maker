@@ -23,15 +23,29 @@ def build_chart_morph(ctx: SceneContext, scene: dict) -> BuiltScene:
     items = scene.get("items")
     if not isinstance(items, list) or not 2 <= len(items) <= 8:
         raise ValueError("chart_morph requires 2..8 items with shared IDs")
+    row_count = len(items)
     parsed = []
+    seen_targets = set()
     for idx, item in enumerate(items):
         if not isinstance(item, dict) or not str(item.get("id", "")).strip():
             raise ValueError(f"chart_morph item {idx} requires a non-empty id")
+        try:
+            from_index = int(item.get("from_index", idx))
+            to_index = int(item.get("to_index", idx))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"chart_morph item {idx} from_index/to_index must be integers") from exc
+        if not 0 <= from_index < row_count or not 0 <= to_index < row_count:
+            raise ValueError(
+                f"chart_morph item {idx} indices must be within 0..{row_count - 1}")
+        if to_index in seen_targets:
+            raise ValueError(f"chart_morph has duplicate to_index {to_index}")
+        seen_targets.add(to_index)
         parsed.append({
             "id": str(item["id"]).strip(),
             "label": str(item.get("label") or item["id"]).strip(),
-            "from_index": int(item.get("from_index", idx)),
-            "to_index": int(item.get("to_index", idx)),
+            "from_index": from_index,
+            "to_index": to_index,
             "from_value": safe_number(item.get("from_value", item.get("value", 0))),
             "to_value": safe_number(item.get("to_value", item.get("value", 0))),
             "suffix": str(item.get("suffix", "")),
@@ -43,7 +57,15 @@ def build_chart_morph(ctx: SceneContext, scene: dict) -> BuiltScene:
     row_gap = ctx.tokens.space("sm")
     row_h = (chart.h - row_gap * (len(parsed) - 1)) / len(parsed)
     slot_step = row_h + row_gap
-    trans_dur = float(scene.get("transition_duration", min(1.2, ctx.duration * .45)))
+    try:
+        trans_dur = float(scene.get(
+            "transition_duration", min(1.2, ctx.duration * .45)))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "chart_morph transition_duration must be a number") from exc
+    if not math.isfinite(trans_dur) or trans_dur <= 0:
+        raise ValueError(
+            "chart_morph transition_duration must be positive and finite")
     t_start = min(0.35, ctx.duration * .18)
     t_end = min(max(t_start + 0.25, ctx.duration - 0.55), t_start + trans_dur)
     from_is_table = scene.get("from_type") == "table"

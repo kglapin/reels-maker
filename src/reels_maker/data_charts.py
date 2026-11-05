@@ -4,10 +4,11 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 import math
+import re
 
 from .data_director import VisualizationPlan, VisualizationVariant, _field_label
 from .data_integrity import validate_loaded_data
-from .data_sources import LoadedData
+from .data_sources import DataSourceError, LoadedData, _number
 from .data_render_support import DataRenderError, _exact_float
 
 def line_chart_scene(
@@ -164,6 +165,10 @@ def bar_chart_scene(
         )
     if data_order not in ("source", "ascending", "descending"):
         raise DataRenderError("data_order must be source, ascending or descending")
+    if len(data.rows) > 12:
+        raise DataRenderError(
+            f"bar chart has {len(data.rows)} rows but the panel limit is 12; "
+            "aggregate or paginate the data instead of dropping rows")
     if (isinstance(duration, bool) or not isinstance(duration, (int, float))
             or not math.isfinite(duration) or not .5 <= duration <= 30):
         raise DataRenderError("duration must be finite and between 0.5 and 30 seconds")
@@ -365,6 +370,26 @@ def morph_chart_scenes(
     if not src_ids or set(src_ids) != set(dst_ids):
         raise DataRenderError("Chart morph requires shared mark/row IDs across both scenes")
 
+    def _cell_number(raw) -> float:
+        """Recover a table cell's numeric value without inventing data."""
+        if isinstance(raw, bool):
+            raise DataRenderError(f"chart morph cannot read boolean cell {raw!r}")
+        if isinstance(raw, (int, float, Decimal)):
+            return float(raw)
+        text = str(raw).strip()
+        candidates = [text]
+        stripped = re.sub(r"[^\d,.\s+\-]", "", text).strip()
+        if stripped and stripped != text:
+            candidates.append(stripped)
+        for candidate in candidates:
+            for locale in ("en_US", "pl_PL"):
+                try:
+                    return float(_number(candidate, locale, "table cell"))
+                except DataSourceError:
+                    continue
+        raise DataRenderError(
+            f"chart morph cannot read numeric table cell {raw!r}")
+
     def _extract_items(sc: dict) -> dict[str, dict]:
         if sc.get("type") == "bars":
             out = {}
@@ -373,7 +398,7 @@ def morph_chart_scenes(
                 out[rid] = {
                     "index": idx,
                     "label": str(b.get("label", rid)),
-                    "value": float(b.get("value", 0.0)),
+                    "value": _cell_number(b.get("value", 0)),
                     "suffix": str(b.get("suffix", "")),
                 }
             return out
@@ -385,19 +410,16 @@ def morph_chart_scenes(
             for idx, r in enumerate(sc.get("rows") or []):
                 rid = str(r["id"])
                 vals = r.get("values") or {}
-                raw_num = str(vals.get(val_col, "0")).split()[0].replace(",", ".")
-                try:
-                    num = float(raw_num)
-                except ValueError:
-                    num = 0.0
                 out[rid] = {
                     "index": idx,
                     "label": str(vals.get(label_col, rid)),
-                    "value": num,
+                    "value": _cell_number(vals.get(val_col, 0)),
                     "suffix": "",
                 }
             return out
-        return {rid: {"index": i, "label": rid, "value": 1.0, "suffix": ""} for i, rid in enumerate(src_ids)}
+        raise DataRenderError(
+            f"chart morph does not support scene type {sc.get('type')!r}; "
+            "only bars and table scenes carry morphable marks")
 
     src_map = _extract_items(source_scene)
     dst_map = _extract_items(target_scene)

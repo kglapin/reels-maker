@@ -12,8 +12,8 @@ from .chart_style import (
     axis_style, chart_card, chart_colors, grid_width,
 )
 from .base import (
-    BuiltScene, SceneContext, animate_progress, format_value, number_node,
-    resolve_text_style, safe_number, text_node,
+    BuiltScene, SceneContext, animate_chart_stagger, animate_progress,
+    format_value, number_node, resolve_text_style, safe_number, text_node,
 )
 from .scene_support import (
     _background, _data_panel_scaffold, _decor, _finish, _headline,
@@ -111,10 +111,11 @@ def build_waterfall(ctx: SceneContext, scene: dict) -> BuiltScene:
             children.append(lbl)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "waterfall", "data": parsed,
                          "row_ids": [p["id"] for p in parsed]})
+    return animate_chart_stagger(plan)
 
 def build_diverging_bar(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render horizontal diverging bars around an explicit baseline (DM-102)."""
@@ -162,9 +163,10 @@ def build_diverging_bar(ctx: SceneContext, scene: dict) -> BuiltScene:
             children.append(lbl)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "diverging_bar", "baseline": baseline, "data": parsed})
+    return animate_chart_stagger(plan)
 
 def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render bullet charts comparing actual measures against explicit targets (DM-102)."""
@@ -185,6 +187,7 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "label": str(item["label"]).strip(),
                        "value": val, "target": target, "max": max_v})
     chart = layout.region("chart")
+    colors = chart_colors(theme)
     plot = Rect(chart.x + chart.w * .24, chart.y + chart.h * .12,
                 chart.w * .70, chart.h * .76)
     row_h = plot.h / len(parsed)
@@ -215,6 +218,16 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
                    "width": max(2, ctx.tokens.px(4)), "color": theme["ink"]},
             qa_class="decor",
         ))
+        val_lbl = text_node(
+            f"bullet-value-{idx}",
+            format_value(item["value"], {"decimals": 0, "thousands": " "}),
+            TextStyle(max(12, ctx.tokens.px(15)), colors["axis"], "bold",
+                      align="right", line_height=1.0),
+            Rect(plot.right - ctx.tokens.px(96), ty,
+                 ctx.tokens.px(92), track_h),
+            ctx.fonts, align="right", valign="center")
+        if val_lbl:
+            children.append(val_lbl)
         lbl = text_node(f"bullet-label-{idx}", item["label"], lbl_style,
                         Rect(chart.x, y, plot.x - chart.x - ctx.tokens.px(8), row_h),
                         ctx.fonts, align="right", valign="center", fit=True)
@@ -222,9 +235,10 @@ def build_bullet(ctx: SceneContext, scene: dict) -> BuiltScene:
             children.append(lbl)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "bullet", "data": parsed})
+    return animate_chart_stagger(plan)
 
 def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render a 2D matrix heatmap with row/column headers and exact cell values (DM-102)."""
@@ -289,10 +303,11 @@ def build_heatmap(ctx: SceneContext, scene: dict) -> BuiltScene:
                 children.append(value_text)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "heatmap", "row_labels": rows,
                          "col_labels": cols, "values": matrix})
+    return animate_chart_stagger(plan)
 
 def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render a paired quantitative scatter plot with explicit domains (DM-102)."""
@@ -374,10 +389,11 @@ def build_scatter(ctx: SceneContext, scene: dict) -> BuiltScene:
                        "x": xv, "y": yv})
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "scatter", "data": parsed,
                          "x_domain": [x0, x1], "y_domain": [y0, y1]})
+    return animate_chart_stagger(plan)
 
 def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render an ordered conversion funnel with non-increasing stage values (DM-102)."""
@@ -432,9 +448,10 @@ def build_funnel(ctx: SceneContext, scene: dict) -> BuiltScene:
             children.append(lbl)
     elements["chart"] = Node(kind="group", role="chart", children=children, qa_class="control")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"), _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "funnel", "data": parsed})
+    return animate_chart_stagger(plan)
 
 def build_sankey(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render a total-conserving Sankey / energy flow diagram with animated links (DM-103)."""

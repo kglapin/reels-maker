@@ -270,6 +270,54 @@ def animate_progress(node: Node, onset: float, duration: float,
     return node
 
 
+def stagger_children(group: Node, onset: float, duration: float, *,
+                     step: float = 0.05, dy: float = 8.0,
+                     easing: str = "out-cubic") -> Node:
+    """Fade-and-rise a chart's leaf children in sequence.
+
+    shadcn/Tremor-style staggered assembly: each mark, label and rule enters
+    a few frames after its neighbour instead of the whole plot popping in at
+    once. Only leaf nodes are staggered (nested groups keep their own
+    choreography); each child's resting opacity/dy is preserved as the track
+    endpoint.
+    """
+    leaves = [child for child in group.children if child.kind != "group"]
+    count = len(leaves)
+    if count == 0 or duration <= 0:
+        return group
+    span = min(duration * .6, step * (count - 1) + .35)
+    per_step = span / max(1, count - 1) if count > 1 else 0.0
+    fade = min(.30, max(.12, span * .35))
+    for index, child in enumerate(leaves):
+        t0 = onset + index * per_step
+        t1 = min(t0 + fade, onset + duration)
+        base_opacity = float(child.opacity)
+        base_dy = float(child.dy)
+        child.track("opacity", Track([
+            Keyframe(0.0, 0.0, "linear"),
+            Keyframe(t0, 0.0, "linear"),
+            Keyframe(t1, base_opacity, easing),
+        ]))
+        if dy:
+            child.track("dy", Track([
+                Keyframe(0.0, base_dy + dy, "linear"),
+                Keyframe(t0, base_dy + dy, "linear"),
+                Keyframe(t1, base_dy, easing),
+            ]))
+    return group
+
+
+def animate_chart_stagger(plan: "BuiltScene", role: str = "chart",
+                          *, lead: float = .05) -> "BuiltScene":
+    """Apply ``stagger_children`` to a built chart group after ``_finish``."""
+    entry = plan.choreography.entries.get(role)
+    group = plan.elements.get(role)
+    if entry is not None and group is not None:
+        stagger_children(group, entry.onset + lead,
+                         max(.3, entry.duration * .85))
+    return plan
+
+
 def animate_icon_state(primary: Node, secondary: Node, *,
                        switch_time: float, duration: float = 0.32,
                        role: str = "icon-state") -> Node:

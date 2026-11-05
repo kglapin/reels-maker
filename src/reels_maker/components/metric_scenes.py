@@ -260,14 +260,17 @@ def build_donut(ctx: SceneContext, scene: dict) -> BuiltScene:
     }
     radius = min(chart.w, chart.h) * .36
     cx, cy = chart.center_x, chart.center_y
+    from .chart_style import chart_colors
+    chart_theme = chart_colors(theme)
     track = Node(kind="ring", role="donut-track",
                  props={"cx": cx, "cy": cy, "r": radius,
                         "width": max(8, radius * .20),
-                        "color": mix(theme["base"], theme["ink"], .18)},
-                 opacity=.45)
+                        "color": chart_theme["hairline"]},
+                 opacity=.8)
     ring = Node(kind="ring", role="chart",
                 props={"cx": cx, "cy": cy, "r": radius,
-                       "width": max(8, radius * .20), "color": theme["accent"],
+                       "width": max(8, radius * .20),
+                       "color": chart_theme["accent"],
                        "progress": 0.0, "start_angle": -90},
                 qa_class="control")
     center_value = number_node(

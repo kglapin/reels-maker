@@ -13,8 +13,8 @@ from .chart_style import (
     mark_width, series_color, smooth_points, value_style,
 )
 from .base import (
-    BuiltScene, SceneContext, animate_progress, format_value, number_node,
-    resolve_text_style, safe_number, text_node,
+    BuiltScene, SceneContext, animate_chart_stagger, animate_progress,
+    format_value, number_node, resolve_text_style, safe_number, text_node,
 )
 from .scene_support import (
     _background, _data_panel_scaffold, _decor, _finish, _headline,
@@ -290,11 +290,12 @@ def build_stacked_bars_100(ctx: SceneContext, scene: dict) -> BuiltScene:
                                       align="center", valign="center")
     specs = [_spec("headline", 7), _spec("chart", 9, "control"),
              _spec("body", 3)]
-    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+    plan = _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "stacked_bars_100",
                          "normalization": "segment value / explicit category total",
                          "data": parsed_categories})
+    return animate_chart_stagger(plan)
 
 def build_line_chart(ctx: SceneContext, scene: dict) -> BuiltScene:
     """Render one explicit, typed-by-contract vector line series.

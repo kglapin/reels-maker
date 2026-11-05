@@ -88,6 +88,9 @@ class SceneRenderer:
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
         self._settled_frame_budget = 128 * 1024 * 1024
+        # Resolved-path -> (mtime_ns, size) signatures. Media cannot change
+        # mid-render, so stat once per renderer instead of once per frame.
+        self._path_stats: dict[str, tuple[int, int]] = {}
         self._media = SceneMediaRenderer(self)
 
     # ------------------------------------------------------------------ public
@@ -227,9 +230,7 @@ class SceneRenderer:
             if not asset:
                 raise ValueError("Photo background requires an asset path")
             source_path = Path(asset).resolve()
-            source_stat = source_path.stat()
-            source_key = (str(source_path), source_stat.st_mtime_ns,
-                          source_stat.st_size)
+            source_key = self._path_signature(source_path)
             source = self._source(
                 source_key, lambda: cv.load_image(source_path))
             camera_spec = spec.get("camera") or {}
@@ -655,8 +656,7 @@ class SceneRenderer:
             return
         if not path.is_file():
             raise ValueError(f"Missing sequence frame: {path}")
-        stat = path.stat()
-        source_key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+        source_key = self._path_signature(path.resolve())
         s = self.ss
         x, y = (props["x"] + dx) * s, (props["y"] + dy) * s
         width = int(max(1, props["w"] * s))
@@ -675,6 +675,15 @@ class SceneRenderer:
             image.putalpha(image.getchannel("A").point(
                 lambda value: int(value * node.opacity)))
         target.alpha_composite(image, (int(x), int(y)))
+
+    def _path_signature(self, path: Path) -> tuple[str, int, int]:
+        resolved = str(path)
+        signature = self._path_stats.get(resolved)
+        if signature is None:
+            stat = path.stat()
+            signature = (stat.st_mtime_ns, stat.st_size)
+            self._path_stats[resolved] = signature
+        return (resolved, *signature)
 
     def _remember_framed_image(self, key: tuple, image: Image.Image) -> None:
         size = image.width * image.height * len(image.getbands())

@@ -23,8 +23,7 @@ class SceneMediaRenderer:
         path = Path(props["path"])
         if not path.is_file():
             raise ValueError(f"Missing image asset: {path}")
-        stat = path.stat()
-        source_key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+        source_key = owner._path_signature(path.resolve())
         source = owner._source(source_key, lambda: cv.load_image(path))
         x, y = (props["x"] + dx) * scale, (props["y"] + dy) * scale
         w, h = props["w"] * scale, props["h"] * scale

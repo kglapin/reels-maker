@@ -10,7 +10,6 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 from time import perf_counter
@@ -25,6 +24,15 @@ _VIDEO_DECODE_SESSION: ContextVar["_VideoDecodeSession | None"] = ContextVar(
 _VIDEO_FRAME_CACHE: OrderedDict[tuple[str, float, float], Image.Image] = OrderedDict()
 _VIDEO_FRAME_CACHE_LOCK = threading.RLock()
 _VIDEO_FRAME_CACHE_SIZE = 64
+_VIDEO_FRAME_CACHE_BUDGET = 512 * 1024 * 1024
+_VIDEO_FRAME_CACHE_BYTES = 0
+# Still images are cached by pixel bytes, not count: a handful of 24 MP
+# sources would otherwise pin gigabytes of RGBA memory.
+_STILL_CACHE: OrderedDict[tuple[str, int, int], Image.Image] = OrderedDict()
+_STILL_CACHE_LOCK = threading.RLock()
+_STILL_CACHE_BUDGET = 256 * 1024 * 1024
+_STILL_CACHE_BYTES = 0
+
 
 @dataclass(frozen=True)
 class Camera:
@@ -34,17 +42,45 @@ class Camera:
     blur: float = 0.0
 
 
-@lru_cache(maxsize=128)
-def _load(path: str, mtime_ns: int, size_bytes: int) -> Image.Image:
-    image = Image.open(path)
-    image.load()
-    return image.convert("RGBA")
+def _image_bytes(image: Image.Image) -> int:
+    return image.width * image.height * len(image.getbands())
+
+
+def _remember_still(key: tuple[str, int, int], image: Image.Image) -> None:
+    global _STILL_CACHE_BYTES
+    size = _image_bytes(image)
+    if size > _STILL_CACHE_BUDGET:
+        return
+    with _STILL_CACHE_LOCK:
+        previous = _STILL_CACHE.pop(key, None)
+        if previous is not None:
+            _STILL_CACHE_BYTES -= _image_bytes(previous)
+        _STILL_CACHE[key] = image
+        _STILL_CACHE_BYTES += size
+        while _STILL_CACHE_BYTES > _STILL_CACHE_BUDGET:
+            _, evicted = _STILL_CACHE.popitem(last=False)
+            _STILL_CACHE_BYTES -= _image_bytes(evicted)
 
 
 def load_image(path: str | Path) -> Image.Image:
-    path = str(Path(path).resolve())
-    stat = os.stat(path)
-    return _load(path, stat.st_mtime_ns, stat.st_size)
+    resolved = str(Path(path).resolve())
+    stat = os.stat(resolved)
+    key = (resolved, stat.st_mtime_ns, stat.st_size)
+    with _STILL_CACHE_LOCK:
+        cached = _STILL_CACHE.get(key)
+        if cached is not None:
+            _STILL_CACHE.move_to_end(key)
+            return cached
+    image = Image.open(resolved)
+    image.load()
+    image = image.convert("RGBA")
+    _remember_still(key, image)
+    return image
+
+
+def _load(path: str, mtime_ns: int, size_bytes: int) -> Image.Image:
+    """Backward-compatible signature for callers of the old lru_cache."""
+    return load_image(path)
 
 
 def _cached_video_frame(key: tuple[str, float, float]) -> Image.Image | None:
@@ -56,11 +92,20 @@ def _cached_video_frame(key: tuple[str, float, float]) -> Image.Image | None:
 
 
 def _remember_video_frame(key: tuple[str, float, float], image: Image.Image) -> None:
+    global _VIDEO_FRAME_CACHE_BYTES
+    size = _image_bytes(image)
+    if size > _VIDEO_FRAME_CACHE_BUDGET:
+        return
     with _VIDEO_FRAME_CACHE_LOCK:
+        previous = _VIDEO_FRAME_CACHE.pop(key, None)
+        if previous is not None:
+            _VIDEO_FRAME_CACHE_BYTES -= _image_bytes(previous)
         _VIDEO_FRAME_CACHE[key] = image
-        _VIDEO_FRAME_CACHE.move_to_end(key)
-        while len(_VIDEO_FRAME_CACHE) > _VIDEO_FRAME_CACHE_SIZE:
-            _VIDEO_FRAME_CACHE.popitem(last=False)
+        _VIDEO_FRAME_CACHE_BYTES += size
+        while (_VIDEO_FRAME_CACHE_BYTES > _VIDEO_FRAME_CACHE_BUDGET
+               or len(_VIDEO_FRAME_CACHE) > _VIDEO_FRAME_CACHE_SIZE):
+            _, evicted = _VIDEO_FRAME_CACHE.popitem(last=False)
+            _VIDEO_FRAME_CACHE_BYTES -= _image_bytes(evicted)
 
 
 class _VideoFrameStream:

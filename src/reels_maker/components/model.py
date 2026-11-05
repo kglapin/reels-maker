@@ -1,6 +1,7 @@
 """Shared scene build context and immutable render result models."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from ..core.scene_graph import Node
@@ -44,6 +45,10 @@ class BuiltScene:
     elements: dict[str, Node]
     choreography: Choreography
     meta: dict = field(default_factory=dict)
+    _subtree_settles: dict = field(default_factory=dict, repr=False,
+                                   compare=False)
+    _settled_samples: dict = field(default_factory=dict, repr=False,
+                                   compare=False)
 
     @property
     def duration(self) -> float:
@@ -53,8 +58,46 @@ class BuiltScene:
     def fps(self) -> int:
         return self.context.fps
 
+    # Kinds whose sampled props depend on the frame time itself; their
+    # subtrees can never reuse a settled sample.
+    _TIME_DEPENDENT = frozenset({"video", "mesh3d", "sequence"})
+
+    def _subtree_settle(self, node: Node) -> float:
+        """Latest time at which any track in this subtree can still change.
+
+        ``math.inf`` marks subtrees that sample differently every frame
+        (video/sequence playback time), so they are never cached.
+        """
+        key = id(node)
+        cached = self._subtree_settles.get(key)
+        if cached is not None:
+            return cached
+        settle = 0.0
+        for descendant in node.flatten():
+            if descendant.kind in self._TIME_DEPENDENT:
+                settle = math.inf
+                break
+            for track in descendant.tracks.values():
+                end = track.end
+                if end > settle:
+                    settle = end
+        self._subtree_settles[key] = settle
+        return settle
+
     def at(self, time: float) -> list[Node]:
-        sampled = [node.sample(time) for node in self.nodes]
+        sampled = []
+        for node in self.nodes:
+            # Once every track in a subtree has ended, sampling is constant;
+            # reuse the first settled sample instead of copying the subtree
+            # and re-evaluating every keyframe on each frame.
+            if self._subtree_settle(node) <= time:
+                entry = self._settled_samples.get(id(node))
+                if entry is None:
+                    entry = node.sample(time)
+                    self._settled_samples[id(node)] = entry
+                sampled.append(entry)
+            else:
+                sampled.append(node.sample(time))
         # Stable sort keeps authored order for nodes without an explicit z-index.
         return sorted(sampled,
                       key=lambda node: float(node.props.get("z_index", 0.0)))

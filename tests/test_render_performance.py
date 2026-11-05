@@ -83,6 +83,56 @@ class SettledFrameReuseTests(unittest.TestCase):
         self.assertIsNone(renderer._settled_frame_time(scene))
 
 
+class NodeSpriteReuseTests(unittest.TestCase):
+    def test_settled_nodes_render_from_pixel_identical_sprites(self):
+        width, height = 240, 320
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        fonts = FontBook()
+        moving = Node(
+            kind="rect", role="moving-accent",
+            props={"x": 40, "y": 70, "w": 90, "h": 30, "fill": "#72D18A"},
+        )
+        moving.track("dx", Track([
+            Keyframe(0.0, -30.0, "smooth"),
+            Keyframe(1.2, 0.0, "smooth"),
+        ]))
+        static_a = Node(
+            kind="circle", role="static-dot",
+            props={"cx": 170, "cy": 210, "r": 22, "fill": "#FFCB66"},
+        )
+        static_b = Node(
+            kind="round", role="static-panel",
+            props={"x": 30, "y": 40, "w": 120, "h": 60, "r": 12,
+                   "fill": "#47A013"},
+        )
+        # BuiltScene.at() hands back one sampled object per settled node;
+        # mimic that so sprite identity checks see stable ids.
+        settled = [static_a.sample(0.0), static_b.sample(0.0)]
+        nodes = [moving, static_a, static_b]
+        scene = SimpleNamespace(
+            duration=2.0,
+            background={"kind": "gradient", "from": "#101A14",
+                        "to": "#26382D", "angle": 90},
+            meta={}, nodes=nodes,
+            at=lambda time: [moving.sample(time), *settled],
+        )
+        cached = SceneRenderer(
+            width, height, tokens, fonts,
+            options=RenderOptions(supersample=1, reuse_node_sprites=True),
+        )
+        uncached = SceneRenderer(
+            width, height, tokens, fonts,
+            options=RenderOptions(supersample=1, reuse_node_sprites=False),
+        )
+        for time in (0.4, 0.9, 1.5):
+            expected = uncached.render(scene, time)
+            actual = cached.render(scene, time)
+            self.assertEqual(expected.tobytes(), actual.tobytes())
+        self.assertEqual(len(cached._sprites), 2)
+        roles = {entry[0].role for entry in cached._sprites.values()}
+        self.assertEqual(roles, {"static-dot", "static-panel"})
+
+
 class FramedImageCacheTests(unittest.TestCase):
     def test_processed_still_image_is_reused_without_pixel_changes(self):
         width, height = 240, 320

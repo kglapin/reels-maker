@@ -60,6 +60,7 @@ class RenderOptions:
     supersample: int = 1
     background_blur: float = 0.0
     reuse_settled_frames: bool = True
+    reuse_node_sprites: bool = True
 
 
 class SceneRenderer:
@@ -91,6 +92,18 @@ class SceneRenderer:
         self._settled_frames: OrderedDict[int, Image.Image] = OrderedDict()
         self._settled_frame_bytes = 0
         self._settled_frame_budget = int(128 * 1024 * 1024 * cache_scale)
+        # Rasterized sprites for settled subtrees: id(node) ->
+        # (node, (tile, x, y) | None). The node reference pins the id so
+        # a recycled identifier can never alias a different node.
+        self._sprites: OrderedDict[int, tuple] = OrderedDict()
+        self._sprite_bytes = 0
+        self._sprite_budget = int(96 * 1024 * 1024 * cache_scale)
+        # id(node) -> (node, (max_settle, has_media, has_negative_text)).
+        self._sprite_profiles: OrderedDict[int, tuple] = OrderedDict()
+        # id(node) -> node seen once while eligible; promoted to a sprite
+        # only when the same object appears again, so one-shot samples
+        # from non-memoized callers never allocate tiles.
+        self._sprite_pending: OrderedDict[int, object] = OrderedDict()
         # Resolved-path -> (mtime_ns, size) signatures. Media cannot change
         # mid-render, so stat once per renderer instead of once per frame.
         self._path_stats: dict[str, tuple[int, int]] = {}
@@ -112,7 +125,7 @@ class SceneRenderer:
                 return cached.copy()
         image = self._background(scene, time)
         for node in scene.at(time):
-            self._draw_node(image, node)
+            self._draw_node_or_sprite(image, node, time)
         transition = scene.meta.get("transition_in")
         if transition and transition != "cut":
             self._transition(image, transition, time,
@@ -181,7 +194,7 @@ class SceneRenderer:
             raise ValueError("Render time is outside the scene")
         image = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
         for node in scene.at(time):
-            self._draw_node(image, node)
+            self._draw_node_or_sprite(image, node, time)
         if self.ss > 1:
             image = image.resize((self.width, self.height),
                                  Image.Resampling.LANCZOS)
@@ -189,6 +202,109 @@ class SceneRenderer:
 
     def frame_bytes(self, scene: BuiltScene, time: float) -> bytes:
         return self.render(scene, time).convert("RGBA").tobytes("raw", "BGRA")
+
+    # -------------------------------------------------------------- sprites
+    _SPRITE_MEDIA_KINDS = {"video", "sequence", "mesh3d"}
+
+    def _subtree_profile(self, node: Node) -> tuple:
+        """(latest settle time, contains media, contains negative text).
+
+        ``BuiltScene.at`` reuses one sampled object for a settled top-level
+        node, so object identity implies identical props. Nodes still
+        animating produce fresh samples every frame and are never cached.
+        Media nodes decode per-frame and negative rich text reads the
+        backdrop pixels, so neither can live on a transparent tile.
+        """
+        key = id(node)
+        entry = self._sprite_profiles.get(key)
+        if entry is not None:
+            if entry[0] is node:
+                self._sprite_profiles.move_to_end(key)
+                return entry[1]
+            self._sprite_profiles.pop(key)
+        max_settle = node.settle()
+        has_media = node.kind in self._SPRITE_MEDIA_KINDS
+        has_negative = False
+        if node.kind == "text":
+            block = node.props.get("block")
+            if block is not None and any(
+                    word.effect == "negative"
+                    for line in block.lines for word in line.words):
+                has_negative = True
+        for child in node.children or []:
+            child_settle, child_media, child_negative = \
+                self._subtree_profile(child)
+            max_settle = max(max_settle, child_settle)
+            has_media = has_media or child_media
+            has_negative = has_negative or child_negative
+        profile = (max_settle, has_media, has_negative)
+        self._sprite_profiles[key] = (node, profile)
+        while len(self._sprite_profiles) > 8192:
+            self._sprite_profiles.popitem(last=False)
+        return profile
+
+    def _sprite_eligible(self, node: Node, time: float) -> bool:
+        if not self.options.reuse_node_sprites:
+            return False
+        settle, has_media, has_negative = self._subtree_profile(node)
+        return settle <= time and not has_media and not has_negative
+
+    def _draw_node_or_sprite(self, target: Image.Image, node: Node,
+                             time: float) -> None:
+        if not self._sprite_eligible(node, time):
+            self._draw_node(target, node)
+            return
+        key = id(node)
+        entry = self._sprites.get(key)
+        if entry is not None:
+            if entry[0] is node:
+                self._sprites.move_to_end(key)
+                sprite = entry[1]
+                if sprite is not None:
+                    target.alpha_composite(sprite[0], (sprite[1], sprite[2]))
+                return
+            # Stale entry pinned a different node; drop it.
+            stale = self._sprites.pop(key)[1]
+            if stale is not None:
+                tile_img = stale[0]
+                self._sprite_bytes -= (
+                    tile_img.width * tile_img.height
+                    * len(tile_img.getbands()))
+        pending = self._sprite_pending.get(key)
+        if pending is not node:
+            self._sprite_pending[key] = node
+            self._sprite_pending.move_to_end(key)
+            while len(self._sprite_pending) > 1024:
+                self._sprite_pending.popitem(last=False)
+            self._draw_node(target, node)
+            return
+        self._sprite_pending.pop(key)
+        # Second sight of the same settled object: rasterize once onto a
+        # transparent tile, keep the ink bounding box, and composite like
+        # a normal draw.
+        layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        self._draw_node(layer, node)
+        bbox = layer.getbbox()
+        sprite = None
+        if bbox is not None:
+            tile = layer.crop(bbox)
+            size = tile.width * tile.height * len(tile.getbands())
+            if size <= self._sprite_budget:
+                sprite = (tile, bbox[0], bbox[1])
+                self._sprite_bytes += size
+                self._sprites[key] = (node, sprite)
+                while self._sprite_bytes > self._sprite_budget \
+                        and self._sprites:
+                    _, evicted = self._sprites.popitem(last=False)
+                    old = evicted[1]
+                    if old is not None:
+                        tile_img = old[0]
+                        self._sprite_bytes -= (
+                            tile_img.width * tile_img.height
+                            * len(tile_img.getbands()))
+        if sprite is not None:
+            target.alpha_composite(sprite[0], (sprite[1], sprite[2]))
+        # A fully transparent node draws nothing; skip storing it entirely.
 
     def _source(self, key: object, loader) -> Image.Image:
         """Load a source image through a byte-bounded LRU cache."""

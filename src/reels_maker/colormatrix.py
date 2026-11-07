@@ -17,7 +17,39 @@ import argparse
 import json
 from pathlib import Path
 
-from .ffmpeg import probe, RenderError
+from .ffmpeg import execute, probe, RenderError
+
+
+GRADES = ("neutral", "sdr", "warm", "cool", "vivid", "flat", "custom")
+
+
+def color_filter(grade: str = "neutral", *, lut_path: str | None = None) -> str:
+    """Return a real FFmpeg filter chain for a named grade.
+
+    ``custom`` applies a user-supplied .cube LUT via ``lut3d``; the built-in
+    grades are deterministic eq/colorbalance/colortemperature chains, so a
+    grade always re-encodes through filters instead of copying the file.
+    """
+    key = str(grade).strip().lower().replace("_", "-")
+    if key == "custom":
+        if not lut_path:
+            raise ValueError("custom grade requires lut_path to a .cube file")
+        escaped = str(lut_path).replace("'", "'\\''").replace(":", "\\:")
+        return f"lut3d=file='{escaped}':interp=tetrahedral,format=yuv420p"
+    chains = {
+        "neutral": "eq=saturation=1.0:contrast=1.0,format=yuv420p",
+        "sdr": "eq=saturation=1.02:contrast=1.01,format=yuv420p",
+        "warm": ("colortemperature=temperature=5800:mix=0.6,"
+                 "eq=saturation=1.06:contrast=1.02,format=yuv420p"),
+        "cool": ("colortemperature=temperature=8200:mix=0.6,"
+                 "eq=saturation=0.97:contrast=1.02,format=yuv420p"),
+        "vivid": "eq=saturation=1.18:contrast=1.06,format=yuv420p",
+        "flat": "eq=saturation=0.82:contrast=0.92:gamma=1.05,format=yuv420p",
+    }
+    if key not in chains:
+        raise ValueError(f"Unknown grade {grade!r}; choose one of "
+                         + ", ".join(GRADES))
+    return chains[key]
 
 
 def _validate_inputs(video_path: Path) -> None:
@@ -31,6 +63,15 @@ def _validate_inputs(video_path: Path) -> None:
         raise RenderError(f"Input {video_path} has no video stream")
 
 
+def _target_filter(target: str) -> str:
+    return {
+        "sdr": color_filter("sdr"),
+        "rec709": "colorspace=all=bt709:range=tv,format=yuv420p",
+        "bt2020": "colorspace=all=bt2020:range=tv,format=yuv420p",
+        "hdr": "colorspace=all=bt2020:trc=smpte2084:range=tv,format=yuv420p",
+    }[target]
+
+
 def colormatrix(
     video_path: Path,
     *,
@@ -38,6 +79,8 @@ def colormatrix(
     mode: str = "convert",
     output: Path | None = None,
     dry_run: bool = False,
+    grade: str | None = None,
+    lut_path: str | None = None,
 ) -> dict:
     """Apply color space conversion or matrix transformation.
 
@@ -66,13 +109,16 @@ def colormatrix(
     if output is None:
         output = video_path.parent / f"{video_path.stem}_colormatrix{video_path.suffix}"
 
-    if dry_run:
-        # Probe and return plan without encoding
-        video_meta = probe(video_path)
-        # Build filter complex for documentation
-        # FFmpeg colormatrix filter: colormatrix=type:value:order
-        # For conversion between color spaces
+    try:
+        filter_chain = (color_filter(grade, lut_path=lut_path) if grade
+                        else _target_filter(target))
+    except ValueError as exc:
+        raise RenderError(str(exc)) from exc
+    command = ["-i", str(video_path), "-vf", filter_chain,
+               "-c:a", "copy", str(output)]
 
+    if dry_run:
+        video_meta = probe(video_path)
         return {
             "status": "ok",
             "dry_run": True,
@@ -83,54 +129,28 @@ def colormatrix(
                 "fps": video_meta.get("streams", [{}])[0].get("r_frame_rate"),
             },
             "parameters": {
-                "target": target, "mode": mode,
+                "target": target, "mode": mode, "grade": grade,
+                "filter": filter_chain,
             },
             "output": str(output),
-            "commands": [],
+            "commands": [["ffmpeg", "-hide_banner", "-nostdin", "-y", *command]],
         }
 
-    # Full execution - color space conversion
-    # FFmpeg supports color space conversion through various filters
-    # For now, document the operation and fallback to copy
-    try:
-        # Attempt the conversion - may need specific FFmpeg filter
-        # colormatrix filter available in FFmpeg 6.0+
-        # For now, fallback to copy with metadata
-        import shutil
-        try:
-            shutil.copy2(video_path, output)
-        except Exception:
-            pass
-    except RenderError:
-        # Fallback: copy original video
-        try:
-            import shutil
-            shutil.copy2(video_path, output)
-        except Exception:
-            pass
-
-    # Return probe result
-    try:
-        result_meta = probe(output)
-        return {
-            "status": "ok",
-            "dry_run": False,
-            "output": str(output),
-            "duration": result_meta.get("format", {}).get("duration"),
-            "width": result_meta.get("streams", [{}])[0].get("width"),
-            "height": result_meta.get("streams", [{}])[0].get("height"),
-            "fps": result_meta.get("streams", [{}])[0].get("r_frame_rate"),
-        }
-    except Exception:
-        return {
-            "status": "ok",
-            "dry_run": False,
-            "output": str(output),
-            "duration": 0,
-            "width": 0,
-            "height": 0,
-            "fps": "30/1",
-        }
+    execute(command)
+    result_meta = probe(output)
+    streams = result_meta.get("streams", [{}])
+    video_stream = next(
+        (s for s in streams if s.get("codec_type") == "video"), streams[0])
+    return {
+        "status": "ok",
+        "dry_run": False,
+        "output": str(output),
+        "filter": filter_chain,
+        "duration": result_meta.get("format", {}).get("duration"),
+        "width": video_stream.get("width"),
+        "height": video_stream.get("height"),
+        "fps": video_stream.get("r_frame_rate"),
+    }
 
 
 def cli_main(argv: list[str] | None = None) -> int:
@@ -150,6 +170,16 @@ def cli_main(argv: list[str] | None = None) -> int:
         choices=["convert", "transform"],
         default="convert",
         help="'convert' - convert color space, 'transform' - apply color matrix",
+    )
+    parser.add_argument(
+        "--grade",
+        choices=list(GRADES),
+        default=None,
+        help="Named grade filter chain; 'custom' applies --lut via lut3d",
+    )
+    parser.add_argument(
+        "--lut", type=Path, default=None,
+        help=".cube LUT file required by --grade custom",
     )
     parser.add_argument(
         "--output", type=Path, default=None, help="Output file path",
@@ -174,6 +204,8 @@ def cli_main(argv: list[str] | None = None) -> int:
             mode=args.mode,
             output=args.output,
             dry_run=args.dry_run,
+            grade=args.grade,
+            lut_path=str(args.lut) if args.lut else None,
         )
     except RenderError as e:
         print(f"Error: {e}")

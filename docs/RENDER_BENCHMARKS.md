@@ -48,6 +48,31 @@ MP4 frame hashes remain exact between cold and warm cache runs; the new
 full-canvas-vs-local-layer parity test also checks pixel identity for scaled,
 rotated text and vector nodes.
 
+## Parallel jobs and hardware encode A/B (2026-11)
+
+Measured locally (macOS, Python 3.13, FFmpeg 8.0.1) on a synthetic
+360×640/20 fps Studio fixture with four scenes (statement, amount, cta,
+checklist), cache disabled, supersample 1, 74 frames per render:
+
+| Variant | Wall time |
+|---|---:|
+| `libx264`, `jobs=1` | 0.55 s |
+| `libx264`, `jobs=4` | 0.27 s |
+| `h264_videotoolbox`, `jobs=2` | 0.63 s |
+
+Parallel scene encodes scale with scene count on this fixture (about 2× at
+four jobs), which is why `studio-render` now defaults to `--jobs 2`.
+Hardware encode was slower at preview size: frame rasterisation in Pillow,
+not H.264 encoding, dominates there. Treat hardware encoders
+(`export.codec`, or the render farm's `use_hardware_encoder=True`) as an
+opt-in for encode-heavy finals, and re-measure on a representative manifest
+before adopting them; these are single-run local numbers, not promises.
+
+A related correctness constraint: the x264 thread count is intentionally
+not tied to `--jobs`. Varying `-threads` between serial and parallel
+renders changed decoded pixels and broke the parallel/serial frame-parity
+test, so encoder settings stay constant and only scene concurrency varies.
+
 ## Scene-renderer reuse paths (2026-11)
 
 `SceneRenderer` now reuses raster work at several levels, all verified

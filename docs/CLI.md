@@ -177,13 +177,21 @@ Studio export profiles are `preview` (360×640/20 fps), `review`
 (1080×1920/60 fps). Pass the same profile to render and storyboard when it
 differs from the manifest's export profile. The storyboard command checks MP4
 dimensions, FPS, frame count and audio structure before sampling real frames.
+Studio storyboards decode the MP4 in a single FFmpeg pass and extract every
+target frame with a `select` filter instead of starting one process per
+thumbnail. With `--motion-strip`, each shot also contributes `peak` frames
+sampled at the exact easing-extrema times of its tracks (back/spring
+overshoot), so the frame most likely to break layout is reviewed too.
 See [MOTION_DESIGN_SYSTEM.md](MOTION_DESIGN_SYSTEM.md) for the full studio
 manifest and QA contract.
 
 Use `--root /absolute/repository` to run from elsewhere. All commands are
 noninteractive. Successful responses go to stdout as one JSON object; errors
 go to stderr with a nonzero exit code. Harnesses should inspect process return
-codes before trusting the `output` path.
+codes before trusting the `output` path. Argument errors (unknown flag,
+missing value) also honour the contract when `--json` was requested: stderr
+then carries one `{"schema_version": 1, "status": "error", ...}` document
+instead of argparse usage text, still with exit code 2.
 
 ## Brand-scoped manifests
 
@@ -218,10 +226,26 @@ cache misses. Audio is encoded separately and multiplexed without re-encoding
 video. Scene frame counts are computed from cumulative cut points.
 Use `--jobs 1..8` based on available CPU and memory for classic video
 renders. `studio-render --jobs 1..8` encodes independent scene segments
-concurrently (default `1`); each worker owns a private renderer and decode
-metrics, and camera-canvas projects stay serial. Studio rendering uses
+concurrently (default `2`); each worker owns a private renderer and decode
+metrics, and camera-canvas projects stay serial. Parallel and serial Studio
+renders produce identical decoded frames; the encoder thread count is
+deliberately not varied with `--jobs`, because varying it changes decoded
+pixels. Studio rendering uses
 `.cache/reels-maker/studio/` by default; `--cache-dir` selects another
 location and `--no-cache` forces a full rebuild.
+
+A manifest may select a hardware H.264/HEVC encoder in
+`export.codec` (`h264_videotoolbox`, `hevc_videotoolbox`, `h264_nvenc`,
+`hevc_nvenc`, `h264_vaapi`). Hardware encoders do not accept x264
+`--preset`/`-crf`; quality is mapped from the configured CRF
+(VideoToolbox `-q:v`, NVENC `-cq`, VAAPI `-qp`), so prefer hardware for
+preview/review work and keep `libx264` for archival finals. The library
+render farm (`execute_render_farm_batch`) applies the detected hardware
+encoder only when called with `use_hardware_encoder=True`. On small
+preview frames the software renderer, not the encoder, is the bottleneck:
+a local A/B on the synthetic 360×640 four-scene fixture measured 0.55 s
+for `libx264 --jobs 1`, 0.27 s for `--jobs 4` and 0.63 s for VideoToolbox
+at `--jobs 2` (see `docs/RENDER_BENCHMARKS.md`).
 Studio cache entries are scene-local and include resolved visual asset metadata.
 
 Inside each scene frame the renderer also reuses raster work automatically:
@@ -525,9 +549,11 @@ reels-maker metadata INPUT --title "TEXT" --artist "NAME" --comment "TEXT" --dat
 reels-maker audioequalizer INPUT --preset speech|music|voice|film|custom
                --bands BAND_SETTINGS
 
-# Color space conversion
-reels-maker colormatrix INPUT --target sdr|hdr|rec709|bt2020
+# Color space conversion and grading (module entry point)
+python -m reels_maker.colormatrix INPUT --target sdr|hdr|rec709|bt2020
                --mode convert|transform
+python -m reels_maker.colormatrix INPUT --grade warm|cool|vivid|flat|sdr
+python -m reels_maker.colormatrix INPUT --grade custom --lut GRADE.cube
 
 # Fade in/out transitions
 reels-maker fade INPUT --fade-in SECONDS --fade-out SECONDS
@@ -544,13 +570,19 @@ reels-maker [module] INPUT ... --dry-run --json
 reels-maker [module] INPUT ... --output OUTPUT_PATH
 ```
 
-**Planning-only mode (6 modules, valid JSON output but FFmpeg filter limitations):**
+**Planning-only mode (5 modules, valid JSON output but FFmpeg filter limitations):**
 - `speedramp` - requires `tmix` transitions between segments
 - `insert` - requires compatible overlay source video/images
 - `loop` - requires seekable concatenation
 - `audioequalizer` - FFmpeg AEVALIB/equalizer filter complexity
-- `colormatrix` - color space conversion filter availability
 - `fade` - actually works in full encoding (see above)
+
+`colormatrix` is no longer planning-only or a file copy: without `--dry-run`
+it re-encodes through a real filter chain. `--target` maps to a `colorspace`
+conversion (or the `sdr` grade chain), `--grade warm|cool|vivid|flat`
+applies deterministic `colortemperature`/`eq` chains, and
+`--grade custom --lut GRADE.cube` applies a 3D LUT via `lut3d`.
+Encode failures raise an error instead of silently copying the input.
 
 ---
 

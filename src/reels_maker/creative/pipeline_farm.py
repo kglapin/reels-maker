@@ -70,8 +70,15 @@ def execute_render_farm_batch(
     output_dir: str | Path,
     *,
     budget_usd: float = 5.0,
+    use_hardware_encoder: bool = False,
 ) -> dict:
-    """Schedule and execute a batch of StudioProject renders with shared warm segment caching (MD-605)."""
+    """Schedule and execute a batch of StudioProject renders with shared warm segment caching (MD-605).
+
+    With ``use_hardware_encoder=True`` and a detected hardware H.264 encoder,
+    each project is rendered with that codec instead of its configured
+    software codec. Hardware output is quality-mapped from CRF, so callers
+    should use it for preview/review batches, not archival finals.
+    """
     from ..renderers.studio import probe_output, render_studio
 
     if not projects:
@@ -98,6 +105,10 @@ def execute_render_farm_batch(
         # Share segment cache across jobs in the same (brand, style) group
         from dataclasses import replace as _replace
         shared_proj = _replace(proj, name=f"{proj.brand or 'default'}-{proj.style}")
+        if use_hardware_encoder and hw_encoder != "libx264":
+            shared_proj = _replace(
+                shared_proj,
+                export={**(proj.export or {}), "codec": hw_encoder})
         rep = render_studio(shared_proj, output=dest, cache_dir=cache_dir, supersample=1)
         probed = probe_output(dest)
         completed.append({
@@ -112,6 +123,8 @@ def execute_render_farm_batch(
     return {
         "ok": all(c["export_status"] == "pass" for c in completed),
         "hardware_encoder_detected": hw_encoder,
+        "hardware_encoder_used": bool(
+            use_hardware_encoder and hw_encoder != "libx264"),
         "cache_dir": str(cache_dir),
         "plan": plan,
         "completed_jobs": completed,

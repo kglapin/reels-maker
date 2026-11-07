@@ -74,7 +74,10 @@ class Keyframe:
         if easing_name not in EASINGS:
             raise ValueError(f"Unknown easing {self.easing!r}")
         allowed_params = ({"back": {"overshoot"},
-                           "spring": {"damping"}}.get(easing_name, set()))
+                           "spring": {"damping"},
+                           "spring-physics": {"omega", "zeta"},
+                           "cubic-bezier": {"x1", "y1", "x2", "y2"}}
+                          .get(easing_name, set()))
         unsupported = set(names) - allowed_params
         if unsupported:
             raise ValueError(

@@ -137,6 +137,15 @@ copy_warnings = audit_creative_typography(creative_spec)
 
 The JSON policy is bundled into wheels and editable installs under `reels_maker.design` (no external runtime fetch). Regression tests include actual measured text blocks, line spacing, hierarchy, all-caps copy, scaled dimensions, source integrity, invalid token ordering, and integration into `creative-qa`.
 
+The profiles are audit suggestions, while `design/styles.py` (`STYLE_SYSTEMS`)
+drives actual rendering; the two scales can drift apart. Run
+`typography_profile_divergences()` from `typography_policy` to list roles
+where suggested and rendered sizes differ by more than 10% (for example
+display 150px suggested vs 170px rendered). Treat the output as a
+configuration-review diagnostic: align the JSON with `STYLE_SYSTEMS` or
+document the intentional difference. It is deliberately not part of the
+per-project token audit, whose clean-token contract stays warning-free.
+
 ## 6. Definition of done for typography in a finished Reel
 
 Type roles follow a deliberate hierarchy; copy fits without truncation or meaningless downscaling; all characters, including Polish glyphs, are legible; actual frame geometry respects platform safe areas and contrast; text holds are long enough; sound and cuts align; subtitles and data labels remain readable on an actual phone; a human reviewer signs off against `docs/REVIEW_RUBRIC.md`.

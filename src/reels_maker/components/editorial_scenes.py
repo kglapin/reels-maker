@@ -290,9 +290,9 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
                        fill=theme["accent"], radius="lg", shadow=True)
     phone_node = Node(kind="text", role="phone", props={
         "x": card_region.x + ctx.tokens.space("md"),
-        "y": card_region.y + card_region.h * .20,
+        "y": card_region.y + card_region.h * .30,
         "w": card_region.w - ctx.tokens.space("md") * 2,
-        "h": card_region.h * .34,
+        "h": card_region.h * .32,
         "block": typeset(phone, phone_style,
                          card_region.w - ctx.tokens.space("md") * 2,
                          ctx.fonts),
@@ -304,9 +304,9 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
                           align="center", uppercase=True, tracking=1.5)
     tag = text_node("cta-tag", line_one, tag_style,
                     Rect(card_region.x + ctx.tokens.space("md"),
-                         card_region.y + card_region.h * .58,
+                         card_region.y + card_region.h * .66,
                          card_region.w - ctx.tokens.space("md") * 2,
-                         card_region.h * .22), ctx.fonts,
+                         card_region.h * .20), ctx.fonts,
                     align="center", valign="center", fit=False)
     elements["cta"] = Node(kind="group", role="cta",
                            children=[panel, phone_node, tag],

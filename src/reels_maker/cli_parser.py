@@ -2,15 +2,36 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from pathlib import Path
 
 from .paths import ROOT
 
 
+class _JsonArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that honours the JSON-first CLI contract on errors.
+
+    Plain argparse prints usage text to stderr, which breaks callers that
+    parse stderr as the versioned JSON error document. When ``--json`` was
+    requested, emit that document instead; exit code stays 2.
+    """
+
+    def error(self, message: str) -> None:  # noqa: D102 - argparse hook
+        if "--json" in sys.argv[1:]:
+            payload = {"schema_version": 1, "status": "error", "ok": False,
+                       "error": {"type": "ArgumentError",
+                                 "message": message}}
+            print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+            raise SystemExit(2)
+        super().error(message)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="reels-maker",
+    parser = _JsonArgumentParser(prog="reels-maker",
         description="Render manifest-driven videos in project-defined formats")
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(dest="command", required=True,
+                                     parser_class=_JsonArgumentParser)
     for name in ("validate", "render"):
         command = commands.add_parser(name)
         command.add_argument("project", type=Path, help="JSON manifest path")
@@ -59,8 +80,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Override the default Studio segment cache directory")
     studio.add_argument("--no-cache", action="store_true",
                         help="Disable the Studio segment cache")
-    studio.add_argument("--jobs", type=int, default=1,
-                        help="Concurrent scene encodes (default: 1; max 8)")
+    studio.add_argument("--jobs", type=int, default=2,
+                        help="Concurrent scene encodes (default: 2; max 8)")
     studio.add_argument("--json", action="store_true")
     studio.add_argument("--status", choices=("accepted", "in-progress"),
                         default="accepted",

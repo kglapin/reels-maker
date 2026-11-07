@@ -8,10 +8,27 @@ from .models import Issue
 
 
 
+PLACEHOLDER_CONTACT = {"CONTACT", "SKONTAKUJ SIĘ", "SPRAWDŹ DOTACJĘ",
+                          "example.com"}
+
+
 def _data_checks(built) -> list[Issue]:
     issues = []
     scene = built.scene
     meta = built.meta
+    if meta.get("component") == "cta":
+        # Engine fallbacks ("CONTACT", "example.com", ...) must never ship
+        # as if they were the client's real contact details.
+        shown = {str(scene.get(k, "")).strip()
+                 for k in ("headline", "phone", "line_one", "website")}
+        hit = sorted(shown & PLACEHOLDER_CONTACT)
+        if hit:
+            issues.append(Issue(
+                "placeholder_contact", "warning",
+                f"CTA shows placeholder contact copy: {', '.join(hit)}.",
+                built.index + 1, None, [],
+                "Fill headline/phone/line_one/website with verified client "
+                "details before rendering."))
     if meta.get("component") == "breakdown":
         items = meta.get("items") or []
         total = float(meta.get("total", 0))

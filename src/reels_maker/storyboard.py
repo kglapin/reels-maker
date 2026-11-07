@@ -61,6 +61,39 @@ def _sample_frames(scene: dict, fps: int, beginning: int, length: int,
     return [("entry", entry), ("settled", settled), ("exit", exit_frame)]
 
 
+def _extrema_local_times(built_scene, duration: float) -> list[float]:
+    """Scene-local times of easing overshoot peaks across all node tracks.
+
+    Motion-strip storyboards otherwise sample only entry/settled/exit, so a
+    back/spring overshoot peak (the frame most likely to break layout) was
+    never shown to the human reviewer.
+    """
+    from .motionkit.easing import easing_extrema_progress
+    times: list[float] = []
+    pending = list(built_scene.nodes)
+    while pending:
+        node = pending.pop()
+        pending.extend(node.children or [])
+        for track in (node.tracks or {}).values():
+            keys = track.keys
+            for left, right in zip(keys, keys[1:]):
+                params = dict(right.params)
+                try:
+                    peaks = easing_extrema_progress(
+                        right.easing,
+                        overshoot=params.get("overshoot", 1.04),
+                        damping=params.get("damping", 7.0),
+                        omega=params.get("omega", 11.0),
+                        zeta=params.get("zeta", 0.32))
+                except ValueError:
+                    continue
+                for peak in peaks:
+                    local = left.time + peak * (right.time - left.time)
+                    if 0.0 < local < duration:
+                        times.append(round(local, 4))
+    return sorted(set(times))[:2]
+
+
 def make_storyboard(project: Project, video: Path, output: Path,
                     *, columns: int = 4, max_shots: int = 80,
                     motion_strip: bool = False) -> dict:
@@ -202,14 +235,17 @@ def make_studio_storyboard(project, video: Path, output: Path, *,
         local_settled = min(max(local_entry, duration * .55), duration - .04)
         local_exit = max(local_settled, duration - .08)
         if motion_strip:
-            samples = (("entry", local_entry), ("settled", local_settled),
-                       ("exit", local_exit))
+            samples = [("entry", local_entry), ("settled", local_settled),
+                       ("exit", local_exit)]
+            samples += [("peak", peak) for peak in
+                        _extrema_local_times(scene, duration)]
         else:
             samples = (("settled", local_settled),)
         for phase, local in samples:
             frame = min(timing.frames - 1, max(0, round(local * timeline.fps)))
             global_time = (timing.start_frame + frame + .5) / timeline.fps
-            targets.append((timing.index, phase, global_time))
+            targets.append((timing.index, phase, global_time,
+                            timing.start_frame + frame))
 
     rows = math.ceil(len(targets) / num_cols)
     cell_w, cell_h = thumb_w + 16, thumb_h + label_h
@@ -220,12 +256,21 @@ def make_studio_storyboard(project, video: Path, output: Path, *,
     font = ImageFont.load_default()
     samples_report = []
     with tempfile.TemporaryDirectory(prefix="reels-studio-storyboard-") as temp:
-        for index, (scene_index, phase, timestamp) in enumerate(targets):
-            still = Path(temp) / f"{index:03d}.png"
-            execute(["-ss", f"{timestamp:.6f}", "-i", str(video),
-                     "-frames:v", "1",
-                     "-vf", f"scale={thumb_w}:{thumb_h}:force_original_aspect_ratio=decrease",
-                     "-update", "1", str(still)])
+        # Single decode pass for every target frame instead of one ffmpeg
+        # process (and seek) per thumbnail.
+        unique_frames = sorted({frame for *_, frame in targets})
+        frame_files = {frame: Path(temp) / f"frame-{order:04d}.png"
+                       for order, frame in enumerate(unique_frames)}
+        if unique_frames:
+            select = "+".join(f"eq(n\\,{frame})" for frame in unique_frames)
+            execute(["-i", str(video),
+                     "-vf", (f"select='{select}',"
+                             f"scale={thumb_w}:{thumb_h}:"
+                             "force_original_aspect_ratio=decrease"),
+                     "-fps_mode", "vfr", "-start_number", "0",
+                     str(Path(temp) / "frame-%04d.png")])
+        for index, (scene_index, phase, timestamp, frame_index) in enumerate(targets):
+            still = frame_files[frame_index]
             if not still.is_file():
                 raise RenderError(f"Cannot extract scene {scene_index + 1} ({phase})")
             with Image.open(still) as picture:

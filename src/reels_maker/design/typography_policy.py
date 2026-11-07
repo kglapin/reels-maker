@@ -191,6 +191,31 @@ def audit_typography_spacing(placements, *, width: int, height: int) -> list[dic
     return issues
 
 
+def typography_profile_divergences(tolerance: float = 0.10) -> list[dict]:
+    """Report roles where the audit profile and the render style disagree.
+
+    ``typography_profiles.json`` drives audits while ``styles.STYLE_SYSTEMS``
+    drives rendering; before this check the two scales could drift apart
+    silently (e.g. display 150 suggested vs 170 rendered). Divergence is a
+    warning, not an error: profiles are suggestions, not renderer overrides.
+    """
+    from .styles import STYLE_SYSTEMS
+    config = _load()
+    divergences = []
+    for style, profile in config["styles"].items():
+        system = STYLE_SYSTEMS.get(style)
+        if system is None:
+            continue
+        for role in ROLES:
+            suggested = profile["roles"][role]["size_px"]
+            rendered = system.typography.size(role)
+            if suggested and abs(rendered - suggested) / suggested > tolerance:
+                divergences.append({
+                    "style": style, "role": role,
+                    "suggested_px": suggested, "rendered_px": rendered})
+    return divergences
+
+
 def audit_typography_tokens(tokens) -> list[dict]:
     """Check configured design scales *before* scene creation."""
     sizes = [tokens.typography.size(role) for role in

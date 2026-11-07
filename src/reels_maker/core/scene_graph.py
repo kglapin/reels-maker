@@ -27,6 +27,8 @@ class Node:
     dx: float = 0.0
     dy: float = 0.0
     scale: float = 1.0
+    sx: float | None = None
+    sy: float | None = None
     rotation: float = 0.0
     opacity: float = 1.0
     anchor: tuple[float, float] | None = None
@@ -35,6 +37,14 @@ class Node:
     tracks: dict[str, "Track"] = field(default_factory=dict, repr=False)
     qa_class: str = "decor"
     meta: dict[str, Any] = field(default_factory=dict)
+
+    def effective_scale(self) -> tuple[float, float]:
+        """Resolved (sx, sy); per-axis values fall back to uniform scale."""
+        sx = self.scale if self.sx is None else self.sx
+        sy = self.scale if self.sy is None else self.sy
+        if not all(math.isfinite(v) and v > 0 for v in (sx, sy)):
+            raise ValueError("Node scale must be positive and finite")
+        return (float(sx), float(sy))
 
     # ------------------------------------------------------------------ tracks
     def track(self, name: str, track: "Track") -> "Node":
@@ -70,6 +80,18 @@ class Node:
                 if not math.isfinite(scale) or scale <= 0:
                     raise ValueError("Animated node scale must remain finite and positive")
                 node.scale = scale
+            elif name in ("sx", "sy"):
+                axis_scale = float(value)
+                if not math.isfinite(axis_scale) or axis_scale <= 0:
+                    raise ValueError("Animated node scale must remain finite and positive")
+                setattr(node, name, axis_scale)
+            elif name == "scale_xy":
+                if not isinstance(value, tuple) or len(value) != 2:
+                    raise ValueError("scale_xy track values must be (sx, sy) pairs")
+                sx, sy = (float(value[0]), float(value[1]))
+                if not all(math.isfinite(v) and v > 0 for v in (sx, sy)):
+                    raise ValueError("Animated node scale must remain finite and positive")
+                node.sx, node.sy = sx, sy
             elif name == "rotation":
                 node.rotation = float(value)
             elif name == "dx":
@@ -112,12 +134,11 @@ class Node:
         if not all(math.isfinite(value) for value in
                    (self.scale, self.rotation, self.dx, self.dy, *anchor)):
             raise ValueError("Node transform values must be finite")
-        if self.scale <= 0:
-            raise ValueError("Node scale must be positive")
+        sx, sy = self.effective_scale()
         angle = math.radians(self.rotation)
         cosine, sine = math.cos(angle), math.sin(angle)
-        a, b = self.scale * cosine, self.scale * sine
-        c, d = -self.scale * sine, self.scale * cosine
+        a, b = sx * cosine, sx * sine
+        c, d = -sy * sine, sy * cosine
         ax, ay = anchor
         return Affine2D(
             a, b, c, d,

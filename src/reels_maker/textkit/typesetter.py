@@ -76,10 +76,17 @@ def _first_existing(candidate: str) -> str | None:
 def assert_polish_coverage(path: str) -> None:
     """Raise RuntimeError when a font file lacks Polish glyphs."""
     try:
-        cmap = TTFont(path, lazy=True).getBestCmap()
+        font = TTFont(path, lazy=True)
     except Exception as exc:
         raise RuntimeError(
             f"Font file is not readable: {path} ({exc})") from exc
+    try:
+        cmap = font.getBestCmap()
+    except Exception as exc:
+        raise RuntimeError(
+            f"Font file is not readable: {path} ({exc})") from exc
+    finally:
+        font.close()
     missing = [ch for ch in POLISH_GLYPHS if ord(ch) not in cmap]
     if missing:
         raise RuntimeError(
@@ -260,7 +267,11 @@ class FontBook:
         key = ("font", weight, size)
         if key not in self._cache:
             path = self.path(weight)
-            self._cache[key] = ImageFont.truetype(path, size)
+            # Pin the basic layout engine: Pillow auto-selects Raqm when
+            # the build bundles libraqm, which shifts glyph pixels between
+            # machines and breaks exact-pixel golden fixtures.
+            self._cache[key] = ImageFont.truetype(
+                path, size, layout_engine=ImageFont.Layout.BASIC)
         return self._cache[key]
 
 

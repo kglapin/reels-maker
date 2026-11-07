@@ -74,9 +74,12 @@ def _instantiate(data: bytes, coordinates: dict) -> bytes:
     from fontTools.ttLib import TTFont
     from fontTools.varLib.instancer import instantiateVariableFont
     font = TTFont(io.BytesIO(data))
-    instantiateVariableFont(font, coordinates, updateFontNames=True)
-    buffer = io.BytesIO()
-    font.save(buffer)
+    try:
+        instantiateVariableFont(font, coordinates, updateFontNames=True)
+        buffer = io.BytesIO()
+        font.save(buffer)
+    finally:
+        font.close()
     return buffer.getvalue()
 
 
@@ -132,8 +135,11 @@ def fetch_font(family: str, dest_dir: str | Path,
             wanted = [w for w in wanted if w in weights]
         from fontTools.ttLib import TTFont as _TTFont
         probe = _TTFont(io.BytesIO(data), lazy=True)
-        axes = ({a.axisTag for a in probe["fvar"].axes}
-                if "fvar" in probe else set())
+        try:
+            axes = ({a.axisTag for a in probe["fvar"].axes}
+                    if "fvar" in probe else set())
+        finally:
+            probe.close()
         coordinates: dict = {}
         for weight in wanted:
             point = dict(coordinates)

@@ -100,6 +100,16 @@ class FontResolutionTests(unittest.TestCase):
             self.assertNotEqual(resolved.name, "Lato-Bold.ttf")
             self.assertTrue(book.used_fallback)
 
+    @needs_font
+    def test_layout_engine_is_pinned_to_basic(self):
+        # Pillow auto-selects Raqm when the build bundles libraqm, which
+        # shifts glyph pixels between machines and breaks exact-pixel
+        # golden fixtures; the renderer must not depend on the build.
+        from PIL import ImageFont
+        book = FontBook()
+        self.assertEqual(
+            book.get(24).layout_engine, ImageFont.Layout.BASIC)
+
     def test_strict_missing_family_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
             self._with_home(tmp)

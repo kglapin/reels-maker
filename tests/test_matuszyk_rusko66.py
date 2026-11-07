@@ -16,6 +16,8 @@ def _load():
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
+@unittest.skipUnless(MANIFEST.is_file(),
+                     "client fixture not committed")
 class RuskoReelTest(unittest.TestCase):
     def test_logo_on_hook_and_end_card(self):
         data = _load()

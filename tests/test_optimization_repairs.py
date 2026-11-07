@@ -180,10 +180,21 @@ def _studio_manifest(path, codec=None):
                      "FFmpeg required")
 class StudioIntegrationTests(unittest.TestCase):
     def test_hardware_encoder_render_is_valid(self):
+        import shutil
+        import subprocess
         import tempfile
         from pathlib import Path
         from reels_maker.renderers.studio import probe_output, render_studio
         from reels_maker.studio import load_studio
+        ffmpeg = shutil.which("ffmpeg")
+        try:
+            encoders = subprocess.run(
+                [ffmpeg, "-hide_banner", "-encoders"],
+                capture_output=True, text=True, timeout=30).stdout or ""
+        except (OSError, TypeError, subprocess.SubprocessError):
+            encoders = ""
+        if "h264_videotoolbox" not in encoders:
+            self.skipTest("h264_videotoolbox is macOS-only")
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             manifest = base / "hw.json"

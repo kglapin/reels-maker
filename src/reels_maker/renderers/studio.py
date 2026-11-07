@@ -40,6 +40,31 @@ from .studio_output import (
     render_master_format_matrix,
 )
 
+HW_ENCODERS = ("h264_videotoolbox", "hevc_videotoolbox", "h264_nvenc",
+               "hevc_nvenc", "h264_vaapi")
+
+
+def encoder_options(codec: str, *, crf: int, preset: str,
+                    threads: int | None = None) -> list[str]:
+    """FFmpeg encoder args for software and hardware H.264/HEVC encoders.
+
+    Hardware encoders do not accept x264 ``-preset``/``-crf``: VideoToolbox
+    uses ``-q:v`` quality, NVENC uses ``-cq`` with a constant-quality rate
+    control, VAAPI uses ``-qp``. Mapping keeps the caller's CRF intent.
+    """
+    if codec in ("h264_videotoolbox", "hevc_videotoolbox"):
+        quality = max(10, min(100, round(100 - crf * 1.8)))
+        return ["-c:v", codec, "-q:v", str(quality)]
+    if codec in ("h264_nvenc", "hevc_nvenc"):
+        return ["-c:v", codec, "-preset", "p4", "-cq", str(crf), "-b:v", "0"]
+    if codec == "h264_vaapi":
+        return ["-c:v", codec, "-qp", str(crf)]
+    options = ["-c:v", codec, "-preset", preset, "-crf", str(crf)]
+    if threads:
+        options += ["-threads", str(threads)]
+    return options
+
+
 def _output_path(project: StudioProject, profile: str | None,
                  output: str | Path | None) -> Path:
     if output:
@@ -134,14 +159,16 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                          frames_done: int, total_frames: int,
                          progress: Callable[[dict], None] | None,
                          next_scene=None, transition: dict | None = None,
-                         metrics: dict | None = None) -> int:
+                         metrics: dict | None = None,
+                         threads: int | None = None) -> int:
     """Encode one scene's frames into a standalone stream-copyable MP4."""
     command = [
         require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-y",
         "-f", "rawvideo", "-pix_fmt", "rgb24",
         "-s", f"{project.width}x{project.height}", "-r", str(project.fps),
-        "-i", "-", "-an", "-c:v", codec, "-preset", preset,
-        "-crf", str(crf), "-pix_fmt", "yuv420p", str(dest),
+        "-i", "-", "-an",
+        *encoder_options(codec, crf=crf, preset=preset, threads=threads),
+        "-pix_fmt", "yuv420p", str(dest),
     ]
     process = subprocess.Popen(command, stdin=subprocess.PIPE,
                                stdout=subprocess.DEVNULL,
@@ -179,7 +206,8 @@ def _encode_studio_scene(project: StudioProject, renderer, built, timing,
                         effect=transition.get("type", "color-takeover"),
                         color=transition.get("color", "#47A013"),
                         anchor=tuple(transition.get("anchor", (.5, .5))),
-                        direction=transition.get("direction", "left"))
+                        direction=transition.get("direction", "left"),
+                        easing=transition.get("easing", "smooth"))
                 render_seconds += perf_counter() - render_started
                 write_started = perf_counter()
                 try:

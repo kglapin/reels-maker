@@ -12,7 +12,7 @@ EASINGS = (
     "in-cubic", "out-cubic", "in-out-cubic",
     "in-quart", "out-quart", "in-out-quart",
     "in-expo", "out-expo", "in-out-expo",
-    "smooth", "back", "spring",
+    "smooth", "back", "spring", "spring-physics", "cubic-bezier",
 )
 
 
@@ -115,12 +115,58 @@ def spring(p: float, damping: float = 7.0) -> float:
     return 1 - math.exp(-damping * p) * math.cos(10 * p)
 
 
+def spring_physics(p: float, *, omega: float = 11.0,
+                   zeta: float = 0.32) -> float:
+    """Analytic damped-spring response (mass-spring-damper, zero initial
+    velocity), normalised so progress 0 and 1 map exactly to 0 and 1.
+
+    ``omega`` is the natural frequency and ``zeta`` the damping ratio:
+    zeta < 1 overshoots and oscillates, zeta >= 1 settles monotonically.
+    Unlike :func:`spring`, the shape comes from the oscillator equation, so
+    stiffness/damping changes alter both overshoot and settle time.
+    """
+    if not math.isfinite(omega) or omega <= 0:
+        raise ValueError("omega must be positive and finite")
+    if not math.isfinite(zeta) or zeta < 0:
+        raise ValueError("zeta must be nonnegative and finite")
+    p = clamp01(p)
+    if p == 0.0:
+        return 0.0
+    if p == 1.0:
+        return 1.0
+
+    def raw(t: float) -> float:
+        if zeta < 1.0:
+            wd = omega * math.sqrt(1.0 - zeta * zeta)
+            envelope = math.exp(-zeta * omega * t)
+            return 1.0 - envelope * (
+                math.cos(wd * t) + (zeta * omega / wd) * math.sin(wd * t))
+        if zeta == 1.0:
+            return 1.0 - (1.0 + omega * t) * math.exp(-omega * t)
+        root = math.sqrt(zeta * zeta - 1.0)
+        r1 = -omega * (zeta - root)
+        r2 = -omega * (zeta + root)
+        return 1.0 - (r2 * math.exp(r1 * t) - r1 * math.exp(r2 * t)) / (r2 - r1)
+
+    settled = raw(1.0)
+    if settled == 0.0 or not math.isfinite(settled):
+        raise ValueError("spring parameters do not settle within progress 1")
+    return raw(p) / settled
+
+
 def cubic_bezier(x1: float, y1: float, x2: float, y2: float, p: float,
                  *, iterations: int = 8) -> float:
-    """CSS-style cubic-bezier easing solved for x, then evaluated for y."""
-    for name, value in (("x1", x1), ("y1", y1), ("x2", x2), ("y2", y2)):
+    """CSS-style cubic-bezier easing solved for x, then evaluated for y.
+
+    Control-point x values must stay in [0, 1] (monotonic time); y values
+    may leave [0, 1] within [-2, 2] for anticipation/overshoot curves.
+    """
+    for name, value in (("x1", x1), ("x2", x2)):
         if not 0 <= value <= 1:
             raise ValueError(f"{name} must be between 0 and 1")
+    for name, value in (("y1", y1), ("y2", y2)):
+        if not math.isfinite(value) or not -2 <= value <= 2:
+            raise ValueError(f"{name} must be finite and between -2 and 2")
     p = clamp01(p)
 
     def coordinate(t: float, a: float, b: float) -> float:
@@ -149,9 +195,22 @@ def ease(name: str, p: float, **params) -> float:
         "out-expo": out_expo, "in-out-expo": in_out_expo,
         "smooth": smooth, "back": back, "spring": spring,
     }
-    if key not in functions:
+    if key not in functions and key not in ("cubic-bezier", "spring-physics"):
         raise ValueError(f"Unknown easing {name!r}; choose one of "
                          + ", ".join(EASINGS))
+    if key == "cubic-bezier":
+        required = {"x1", "y1", "x2", "y2"}
+        if set(params) != required:
+            raise ValueError(
+                "cubic-bezier easing requires exactly x1, y1, x2, y2 params")
+        return cubic_bezier(params["x1"], params["y1"], params["x2"],
+                            params["y2"], p)
+    if key == "spring-physics":
+        unsupported = set(params) - {"omega", "zeta"}
+        if unsupported:
+            raise ValueError("Unsupported spring-physics params: "
+                             + ", ".join(sorted(unsupported)))
+        return spring_physics(p, **params)
     function = functions[key]
     if key in ("back", "spring"):
         return function(p, **params)
@@ -166,7 +225,8 @@ def progress(t: float, onset: float, duration: float) -> float:
 
 
 def easing_extrema_progress(name: str, *, overshoot: float = 1.04,
-                            damping: float = 7.0) -> tuple[float, ...]:
+                            damping: float = 7.0, omega: float = 11.0,
+                            zeta: float = 0.32) -> tuple[float, ...]:
     """Return exact interior progress values p in (0, 1) where d(ease)/dp == 0.
 
     Monotonic easings return ``()``; ``back`` and ``spring`` return their
@@ -197,6 +257,20 @@ def easing_extrema_progress(name: str, *, overshoot: float = 1.04,
                 break
             if p > 0.0:
                 extrema.append(p)
+            k += 1
+        return tuple(extrema)
+    if key == "spring-physics":
+        if not math.isfinite(omega) or omega <= 0:
+            raise ValueError("omega must be positive and finite")
+        if not math.isfinite(zeta) or zeta < 0:
+            raise ValueError("zeta must be nonnegative and finite")
+        if zeta >= 1.0:
+            return ()
+        wd = omega * math.sqrt(1.0 - zeta * zeta)
+        extrema = []
+        k = 1
+        while (p := k * math.pi / wd) < 1.0:
+            extrema.append(p)
             k += 1
         return tuple(extrema)
     return ()

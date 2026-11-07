@@ -14,15 +14,18 @@ EFFECTS = frozenset({"color-takeover", "radial-reveal", "whip-pan", "zoom-throug
                      "split-slide", "spin-zoom", "pixel-dissolve"})
 
 
-def _ease(t: float) -> float:
-    t = min(1.0, max(0.0, float(t)))
-    return t * t * (3.0 - 2.0 * t)
+def _ease(t: float, easing: str = "smooth") -> float:
+    from ..motionkit.easing import ease as _motion_ease
+    try:
+        return float(_motion_ease(easing, min(1.0, max(0.0, float(t)))))
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def transition_frame(outgoing: Image.Image, incoming: Image.Image,
                      progress: float, *, effect: str = "color-takeover",
                      color: str = "#47A013", anchor: tuple[float, float] = (.5, .5),
-                     direction: str = "left") -> Image.Image:
+                     direction: str = "left", easing: str = "smooth") -> Image.Image:
     """Blend adjacent frames via masks, geometry and camera movement.
 
     progress=0 returns outgoing, progress=1 returns incoming.
@@ -35,7 +38,7 @@ def transition_frame(outgoing: Image.Image, incoming: Image.Image,
         raise ValueError("Transition anchor must be normalized 0..1")
     if direction not in ("left", "right", "up", "down"):
         raise ValueError("Unsupported camera direction")
-    t = _ease(progress)
+    t = _ease(progress, easing)
     if t <= 0:
         return outgoing.copy()
     if t >= 1:

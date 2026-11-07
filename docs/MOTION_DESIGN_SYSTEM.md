@@ -126,7 +126,28 @@ widths and blinks during the remaining hold. Leave scene boundaries as hard
 cuts by default; smoothness comes from the staged motion inside each scene.
 Use an explicit `transition_in` only when the story needs an overlay wipe or
 dip, and set its easing to `smooth`, `out-cubic`, `in-out-cubic` or `linear`.
-Studio transition-out effects use a smoothstep travel curve.
+Studio transition-out effects accept a per-effect `easing` in the scene's
+`transition_out` object (any motionkit easing name); the travel curve defaults
+to `smooth` (smoothstep) when no easing is given.
+
+## Motion vocabulary
+
+Keyframe tracks accept every name in `motionkit.easing.EASINGS`, including
+two additions for authored motion:
+
+- `cubic-bezier` with params `x1, y1, x2, y2` (CSS semantics: x stays in
+  0..1, y may leave 0..1 within -2..2 for anticipation/overshoot), e.g.
+  `Keyframe(t, v, "cubic-bezier", (("x1", .2), ("y1", 1.4), ("x2", .3), ("y2", 1)))`.
+- `spring-physics` with params `omega` (natural frequency) and `zeta`
+  (damping ratio): an analytic damped-oscillator response, normalised to
+  settle exactly at the end key. `zeta < 1` overshoots; `zeta >= 1` settles
+  monotonically. Timeline QA samples its extrema like `back`/`spring`.
+
+Nodes can be scaled non-uniformly for squash-and-stretch: tracks named
+`sx`, `sy` or `scale_xy` (tuple values) resolve through
+`Node.effective_scale()` in the scene graph and both renderer paths.
+The `anticipate-pop` entrance preset uses it: a brief vertical squash
+(wider, shorter) at 30% of the entrance, then a `back` settle to 1.0.
 
 ```json
 {
@@ -168,6 +189,11 @@ reels-maker storyboard brands/asta-energy/projects/example.json --video renders/
 `storyboard` verifies the encoded MP4's dimensions, FPS, exact frame count and
 expected audio structure before sampling actual frames. For a non-default
 render profile, pass the same `--profile` to the storyboard command.
+Studio storyboards extract all thumbnails in one FFmpeg decode pass; with
+`--motion-strip` they add `peak` frames at easing-extrema times (overshoot
+peaks) next to the entry/settled/exit frames. `studio-render` defaults to
+`--jobs 2`; see `docs/CLI.md` for the parallel-render and hardware-encoder
+contract.
 
 ## QA and human gates
 

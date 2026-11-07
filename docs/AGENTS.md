@@ -16,13 +16,15 @@ reels-maker storyboard brands/asta-energy/projects/asta-rush-demo.json --video r
 
 Machine contract: successful JSON on stdout with `schema_version: 1` and
 `status: "ok"`; errors as structured JSON on stderr, process exit 2.
+Argument errors follow the same contract when `--json` was requested
+(argparse usage text is only printed without `--json`).
 `doctor` returns exit 3 if FFmpeg/FFprobe is missing.
 
 Brand manifests inherit `brand.json` defaults. Media paths resolve inside
 `brands/<slug>/`; other brands cannot be accessed using relative traversal.
 Catalog defaults to inexpensive file discovery, `--probe` inspects metadata.
 A scene is encoded only on a cache miss; independent scenes may encode
-concurrently. `studio-render` accepts `--jobs 1..8` (default `1`) for
+concurrently. `studio-render` accepts `--jobs 1..8` (default `2`) for
 parallel scene-segment encodes; camera-canvas projects stay serial.
 Use unique output filenames for concurrent agent jobs.
 

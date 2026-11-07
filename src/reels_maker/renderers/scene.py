@@ -133,7 +133,8 @@ class SceneRenderer:
         if self.ss > 1:
             image = image.resize((self.width, self.height),
                                  Image.Resampling.LANCZOS)
-        image = image.convert("RGB")
+        if image.mode != "RGB":
+            image = image.convert("RGB")
         if (self.options.reuse_settled_frames and settled_at is not None
                 and time >= settled_at):
             self._remember_settled_frame(scene_key, image)
@@ -396,7 +397,8 @@ class SceneRenderer:
             return
         rotation = float(node.props.get(
             "_carousel_rotation", node.rotation))
-        needs_layer = (node.opacity < .999 or node.scale != 1
+        needs_layer = (node.opacity < .999
+                       or node.effective_scale() != (1.0, 1.0)
                        or abs(rotation) > 1e-6
                        or node.clip is not None or progress < .999)
         if not needs_layer:
@@ -494,7 +496,7 @@ class SceneRenderer:
             source.putalpha(source.getchannel("A").point(
                 lambda value: int(value * node.opacity)))
 
-        if node.scale == 1 and abs(rotation) <= 1e-6:
+        if node.effective_scale() == (1.0, 1.0) and abs(rotation) <= 1e-6:
             # The tile was rasterized relative to (source_left, source_top);
             # composite it back at that same origin. Compositing at the
             # transform output origin would shift content by the padding
@@ -521,11 +523,9 @@ class SceneRenderer:
             ay = (anchor[1] + node.dy + oy) * scale
             angle = math.radians(rotation)
             cosine, sine = math.cos(angle), math.sin(angle)
-            node_scale = node.scale
-            if not math.isfinite(node_scale) or node_scale <= 0:
-                raise ValueError("Animated node scale must remain finite and positive")
-            inverse = (cosine / node_scale, sine / node_scale,
-                       -sine / node_scale, cosine / node_scale)
+            scale_x, scale_y = node.effective_scale()
+            inverse = (cosine / scale_x, sine / scale_x,
+                       -sine / scale_y, cosine / scale_y)
             a, c, b, d = inverse
             e = ax - a * ax - c * ay
             f = ay - b * ax - d * ay
@@ -570,7 +570,7 @@ class SceneRenderer:
         if progress < .999:
             return False
         rotation = float(node.props.get("_carousel_rotation", node.rotation))
-        if (node.opacity < .999 or node.scale != 1
+        if (node.opacity < .999 or node.effective_scale() != (1.0, 1.0)
                 or abs(rotation) > 1e-6):
             return False
         if node.kind in ("group", "scene"):
@@ -644,7 +644,7 @@ class SceneRenderer:
             alpha = node.opacity
             layer.putalpha(layer.getchannel("A").point(
                 lambda value: int(value * alpha)))
-        if node.scale != 1 or abs(rotation) > 1e-6:
+        if node.effective_scale() != (1.0, 1.0) or abs(rotation) > 1e-6:
             anchor = node.anchor
             if anchor is None:
                 base = node.base_bounds()
@@ -655,13 +655,11 @@ class SceneRenderer:
             ay = (anchor[1] + node.dy + oy) * self.ss
             angle = math.radians(rotation)
             cosine, sine = math.cos(angle), math.sin(angle)
-            scale = node.scale
-            if not math.isfinite(scale) or scale <= 0:
-                raise ValueError("Animated node scale must remain finite and positive")
-            matrix = (cosine / scale, sine / scale,
-                      ax - (cosine / scale) * ax - (sine / scale) * ay,
-                      -sine / scale, cosine / scale,
-                      ay + (sine / scale) * ax - (cosine / scale) * ay)
+            scale_x, scale_y = node.effective_scale()
+            matrix = (cosine / scale_x, sine / scale_x,
+                      ax - (cosine / scale_x) * ax - (sine / scale_x) * ay,
+                      -sine / scale_y, cosine / scale_y,
+                      ay + (sine / scale_y) * ax - (cosine / scale_y) * ay)
             layer = layer.transform((self.W, self.H), Image.Transform.AFFINE,
                                     matrix, resample=Image.Resampling.BICUBIC)
         return layer

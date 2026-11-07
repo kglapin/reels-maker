@@ -37,6 +37,7 @@ PRESETS = {
     "reveal-right": Preset("reveal-right", "panel", 0, 1.0, "right", "in-out-quart", .52),
     "tracking-in": Preset("tracking-in", "display", 0, 1.0, None, "out-expo", .60),
     "scale-focus": Preset("scale-focus", "visual", 0, 1.06, None, "out-expo", .72),
+    "anticipate-pop": Preset("anticipate-pop", "display", 10, 1.0, None, "back", .55),
     "none": Preset("none", "support", 0, 1.0, None, "linear", 0.0),
 }
 
@@ -250,6 +251,20 @@ def apply_entrance(node: Node, preset: str, onset: float, duration: float,
         node.track("prop.tracking_offset", Track([
             Keyframe(onset, tokens.px(14), "out-expo"),
             Keyframe(end, 0.0, "out-expo")]))
+    elif key == "anticipate-pop":
+        # Anticipation: brief vertical squash (wider, shorter) before the
+        # settle, so the eye is primed for the arrival instead of a plain pop.
+        dip = onset + duration * .3
+        node.track("opacity", Track([
+            Keyframe(onset, 0.0, "out-cubic"),
+            Keyframe(onset + min(duration * .4, .18), 1.0, "out-cubic")]))
+        node.track("scale_xy", Track([
+            Keyframe(onset, (1.0, 1.0), "out-cubic"),
+            Keyframe(dip, (1.06, .90), "out-cubic"),
+            Keyframe(end, (1.0, 1.0), "back")]))
+        node.track("dy", Track([
+            Keyframe(onset, _safe_translation(node, travel, "y", safe_bounds), "out-quart"),
+            Keyframe(end, 0.0, "out-quart")]))
     elif key == "scale-focus":
         start_scale = _safe_scale(node, spec.scale_from, safe_bounds)
         node.track("opacity", Track([

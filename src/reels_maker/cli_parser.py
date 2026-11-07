@@ -15,10 +15,21 @@ class _JsonArgumentParser(argparse.ArgumentParser):
     Plain argparse prints usage text to stderr, which breaks callers that
     parse stderr as the versioned JSON error document. When ``--json`` was
     requested, emit that document instead; exit code stays 2.
+
+    The flag is detected in the argument list being parsed, not only in
+    the process ``sys.argv``, so embedded uses (tests, automation passing
+    explicit argv) get the same contract as the real CLI.
     """
 
+    def parse_known_args(self, args=None, namespace=None):
+        if args is None:
+            args = sys.argv[1:]
+        self._json_requested = "--json" in args
+        return super().parse_known_args(args, namespace)
+
     def error(self, message: str) -> None:  # noqa: D102 - argparse hook
-        if "--json" in sys.argv[1:]:
+        if getattr(self, "_json_requested", False) or \
+                "--json" in sys.argv[1:]:
             payload = {"schema_version": 1, "status": "error", "ok": False,
                        "error": {"type": "ArgumentError",
                                  "message": message}}

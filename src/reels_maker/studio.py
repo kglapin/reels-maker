@@ -77,9 +77,12 @@ def _font_book(root: Path, brand_data: Mapping) -> FontBook:
     regular = branding.get("font_regular") or typography.get("regular")
     bold = branding.get("font_bold") or typography.get("bold")
     extra = []
-    fonts_dir = root / "brands" / str(brand_data.get("id", "")) / "fonts"
-    if fonts_dir.is_dir():
-        extra.append(str(fonts_dir))
+    for fonts_dir in (
+            root / "brands" / str(brand_data.get("id", "")) / "fonts",
+            root / "brands" / str(brand_data.get("id", "")) / "media" / "fonts",
+    ):
+        if fonts_dir.is_dir():
+            extra.append(str(fonts_dir))
     return FontBook(regular=regular, bold=bold, family=family,
                     extra_dirs=tuple(extra))
 

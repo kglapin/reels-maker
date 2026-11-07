@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 from PIL import ImageFont
+from fontTools.ttLib import TTFont
 from .models import Line, Run, TextBlock, TextStyle, Word
 
 NBSP = "\u00a0"
@@ -29,6 +30,61 @@ WORD = re.compile(r"[^ \t]+")
 
 class TextOverflow(ValueError):
     """Raised when copy cannot fit without violating a hard constraint."""
+
+
+WEIGHT_SUFFIXES = {
+    "light": "Light",
+    "regular": "Regular",
+    "medium": "Medium",
+    "semibold": "SemiBold",
+    "bold": "Bold",
+    "italic": "Italic",
+    "bold_italic": "BoldItalic",
+}
+WEIGHTS = tuple(WEIGHT_SUFFIXES)
+
+# Polish copy requires these codepoints; a resolved font that lacks any of
+# them would render tofu instead of failing loudly.
+POLISH_GLYPHS = "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"
+
+
+@lru_cache(maxsize=64)
+def _dir_files(directory: str) -> tuple[str, ...]:
+    """Cached directory listing for case-insensitive font matching."""
+    try:
+        return tuple(sorted(os.listdir(directory)))
+    except OSError:
+        return ()
+
+
+def _first_existing(candidate: str) -> str | None:
+    """Resolve a candidate path, matching the basename case-insensitively.
+
+    Always returns the on-disk spelling so equal files never compare
+    unequal across case-sensitive and case-insensitive filesystems.
+    """
+    parent = os.path.dirname(candidate) or "."
+    if not os.path.isdir(parent):
+        return None
+    wanted = os.path.basename(candidate).lower()
+    for name in _dir_files(parent):
+        if name.lower() == wanted:
+            return os.path.join(parent, name)
+    return None
+
+
+def assert_polish_coverage(path: str) -> None:
+    """Raise RuntimeError when a font file lacks Polish glyphs."""
+    try:
+        cmap = TTFont(path, lazy=True).getBestCmap()
+    except Exception as exc:
+        raise RuntimeError(
+            f"Font file is not readable: {path} ({exc})") from exc
+    missing = [ch for ch in POLISH_GLYPHS if ord(ch) not in cmap]
+    if missing:
+        raise RuntimeError(
+            f"Font {Path(path).name} lacks Polish glyphs: "
+            f"{' '.join(missing)}")
 
 
 DEFAULT_CANDIDATES = {
@@ -76,58 +132,129 @@ FAMILY_CANDIDATES = {
 
 @dataclass
 class FontBook:
-    """Resolve and cache real font files for consistent metrics."""
+    """Resolve and cache real font files for consistent metrics.
+
+    ``family`` is matched case-insensitively against installed
+    "<Family>-<Weight>.ttf" files. When an explicit family misses but a
+    default font resolves, the book records ``used_fallback`` instead of
+    silently swapping the typeface; ``strict=True`` raises immediately so a
+    misconfigured brand fails fast.
+    """
     regular: str | None = None
     bold: str | None = None
     family: str | None = None
     extra_dirs: tuple[str, ...] = ()
+    strict: bool = False
     _cache: dict = field(default_factory=dict, repr=False)
+    _fallback_weights: set = field(default_factory=set, repr=False)
 
-    def _candidates(self, weight: str) -> list[str]:
+    @property
+    def requested_family(self) -> str | None:
+        return self.family
+
+    @property
+    def used_fallback(self) -> bool:
+        return bool(self._fallback_weights)
+
+    @property
+    def fallback_weights(self) -> tuple[str, ...]:
+        return tuple(sorted(self._fallback_weights))
+
+    def _family_candidates(self, weight: str) -> list[str]:
         result: list[str] = []
-        explicit = self.bold if weight == "bold" else self.regular
-        if explicit:
-            result.append(explicit)
+        if weight == "bold" and self.bold:
+            result.append(self.bold)
+        elif weight == "regular" and self.regular:
+            result.append(self.regular)
         family = (self.family or "").lower().replace(" ", "")
-        if family in FAMILY_CANDIDATES:
-            result.extend(FAMILY_CANDIDATES[family][weight])
+        table = FAMILY_CANDIDATES.get(family, {})
+        if table and weight not in table:
+            suffix = WEIGHT_SUFFIXES[weight]
+            result.extend(
+                pattern.replace("Regular", suffix).replace(
+                    "regular", suffix.lower())
+                for pattern in table["regular"])
+        elif weight in table:
+            result.extend(table[weight])
         elif self.family:
             # Any installed "<Family>-<Weight>.ttf" (e.g. a Google Fonts
-            # download in ~/Library/Fonts) resolves by family name alone.
+            # download in ~/Library/Fonts or a brand media/fonts dir
+            # populated by fetch-fonts) resolves by family name alone.
             stem = (f'{self.family.replace(" ", "")}-'
-                    f'{"Bold" if weight == "bold" else "Regular"}.ttf')
+                    f'{WEIGHT_SUFFIXES[weight]}.ttf')
             result.extend([
                 str(Path.home() / "Library/Fonts" / stem),
                 f"/Library/Fonts/{stem}",
                 stem,
             ])
-        for directory in self.extra_dirs:
-            result.extend(str(path) for path in
-                          sorted(Path(directory).glob("*.tt[fc]")))
-            result.extend(str(path) for path in
-                          sorted(Path(directory).glob("*.otf")))
-        result.extend(DEFAULT_CANDIDATES[weight])
+            wanted = stem.lower()
+            for directory in self.extra_dirs:
+                result.extend(
+                    str(Path(directory) / name)
+                    for name in _dir_files(directory)
+                    if name.lower() == wanted)
         return result
 
+    def _fallback_candidates(self, weight: str) -> list[str]:
+        result: list[str] = []
+        if not self.family:
+            for directory in self.extra_dirs:
+                result.extend(
+                    str(Path(directory) / name)
+                    for name in _dir_files(directory)
+                    if name.lower().endswith((".ttf", ".ttc", ".otf")))
+        table = DEFAULT_CANDIDATES.get(
+            weight, DEFAULT_CANDIDATES["bold" if "bold" in weight
+                                       else "regular"])
+        result.extend(table)
+        return result
+
+    def _matches_family(self, resolved: str) -> bool:
+        if not self.family:
+            return True
+        stem = Path(resolved).stem.lower()
+        return stem.startswith(self.family.lower().replace(" ", ""))
+
     def path(self, weight: str = "regular") -> str:
-        if weight not in ("regular", "bold"):
-            raise ValueError("Font weight must be regular or bold")
+        if weight not in WEIGHTS:
+            raise ValueError(
+                f"Font weight must be one of {', '.join(WEIGHTS)}")
         cache_key = f"path:{weight}"
         if cache_key in self._cache:
             return self._cache[cache_key]
-        for candidate in self._candidates(weight):
+        for candidate in self._family_candidates(weight):
             if not candidate:
                 continue
-            if os.path.isfile(candidate):
-                self._cache[cache_key] = candidate
-                return candidate
+            resolved = _first_existing(candidate)
+            if resolved is None:
+                continue
+            assert_polish_coverage(resolved)
+            self._cache[cache_key] = resolved
+            return resolved
+        if self.family and self.strict:
+            raise RuntimeError(
+                f"Font family '{self.family}' weight '{weight}' is not "
+                f"installed. Run: reels-maker fetch-fonts --brand <slug> "
+                f"--family '{self.family}'")
+        for candidate in self._fallback_candidates(weight):
+            if not candidate:
+                continue
+            resolved = _first_existing(candidate)
+            if resolved is None:
+                continue
+            assert_polish_coverage(resolved)
+            self._cache[cache_key] = resolved
+            if self.family and not self._matches_family(resolved):
+                self._fallback_weights.add(weight)
+            return resolved
         raise RuntimeError(
             "No TrueType font available. Install DejaVu Sans, Open Sans or set "
             "branding.font_regular/branding.font_bold to a real .ttf file.")
 
     def get(self, size: int, weight: str = "regular") -> ImageFont.FreeTypeFont:
-        if weight not in ("regular", "bold"):
-            raise ValueError("Font weight must be regular or bold")
+        if weight not in WEIGHTS:
+            raise ValueError(
+                f"Font weight must be one of {', '.join(WEIGHTS)}")
         if type(size) is not int or not 6 <= size <= 1000:
             raise ValueError("Font size must be an integer between 6 and 1000")
         key = ("font", weight, size)

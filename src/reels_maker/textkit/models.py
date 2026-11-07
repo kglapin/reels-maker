@@ -22,8 +22,11 @@ class TextStyle:
     def __post_init__(self) -> None:
         if type(self.size) is not int or self.size < 6 or self.size > 1000:
             raise ValueError("Text size must be an integer between 6 and 1000")
-        if self.weight not in ("regular", "bold"):
-            raise ValueError("Font weight must be regular or bold")
+        if self.weight not in ("light", "regular", "medium", "semibold",
+                                     "bold", "italic", "bold_italic"):
+            raise ValueError(
+                "Font weight must be light, regular, medium, semibold, "
+                "bold, italic or bold_italic")
         if self.align not in ("left", "center", "right"):
             raise ValueError("Text align must be left, center or right")
         if not .8 <= self.line_height <= 2.0:

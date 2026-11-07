@@ -165,6 +165,18 @@ def build_parser() -> argparse.ArgumentParser:
     brandbook.add_argument("--root", type=Path, default=ROOT)
     brandbook.add_argument("--output", type=Path)
     brandbook.add_argument("--json", action="store_true")
+    fonts = commands.add_parser(
+        "fetch-fonts",
+        help="Install hash-verified Google Fonts into a brand media dir")
+    fonts.add_argument("--brand", required=True, help="Brand slug")
+    fonts.add_argument("--family",
+                       help="Font family (default: brand typography.primary)")
+    fonts.add_argument("--weights",
+                       help="Comma-separated subset (default: all listed)")
+    fonts.add_argument("--allowlist", type=Path,
+                       help="Custom allowlist JSON (default: bundled)")
+    fonts.add_argument("--root", type=Path, default=ROOT)
+    fonts.add_argument("--json", action="store_true")
     plan = commands.add_parser("plan",
         help="Convert a reviewed brief into an explainable studio manifest draft; "
              "VALIDATE WITH studio-qa (studio manifests are file-optional)")

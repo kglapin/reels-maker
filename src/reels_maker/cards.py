@@ -34,7 +34,8 @@ def _font(size: int, bold: bool, custom: str | None = None,
     for name in choices:
         if name:
             try:
-                return ImageFont.truetype(name, size)
+                return ImageFont.truetype(
+                    name, size, layout_engine=ImageFont.Layout.BASIC)
             except OSError:
                 continue
     raise RenderError("No TrueType font available. Install DejaVu Sans or set branding fonts")

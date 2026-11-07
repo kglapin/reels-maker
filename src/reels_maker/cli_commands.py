@@ -187,6 +187,13 @@ def handle_commands(args) -> int:
                          limit=args.limit, reviewed_assets=reviews)
         if args.brand:
             result["brand"] = args.brand
+    elif args.command == "fetch-fonts":
+        from .google_fonts import fetch_brand_fonts
+        weights = ([item.strip() for item in args.weights.split(",")
+                    if item.strip()] if args.weights else None)
+        result = fetch_brand_fonts(args.brand, root=args.root,
+                                   family=args.family, weights=weights,
+                                   allowlist=args.allowlist)
     elif args.command == "cue-sheet":
         from .cue_sheet import make_cue_sheet
         result = make_cue_sheet(load_project(args.project))

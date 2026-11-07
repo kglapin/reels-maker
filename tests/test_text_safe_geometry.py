@@ -110,10 +110,23 @@ class FontBookResolutionTests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
             self._with_home(tmp)
+            try:
+                import matplotlib
+                source = (Path(matplotlib.get_data_path()) /
+                          "fonts/ttf/DejaVuSans.ttf")
+            except ImportError:
+                source = Path(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+            if not source.is_file():
+                self.skipTest("no DejaVuSans.ttf available for fixtures")
             fonts_dir = Path(tmp) / "Library" / "Fonts"
             fonts_dir.mkdir(parents=True)
+            # Fixtures must be real fonts: FontBook validates Polish
+            # glyph coverage and rejects empty files instead of passing
+            # them through to the renderer.
             for weight in ("Regular", "Bold"):
-                (fonts_dir / f"UnitTestSans-{weight}.ttf").touch()
+                (fonts_dir / f"UnitTestSans-{weight}.ttf").write_bytes(
+                    source.read_bytes())
             book = FontBook(family="Unit Test Sans")
             self.assertEqual(Path(book.path("regular")).name,
                              "UnitTestSans-Regular.ttf")

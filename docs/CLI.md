@@ -258,12 +258,23 @@ box. All reuse paths are covered by pixel-parity tests; see
 
 Do not assume `brand.json` font-family guidance automatically installs or
 embeds a font. The renderer resolves `branding.font_family` /
-`identity.typography.primary` to an installed `<Family>-Regular.ttf` /
-`<Family>-Bold.ttf` (for example a Google Fonts download in
-`~/Library/Fonts`), then brand `fonts/` directories, then compatible system
-fallbacks. Explicit `branding.font_regular`/`font_bold` or
-`identity.typography.regular`/`bold` file paths take precedence; font
-licensing remains the operator's responsibility.
+`identity.typography.primary` to an installed `<Family>-<Weight>.ttf`
+(light/regular/medium/semibold/bold/italic/bold_italic, matched
+case-insensitively) in the user/system font directories or the brand's
+`fonts/` and `media/fonts/` directories. Every resolved file must cover
+Polish diacritics or the render fails fast instead of printing tofu.
+When the requested family is missing but a default font resolves, the
+run continues on the fallback and records it (`FontBook.used_fallback`);
+`strict` mode raises immediately. Explicit `branding.font_regular` /
+`font_bold` or `identity.typography.regular`/`bold` file paths take
+precedence; font licensing remains the operator's responsibility.
+
+Run `reels-maker fetch-fonts --brand <slug>` to install the brand's
+primary family from the hash-pinned Google Fonts allowlist
+(`Lato`, `Poppins`, `Roboto`, `Montserrat`, `Open Sans`, `Baloo 2`,
+`Inter`; all SIL OFL) into `brands/<slug>/media/fonts/`. Variable
+families are instantiated to static weights locally; every file is
+checksum-verified before install.
 
 ## Brand-safe typography and performance timings
 

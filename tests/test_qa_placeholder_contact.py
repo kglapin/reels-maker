@@ -3,7 +3,7 @@ import unittest
 
 from types import SimpleNamespace
 
-from src.reels_maker.qa.data import _data_checks
+from reels_maker.qa.data import _data_checks
 
 
 def _built(scene):

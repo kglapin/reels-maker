@@ -108,13 +108,15 @@ class CameraCanvasRenderer:
         if self.fonts is not None:
             try:
                 return ImageFont.truetype(
-                    str(self.fonts.path("bold" if bold else "regular")),size)
+                    str(self.fonts.path("bold" if bold else "regular")),size,
+                    layout_engine=ImageFont.Layout.BASIC)
             except Exception:
                 pass
         for p in (["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"] if bold else
                   ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]):
             if Path(p).is_file():
-                return ImageFont.truetype(p,size)
+                return ImageFont.truetype(
+                    p,size, layout_engine=ImageFont.Layout.BASIC)
         return ImageFont.load_default()
 
     def _tile(self,scene,photo,playback_time: float | None = None):

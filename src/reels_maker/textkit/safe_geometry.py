@@ -185,7 +185,9 @@ def _font_for(word: Word, fonts: FontBook, cache: dict,
         raise ValueError(f"Invalid font index for word {word.text!r}")
     key = (str(path), size, word.font_index)
     if key not in cache:
-        cache[key] = ImageFont.truetype(str(path), size, index=word.font_index)
+        cache[key] = ImageFont.truetype(
+            str(path), size, index=word.font_index,
+            layout_engine=ImageFont.Layout.BASIC)
     return cache[key]
 
 

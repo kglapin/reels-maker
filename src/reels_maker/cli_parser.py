@@ -15,10 +15,21 @@ class _JsonArgumentParser(argparse.ArgumentParser):
     Plain argparse prints usage text to stderr, which breaks callers that
     parse stderr as the versioned JSON error document. When ``--json`` was
     requested, emit that document instead; exit code stays 2.
+
+    The flag is detected in the argument list being parsed, not only in
+    the process ``sys.argv``, so embedded uses (tests, automation passing
+    explicit argv) get the same contract as the real CLI.
     """
 
+    def parse_known_args(self, args=None, namespace=None):
+        if args is None:
+            args = sys.argv[1:]
+        self._json_requested = "--json" in args
+        return super().parse_known_args(args, namespace)
+
     def error(self, message: str) -> None:  # noqa: D102 - argparse hook
-        if "--json" in sys.argv[1:]:
+        if getattr(self, "_json_requested", False) or \
+                "--json" in sys.argv[1:]:
             payload = {"schema_version": 1, "status": "error", "ok": False,
                        "error": {"type": "ArgumentError",
                                  "message": message}}
@@ -165,6 +176,18 @@ def build_parser() -> argparse.ArgumentParser:
     brandbook.add_argument("--root", type=Path, default=ROOT)
     brandbook.add_argument("--output", type=Path)
     brandbook.add_argument("--json", action="store_true")
+    fonts = commands.add_parser(
+        "fetch-fonts",
+        help="Install hash-verified Google Fonts into a brand media dir")
+    fonts.add_argument("--brand", required=True, help="Brand slug")
+    fonts.add_argument("--family",
+                       help="Font family (default: brand typography.primary)")
+    fonts.add_argument("--weights",
+                       help="Comma-separated subset (default: all listed)")
+    fonts.add_argument("--allowlist", type=Path,
+                       help="Custom allowlist JSON (default: bundled)")
+    fonts.add_argument("--root", type=Path, default=ROOT)
+    fonts.add_argument("--json", action="store_true")
     plan = commands.add_parser("plan",
         help="Convert a reviewed brief into an explainable studio manifest draft; "
              "VALIDATE WITH studio-qa (studio manifests are file-optional)")

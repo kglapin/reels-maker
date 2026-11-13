@@ -220,6 +220,49 @@ class Canvas:
         opaque = len(col) <= 3 or col[3] >= 250
         self._z_composite(mask, dmap, col, opaque, (x0, y0, x1, y1))
 
+    def _grad_poly_z(self, ps, c_top, c_bot):
+        """Depth-tested gradient polygon: same vertical falloff as
+        grad_poly, but visibility and depth claims follow the buffer."""
+        if self._zbuf is None:
+            self._zbuf = np.full((1500, 1840), -np.inf, dtype=np.float32)
+        pts2 = [self.P(p) for p in ps]
+        xs = [p[0] for p in pts2]
+        ys = [p[1] for p in pts2]
+        x0 = max(0, int(min(xs)) - 1)
+        x1 = min(1840, int(max(xs)) + 2)
+        y0 = max(0, int(min(ys)) - 1)
+        y1 = min(1500, int(max(ys)) + 2)
+        if x1 <= x0 or y1 <= y0:
+            return
+        mask_im = Image.new("L", (x1 - x0, y1 - y0), 0)
+        ImageDraw.Draw(mask_im).polygon(
+            [(x - x0, y - y0) for x, y in pts2], fill=255)
+        mask = np.asarray(mask_im, dtype=np.float32) / 255.0
+        if not mask.any():
+            return
+        coef = self._depth_plane(ps, pts2)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        dmap = (coef[0] * xx + coef[1] * yy + coef[2]).astype(np.float32)
+        zb = self._zbuf[y0:y1, x0:x1]
+        vis = (mask > 0.0) & (dmap >= zb - 1e-3)
+        if not vis.any():
+            return
+        h, w = y1 - y0, x1 - x0
+        t = np.linspace(0.0, 1.0, h, dtype=float)[:, None, None]
+        ct = np.array(self._c(c_top)[:3], dtype=float)
+        cb = np.array(self._c(c_bot)[:3], dtype=float)
+        grad = np.broadcast_to(ct[None, None, :] * (1.0 - t)
+                               + cb[None, None, :] * t,
+                               (h, w, 3))
+        a = np.where(vis, mask, 0.0)[..., None]
+        region = np.asarray(self.im.crop((x0, y0, x1, y1)),
+                            dtype=np.float32)
+        out = region * (1.0 - a) + grad * a
+        self.im.paste(Image.fromarray(out.astype(np.uint8), mode="RGB"),
+                      (x0, y0))
+        claim = vis & (mask > 0.5)
+        zb[claim] = np.maximum(zb[claim], dmap[claim])
+
     def _dot_z(self, p, r, c):
         col = self._c(c)
         if self._zbuf is None:
@@ -330,6 +373,9 @@ class Canvas:
 
     def grad_poly(self, ps, c_top, c_bot):
         """Vertical gradient polygon: top color flows into bottom color."""
+        if _USE_DEPTH:
+            self._grad_poly_z(ps, c_top, c_bot)
+            return
         pts = [self.P(p) for p in ps]
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]

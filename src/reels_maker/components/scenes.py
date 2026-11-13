@@ -206,6 +206,20 @@ BUILDERS = {
 }
 
 
+def _carbon_aware(builder):
+    from functools import wraps
+    @wraps(builder)
+    def wrapped(ctx, scene):
+        built = builder(ctx, scene)
+        if scene.get("carbon_motion") is not None:
+            from ..motionkit.carbon import apply_carbon_motion
+            return apply_carbon_motion(built, scene["carbon_motion"],
+                                       duration=ctx.duration, fps=ctx.fps)
+        return built
+    return wrapped
+
+
+@_carbon_aware
 def build_scene(ctx: SceneContext, scene: dict) -> BuiltScene:
     kind = _scene_type(scene)
     if kind == "photo_carousel":

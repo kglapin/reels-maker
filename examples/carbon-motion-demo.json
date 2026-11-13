@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "carbon-motion-engineering-demo",
+  "style": "editorial-premium",
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "scenes": [
+    {
+      "id": "productive",
+      "composition": "statement",
+      "duration": 4.5,
+      "headline": "PRECYZYJNY RUCH",
+      "subtitle": "TRYB PRODUCTIVE — DEMO TECHNICZNE",
+      "typography_motion": "fade-up",
+      "carbon_motion": {
+        "mode": "productive"
+      }
+    },
+    {
+      "id": "expressive",
+      "composition": "statement",
+      "duration": 4.5,
+      "headline": "WYRAŹNY AKCENT",
+      "subtitle": "TRYB EXPRESSIVE — DO OCENY WIZUALNEJ",
+      "typography_motion": "fade-up",
+      "carbon_motion": {
+        "mode": "expressive",
+        "roles": {
+          "headline": {
+            "phase": "entrance",
+            "duration_token": "slow-01",
+            "film_scale": 1.5
+          }
+        }
+      }
+    }
+  ]
+}

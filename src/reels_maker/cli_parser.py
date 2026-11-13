@@ -91,8 +91,19 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Override the default Studio segment cache directory")
     studio.add_argument("--no-cache", action="store_true",
                         help="Disable the Studio segment cache")
-    studio.add_argument("--jobs", type=int, default=2,
-                        help="Concurrent scene encodes (default: 2; max 8)")
+    studio.add_argument("--jobs", type=int, default=4,
+                        help="Concurrent encodes (default: 4; max 8)")
+    studio.add_argument("--scenes", type=str, default=None,
+                        help="Render only these 1-based scenes, e.g. 3,4 "
+                             "(partial preview; requires --output)")
+    studio.add_argument("--range", type=str, default=None,
+                        help="Render a 1-based inclusive scene range, "
+                             "e.g. 3:5 (partial preview; requires --output)")
+    studio.add_argument("--chunk-frames", type=int, default=60,
+                        help="Frames per parallel encode chunk (default: 60)")
+    studio.add_argument("--cache-max-gb", type=float, default=None,
+                        help="After a successful render, evict oldest cache "
+                             "objects beyond this size in GB")
     studio.add_argument("--json", action="store_true")
     studio.add_argument("--status", choices=("accepted", "in-progress"),
                         default="accepted",
@@ -289,6 +300,38 @@ def build_parser() -> argparse.ArgumentParser:
     sfx.add_argument("--peak", type=float, default=0.20,
                      help="Linear peak amplitude (0.01..0.50)")
     sfx.add_argument("--json", action="store_true")
+    tts = commands.add_parser(
+        "tts-generate",
+        help="Generate ElevenLabs voiceover into imports/audio quarantine")
+    tts.add_argument("--brand", required=True, help="Existing brand slug")
+    tts.add_argument("--root", type=Path, default=ROOT,
+                     help="Repository root containing brands/")
+    text_group = tts.add_mutually_exclusive_group(required=True)
+    text_group.add_argument("--text", help="Voiceover script text")
+    text_group.add_argument("--text-file", type=Path,
+                            help="UTF-8 file with the voiceover script")
+    tts.add_argument("--voice",
+                     help="ElevenLabs voice ID (default: brand.json "
+                          "voiceover.elevenlabs.voice_id; see tts-voices)")
+    tts.add_argument("--model",
+                     help="ElevenLabs model ID (default: brand.json "
+                          "voiceover.elevenlabs.model_id, else "
+                          "eleven_multilingual_v2)")
+    tts.add_argument("--format",
+                     help="ElevenLabs output_format (default: brand.json "
+                          "voiceover.elevenlabs.output_format, else "
+                          "mp3_44100_128)")
+    tts.add_argument("--timestamps", action="store_true",
+                     help="Request character alignment and derive word "
+                          "timings for voiceover.sync_marks review")
+    tts.add_argument("--json", action="store_true")
+    tts_voices = commands.add_parser(
+        "tts-voices",
+        help="List ElevenLabs workspace voices for picking a voice ID")
+    tts_voices.add_argument("--query",
+                            help="Case-insensitive name substring filter")
+    tts_voices.add_argument("--limit", type=int, default=100)
+    tts_voices.add_argument("--json", action="store_true")
     doctor = commands.add_parser("doctor")
     doctor.add_argument("--json", action="store_true")
     creative_caps = commands.add_parser(

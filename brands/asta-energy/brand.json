@@ -1,72 +1,79 @@
 {
-  "id": "asta-energy",
-  "name": "ASTA Energy",
-  "version": 1,
-  "branding": {
-    "accent": "#47A013",
-    "logo": "assets/logo.png",
-    "editorial_profiles": {
-      "light-information": {
-        "theme": "light",
-        "position": "upper",
-        "headline_style": "hero",
-        "backdrop": "none",
-        "logo": false,
-        "accent_rule": false
-      },
-      "light-detail": {
-        "theme": "light",
-        "position": "middle",
-        "headline_style": "standard",
-        "backdrop": "none",
-        "logo": false,
-        "accent_rule": false
-      },
-      "dark-hero": {
-        "theme": "dark",
-        "position": "upper",
-        "headline_style": "hero",
-        "backdrop": "strong",
-        "logo": true,
-        "accent_rule": false
-      },
-      "dark-cta": {
-        "theme": "dark",
-        "position": "middle",
-        "headline_style": "standard",
-        "backdrop": "strong",
-        "logo": true,
-        "accent_rule": false
-      }
-    }
-  },
-  "identity": {
-    "typography": {
-      "primary": "Open Sans",
-      "fallback": "DejaVu Sans",
-      "status": "Open Sans preferred; renderer falls back until a licensed local font path is configured"
-    },
-    "palette": {
-      "primary": "#47A013",
-      "background": "#FFFFFF",
-      "text": "#FFFFFF",
-      "neutral": "#14221A"
-    },
-    "logo": {
-      "source": "assets/logo.svg",
-      "render_png": "assets/logo.png",
-      "preview_background": "#14221A"
-    },
-    "motion": {
-      "style": "minimal, purposeful; no automatic effects",
-      "audio": "music and SFX only when specified per project"
-    }
-  },
-  "catalog": {
-    "footage": "media/footage",
-    "stock": "media/stock",
-    "audio": "media/audio",
-    "effects": "media/fx",
-    "references": "references"
+ "id": "asta-energy",
+ "name": "ASTA Energy",
+ "version": 1,
+ "branding": {
+  "accent": "#47A013",
+  "logo": "assets/logo.png",
+  "editorial_profiles": {
+   "light-information": {
+    "theme": "light",
+    "position": "upper",
+    "headline_style": "hero",
+    "backdrop": "none",
+    "logo": false,
+    "accent_rule": false
+   },
+   "light-detail": {
+    "theme": "light",
+    "position": "middle",
+    "headline_style": "standard",
+    "backdrop": "none",
+    "logo": false,
+    "accent_rule": false
+   },
+   "dark-hero": {
+    "theme": "dark",
+    "position": "upper",
+    "headline_style": "hero",
+    "backdrop": "strong",
+    "logo": true,
+    "accent_rule": false
+   },
+   "dark-cta": {
+    "theme": "dark",
+    "position": "middle",
+    "headline_style": "standard",
+    "backdrop": "strong",
+    "logo": true,
+    "accent_rule": false
+   }
   }
+ },
+ "identity": {
+  "typography": {
+   "primary": "Open Sans",
+   "fallback": "DejaVu Sans",
+   "status": "Open Sans preferred; renderer falls back until a licensed local font path is configured"
+  },
+  "palette": {
+   "primary": "#47A013",
+   "background": "#FFFFFF",
+   "text": "#FFFFFF",
+   "neutral": "#14221A"
+  },
+  "logo": {
+   "source": "assets/logo.svg",
+   "render_png": "assets/logo.png",
+   "preview_background": "#14221A"
+  },
+  "motion": {
+   "style": "minimal, purposeful; no automatic effects",
+   "audio": "music and SFX only when specified per project"
+  }
+ },
+ "catalog": {
+  "footage": "media/footage",
+  "stock": "media/stock",
+  "audio": "media/audio",
+  "effects": "media/fx",
+  "references": "references"
+ },
+ "voiceover": {
+  "elevenlabs": {
+   "voice_id": "xAVsdcJvD1uegu8lFEE2",
+   "model_id": "eleven_multilingual_v2",
+   "note": "Domyślny głos lektora ASTA Energy (ElevenLabs). Używany przez reels-maker tts-generate --brand asta-energy."
+  }
+ }
 }

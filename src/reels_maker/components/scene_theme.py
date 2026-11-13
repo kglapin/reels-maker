@@ -27,17 +27,20 @@ def theme_for_scene(ctx: SceneContext, scene: dict) -> dict:
         light = False
     photo = bool(scene.get("photo") or (isinstance(background, dict)
                                          and background.get("asset")))
+    accent_source = scene.get("accent") or palette.accent
+    if isinstance(accent_source, str):
+        accent_source = parse_hex(accent_source)
     if light:
         ink = darken(base, .88) if relative_luminance(base) > .25 else (18, 30, 22)
         muted = mix(ink, base, .38)
-        accent = ensure_contrast(palette.accent, base, 4.5)
+        accent = ensure_contrast(accent_source, base, 4.5)
         surface = palette.surface if relative_luminance(palette.surface) > .7 else (255, 255, 255)
         kicker = accent
         scrim = 0.0
     else:
         ink = (255, 255, 255)
         muted = lighten(ink, .22)
-        accent = ensure_contrast(palette.accent, base, 4.5)
+        accent = ensure_contrast(accent_source, base, 4.5)
         surface = palette.surface
         kicker = ink if photo else accent
         scrim = .62 if photo else (.55 if ctx.tokens.backdrop != "none" else .15)
@@ -66,7 +69,9 @@ def background_for_scene(ctx: SceneContext, scene: dict, theme: dict) -> dict:
                 "intensity": camera.get("intensity", ctx.tokens.motion.camera_drift),
             },
             "scrim": config.get("scrim", theme["scrim"]),
+            "scrim_uniform": config.get("scrim_uniform", 0),
             "tint": config.get("tint"),
+            "tint_amount": config.get("tint_amount", .14),
             "blur": config.get("blur", 0),
         }
     kind = config.get("kind", "gradient" if not theme["light"] else "solid")

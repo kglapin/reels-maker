@@ -178,7 +178,7 @@ def _scaled_box_track(source: Track, prop: str, base: float,
 
 
 def _card(ctx: SceneContext, image: str, index: int,
-          rect: Rect) -> Node:
+          rect: Rect, photo_fit: str = "cover") -> Node:
     frame = panel_node(
         f"carousel-frame-{index}", rect, ctx.tokens,
         fill=(255, 255, 255), radius="lg", shadow=True,
@@ -189,6 +189,7 @@ def _card(ctx: SceneContext, image: str, index: int,
     photo = image_node(f"carousel-photo-{index}", image, photo_rect,
                        qa_class="decor")
     photo.props["radius"] = ctx.tokens.radius("md")
+    photo.props["fit"] = photo_fit
     return Node(
         kind="group", role=f"carousel-card-{index}",
         children=[frame, photo], qa_class="decor",
@@ -202,6 +203,15 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     direction = str(config.get("direction", "horizontal")).strip().lower()
     if direction not in ("horizontal", "vertical"):
         raise ValueError("carousel.direction must be horizontal or vertical")
+    card_aspect = float(config.get("card_aspect", 1.38))
+    if not math.isfinite(card_aspect) or not .5 <= card_aspect <= 3.0:
+        raise ValueError("carousel.card_aspect must be in [0.5, 3.0]")
+    photo_fit = str(config.get("photo_fit", "cover")).strip().lower()
+    if photo_fit not in ("cover", "contain"):
+        raise ValueError("carousel.photo_fit must be cover or contain")
+    card_scale = float(config.get("card_scale", 1.0))
+    if not math.isfinite(card_scale) or not .6 <= card_scale <= 1.6:
+        raise ValueError("carousel.card_scale must be in [0.6, 1.6]")
     if not isinstance(items, list) or not 3 <= len(items) <= 12:
         raise ValueError("photo-carousel requires between 3 and 12 image items")
     advance = float(config.get("advance_seconds", 1.6))
@@ -217,8 +227,8 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
     dot_r = max(3.5, ctx.tokens.px(6))
     if direction == "vertical":
         side_scale = .42
-        card_h = min(safe.h * .55, safe.w * .68 * 1.38)
-        card_w = card_h / 1.38
+        card_h = min(safe.h * .55, safe.w * .68 * card_aspect) * card_scale
+        card_w = card_h / card_aspect
         cards_y = ctx.height / 2
         center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                       card_w, card_h)
@@ -233,8 +243,8 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
                              max(0.0, visual_bottom - visual_top))
     else:
         cards_y = safe.y + safe.h * .615
-        card_w = min(safe.w * .58, safe.h * .37)
-        card_h = min(safe.h * .50, card_w * 1.38)
+        card_w = min(safe.w * .58, safe.h * .37) * card_scale
+        card_h = min(safe.h * .50, card_w * card_aspect)
         center = Rect((ctx.width - card_w) / 2, cards_y - card_h / 2,
                       card_w, card_h)
         side_scale = .44
@@ -287,7 +297,7 @@ def build_photo_carousel(ctx: SceneContext, scene: dict):
         if not isinstance(item, dict) or not item.get("image"):
             raise ValueError(f"carousel.items[{index}] requires an image")
         image = str(item["image"])
-        card = _card(ctx, image, index, center)
+        card = _card(ctx, image, index, center, photo_fit)
         # Resize photo and frame geometry directly around the shared card
         # center. The outer slot remains a pure translation, so scaling cannot
         # compress the carousel spacing.

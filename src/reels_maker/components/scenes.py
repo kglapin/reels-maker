@@ -22,9 +22,11 @@ from .metric_scenes import (
 )
 from .editorial_scenes import (
     _calendar_card, _timeline_graphic, build_announcement, build_checklist,
-    build_cta, build_deadline, build_energy, build_quote, build_spotlight,
-    build_statement, build_urgency,
+    build_cta, build_cta_minimal, build_deadline, build_energy,
+    build_pillars, build_quote, build_spotlight, build_statement,
+    build_urgency,
 )
+from .iso_scenes import build_iso_explainer
 from .table_scenes import build_table
 from .media_scenes import build_polaroid_burst, build_product_3d
 from .custom_scenes import _build_full_bleed, _build_split, _build_stack
@@ -42,6 +44,7 @@ TYPE_COMPOSITION = {
     "deadline": "timeline",
     "urgency": "stack-center",
     "cta": "cta-panel",
+    "cta-minimal": "cta-minimal",
     "spotlight": "spotlight",
     "statement": "statement",
     "checklist": "checklist",
@@ -60,6 +63,7 @@ TYPE_COMPOSITION = {
     "product_3d": "data-panel",
     "table": "table",
     "energy": "energy-flow",
+    "iso-explainer": "iso-explainer",
     "quote": "quote",
     "product": "spotlight",
     "photo_carousel": "photo-carousel",
@@ -173,9 +177,11 @@ BUILDERS = {
     "deadline": build_deadline,
     "urgency": build_urgency,
     "cta": build_cta,
+    "cta-minimal": build_cta_minimal,
     "spotlight": build_spotlight,
     "statement": build_statement,
     "checklist": build_checklist,
+    "pillars": build_pillars,
     "stats": build_stats,
     "bars": build_bars,
     "line_chart": build_line_chart,
@@ -192,6 +198,7 @@ BUILDERS = {
     "polaroid_burst": build_polaroid_burst,
     "table": build_table,
     "energy": build_energy,
+    "iso-explainer": build_iso_explainer,
     "quote": build_quote,
     "paper_reveal": build_paper_reveal,
     "note_canvas": build_note_canvas,

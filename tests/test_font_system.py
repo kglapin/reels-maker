@@ -176,6 +176,40 @@ class FetchFontsTests(unittest.TestCase):
                            allowlist={"families": {}})
 
 
+class InstantiateTests(unittest.TestCase):
+    def test_instantiate_saves_returned_font_not_input(self):
+        """instantiateVariableFont returns a new font unless inplace=True.
+
+        Saving the input instead keeps the unpinned variable default
+        (e.g. Thin filed as Bold). Regression test: the saved bytes must
+        come from the returned font.
+        """
+        from unittest import mock
+        from reels_maker.google_fonts import _instantiate
+
+        class FakeFont:
+            def __init__(self, payload):
+                self.payload = payload
+                self.closed = False
+
+            def save(self, buf):
+                buf.write(self.payload)
+
+            def close(self):
+                self.closed = True
+
+        variable, pinned = FakeFont(b"VARIABLE"), FakeFont(b"PINNED")
+        with mock.patch("fontTools.ttLib.TTFont",
+                        return_value=variable), mock.patch(
+                "fontTools.varLib.instancer.instantiateVariableFont",
+                return_value=pinned) as inst:
+            result = _instantiate(b"fake-variable-bytes", {"wght": 700})
+        self.assertEqual(result, b"PINNED")
+        inst.assert_called_once()
+        self.assertTrue(variable.closed)
+        self.assertTrue(pinned.closed)
+
+
 class BrandFontsDirTests(unittest.TestCase):
     @needs_font
     def test_font_book_reads_brand_media_fonts(self):

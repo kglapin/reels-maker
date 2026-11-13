@@ -20,6 +20,11 @@ editorial rules before generating an ASTA Energy Reel.
 - Audio is optional: use music, voice-over or SFX only if the project requests it.
 - Prioritize speech intelligibility when adding voiceover or sound effects.
 - Respect beat-synchronized montage cuts. Verify all sound licenses.
+- Default narrator: the ElevenLabs voice `xAVsdcJvD1uegu8lFEE2`, declared in
+  `brand.json → voiceover.elevenlabs`. `reels-maker tts-generate --brand
+  asta-energy` uses it automatically; pass `--voice` only for a deliberate
+  one-off override. Generated speech lands in `imports/audio/` quarantine and
+  still needs human review before use.
 
 ## Reusable assets
 - `media/footage/` — original ASTA installation footage.

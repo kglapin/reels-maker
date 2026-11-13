@@ -28,6 +28,9 @@ class BackendOptions:
     supersample: int | None = None
     title_engine: str | None = None
     progress: Callable[[dict], None] | None = None
+    scenes: list[int] | None = None
+    chunk_frames: int | None = None
+    cache_max_gb: float | None = None
 
 
 class RenderBackend(Protocol):
@@ -72,6 +75,12 @@ class _StudioBackend:
         from .studio import render_studio
 
         kwargs = {"jobs": options.jobs} if options.jobs is not None else {}
+        if options.scenes is not None:
+            kwargs["scenes"] = options.scenes
+        if options.chunk_frames is not None:
+            kwargs["chunk_frames"] = options.chunk_frames
+        if options.cache_max_gb is not None:
+            kwargs["cache_max_gb"] = options.cache_max_gb
         return render_studio(
             project,
             output=options.output,

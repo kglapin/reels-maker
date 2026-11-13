@@ -75,6 +75,31 @@ def handle_commands(args) -> int:
     elif args.command == "studio-render":
         from .studio import load_studio
         from .renderers.backend import BackendOptions, render_with_backend
+        scenes_arg = getattr(args, "scenes", None)
+        range_arg = getattr(args, "range", None)
+        partial_scenes = None
+        if scenes_arg and range_arg:
+            raise ProjectError("--scenes and --range are mutually exclusive")
+        if scenes_arg or range_arg:
+            if not args.output:
+                raise ProjectError(
+                    "--scenes/--range requires an explicit --output")
+            try:
+                if scenes_arg:
+                    picked = [int(p) for p in scenes_arg.split(",")
+                              if p.strip()]
+                    if not picked or any(p < 1 for p in picked):
+                        raise ValueError
+                    partial_scenes = sorted({p - 1 for p in picked})
+                else:
+                    first, last = (int(p) for p in range_arg.split(":"))
+                    if first < 1 or last < first:
+                        raise ValueError
+                    partial_scenes = list(range(first - 1, last))
+            except ValueError:
+                raise ProjectError(
+                    "Invalid --scenes/--range value (1-based, e.g. "
+                    "--scenes 3,4 or --range 3:5)") from None
         project = load_studio(args.manifest, root=args.root,
                               profile=args.profile)
         # Determine output directory based on status
@@ -96,13 +121,37 @@ def handle_commands(args) -> int:
             suffix = '-in-progress' if status == 'in-progress' else ''
             name = (project.name.lower().replace(' ', '-').strip('-') or 'video')
             output_path = output_dir / f"{name}{suffix}.mp4"
+        if getattr(args, "json", False):
+            progress_cb = None
+        else:
+            import sys as _sys
+            import time as _time
+            _state = {"pct": -1, "scene": None, "at": 0.0}
+
+            def progress_cb(update):
+                total = int(update.get("total") or 0)
+                done = int(update.get("frames") or 0)
+                scene = update.get("scene")
+                pct = (100 * done // total) if total else 0
+                now = _time.monotonic()
+                if pct >= _state["pct"] + 2 or scene != _state["scene"] \
+                        or now - _state["at"] >= 10 or done >= total:
+                    _state.update(pct=pct, scene=scene, at=now)
+                    print(f"studio-render: scena {scene}, "
+                          f"{done}/{total} klatek ({pct}%)",
+                          file=_sys.stderr, flush=True)
+
         result = render_with_backend(
             "studio", project,
             BackendOptions(output=str(output_path), profile=args.profile,
                            supersample=args.supersample,
                            cache_dir=args.cache_dir,
                            cache=not args.no_cache,
-                           jobs=getattr(args, "jobs", None)))
+                           jobs=getattr(args, "jobs", None),
+                           scenes=partial_scenes,
+                           chunk_frames=getattr(args, "chunk_frames", None),
+                           cache_max_gb=getattr(args, "cache_max_gb", None),
+                           progress=progress_cb))
         # Store the actual output path in result for downstream use
         result['output_path'] = str(output_path)
     elif args.command == "studio-inspect":
@@ -395,6 +444,41 @@ def handle_commands(args) -> int:
         result = {"audio": write_procedural_sfx(
             SFXSpec(args.kind, args.duration, args.sample_rate, args.seed, args.peak),
             brand=args.brand, root=args.root)}
+    elif args.command == "tts-generate":
+        from .tts_elevenlabs import brand_tts_defaults, generate_voiceover
+        if args.text_file is not None:
+            try:
+                text = args.text_file.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise ProjectError(
+                    f"Cannot read voiceover script {args.text_file}: {exc}"
+                ) from exc
+        else:
+            text = args.text
+        defaults = brand_tts_defaults(args.brand, args.root)
+        voice_id = args.voice or defaults.get("voice_id")
+        if not voice_id:
+            raise ProjectError(
+                "No voice specified: pass --voice or set "
+                "voiceover.elevenlabs.voice_id in brands/<slug>/brand.json")
+        model_id = args.model or defaults.get("model_id") \
+            or "eleven_multilingual_v2"
+        output_format = args.format or defaults.get("output_format") \
+            or "mp3_44100_128"
+        result = {"voiceover": generate_voiceover(
+            text, voice_id=voice_id, brand=args.brand, root=args.root,
+            model_id=model_id, output_format=output_format,
+            with_timestamps=args.timestamps)}
+        result["note"] = ("Generated speech stays in imports/audio quarantine "
+                          "until human review; reference it from the manifest "
+                          "as brands/<slug>/" +
+                          result["voiceover"]["quarantine_directory"] + "/"
+                          + Path(result["voiceover"]["file"]).name)
+    elif args.command == "tts-voices":
+        from .tts_elevenlabs import list_voices
+        voices = list_voices(query=args.query)
+        result = {"voices": voices[:max(1, args.limit)],
+                  "voice_count": min(len(voices), max(1, args.limit))}
     else:
         project = load_project(args.project)
         if args.command == "validate":

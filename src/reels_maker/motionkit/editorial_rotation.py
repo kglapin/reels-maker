@@ -90,6 +90,27 @@ def editorial_media_nodes(scene: Mapping, width: int, height: int,
                            "x":width*x,"y":height*y,
                            "w":width*w,"h":height*h,
                            "zoom":_number(item.get("zoom",1.0),"zoom",1,1.4)})
+        enter = item.get("enter")
+        if enter is not None:
+            from .keyframes import Track
+            if not isinstance(enter, Mapping):
+                raise ValueError("editorial_media enter must be an object")
+            delay = _number(enter.get("delay", 0.0), "enter delay", 0, duration)
+            travel = _number(enter.get("duration", .28), "enter duration",
+                             .03, duration)
+            end = min(duration, delay + travel)
+            style = str(enter.get("style", "pop"))
+            if style not in ("pop", "fade"):
+                raise ValueError(f"Unknown editorial_media enter style: {style}")
+            fade = Track.from_pairs([(0.0, 0.0), (delay, 0.0), (end, 1.0)],
+                                    easing="out-cubic")
+            node.track("opacity", fade)
+            if style == "pop":
+                grow = Track.from_pairs(
+                    [(0.0, .55), (delay, .55), (end, 1.0)], easing="back")
+                node.track("scale", grow)
+            node.meta["editorial_enter"] = {"style": style,
+                                            "delay": round(delay, 4)}
         if "rotation" in item:
             spec=item["rotation"]
             node.track("rotation",rotation_track(spec,duration,role="photo"))

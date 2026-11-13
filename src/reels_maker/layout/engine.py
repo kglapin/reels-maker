@@ -176,6 +176,7 @@ class LayoutEngine:
             "statement": self._statement,
             "timeline": self._timeline,
             "checklist": self._checklist,
+            "pillars": self._pillars,
             "stat-grid": self._stat_grid,
             "breakdown": self._breakdown,
             "energy-flow": self._energy_flow,
@@ -365,12 +366,15 @@ class LayoutEngine:
         safe = self.safe
         headline = _height(measure, "headline", self.tokens.type_size("hero") * 1.5)
         body = _height(measure, "body", self.tokens.type_size("body") * 2)
+        # Copy sits one gap above the safe bottom: the safe edge coincides
+        # with the Reels content-zone edge, so flush descenders would read
+        # as margin violations in QA.
         return {
             "kicker": Rect(safe.x, safe.y, safe.w,
                            self.tokens.type_size("kicker") * 1.4),
-            "headline": Rect(safe.x, safe.bottom - body - self.gap * 2 - headline,
+            "headline": Rect(safe.x, safe.bottom - body - self.gap * 3 - headline,
                              safe.w, headline),
-            "body": Rect(safe.x, safe.bottom - body, safe.w, body),
+            "body": Rect(safe.x, safe.bottom - body - self.gap, safe.w, body),
         }
 
     def _statement(self, measure, has_visual: bool) -> dict[str, Rect]:
@@ -420,6 +424,21 @@ class LayoutEngine:
             "headline": Rect(safe.x, safe.y, safe.w, headline),
             "stat-1": cells[0], "stat-2": cells[1],
             "stat-3": cells[2], "stat-4": cells[3],
+        }
+
+    def _pillars(self, measure, has_visual: bool) -> dict[str, Rect]:
+        safe = self.safe
+        headline = _height(measure, "headline", self.tokens.type_size("title") * 1.4)
+        row_h = min(safe.h * .26, self.tokens.px(360))
+        grid_h = row_h * 2 + self.gap
+        content = headline + self.gap * 2 + grid_h
+        start = safe.y + max(0.0, (safe.h - content) / 2)
+        grid = Rect(safe.x, start + headline + self.gap * 2,
+                    safe.w, grid_h).grid(2, 2, self.gap)
+        return {
+            "headline": Rect(safe.x, start, safe.w, headline),
+            "pillar-1": grid[0], "pillar-2": grid[1],
+            "pillar-3": grid[2], "pillar-4": grid[3],
         }
 
     def _breakdown(self, measure, has_visual: bool) -> dict[str, Rect]:

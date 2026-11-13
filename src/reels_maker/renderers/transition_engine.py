@@ -11,7 +11,8 @@ from PIL import Image, ImageDraw, ImageFilter
 
 EFFECTS = frozenset({"color-takeover", "radial-reveal", "whip-pan", "zoom-through",
                      "diagonal-wipe", "iris-close-open", "stripe-reveal",
-                     "split-slide", "spin-zoom", "pixel-dissolve"})
+                     "split-slide", "spin-zoom", "pixel-dissolve",
+                     "flip-rotate", "crash-zoom"})
 
 
 def _ease(t: float, easing: str = "smooth") -> float:
@@ -155,10 +156,66 @@ def transition_frame(outgoing: Image.Image, incoming: Image.Image,
         else:
             frame.paste(a, (0, sign*shift))
             frame.paste(b, (0, sign*(shift-dist)))
-        # Directional blur strengthens motion at maximum velocity.
-        if .12 < t < .88:
-            frame = frame.filter(ImageFilter.GaussianBlur(radius=max(0.4, min(w,h)*.004)))
+        # Directional ghosts: offset alpha copies along travel, strongest
+        # at peak velocity; cheap motion blur without extra resamples.
+        if .08 < t < .92:
+            vel = math.sin(math.pi * min(max((t - .08) / .84, 0.0), 1.0))
+            step = round(46 * vel) or 1
+            veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            ghost = frame.copy()
+            if horizontal:
+                ghost = ghost.transform(
+                    (w, h), Image.AFFINE, (1, 0, -sign * step, 0, 1, 0),
+                    resample=Image.Resampling.BICUBIC)
+            else:
+                ghost = ghost.transform(
+                    (w, h), Image.AFFINE, (1, 0, 0, 0, 1, -sign * step),
+                    resample=Image.Resampling.BICUBIC)
+            veil = Image.blend(veil, ghost.convert("RGBA"),
+                               round(110 * vel) / 255)
+            frame = Image.alpha_composite(frame.convert("RGBA"),
+                                          veil).convert("RGB")
         return frame
+    if effect == "flip-rotate":
+        # Fake rotateY card flip: outgoing squeezes to an edge-on line
+        # with a brightness dip, incoming unfolds from the other side.
+        # The other scene stays behind the card, never a black void.
+        if t < .5:
+            q = _ease(t * 2)
+            sx = max(.02, math.cos(q * math.pi / 2))
+            cw = max(1, round(w * sx))
+            card = a.resize((cw, h), Image.Resampling.BICUBIC)
+            frame = a.copy()
+            frame.paste(card, (round((w - cw) / 2), 0))
+            dim = Image.new("RGB", (w, h), (0, 0, 0))
+            return Image.blend(frame, dim, .45 * math.sin(q * math.pi / 2))
+        q = _ease((t - .5) * 2)
+        sx = max(.02, math.sin(q * math.pi / 2))
+        cw = max(1, round(w * sx))
+        card = b.resize((cw, h), Image.Resampling.BICUBIC)
+        frame = b.copy()
+        frame.paste(card, (round((w - cw) / 2), 0))
+        dim = Image.new("RGB", (w, h), (0, 0, 0))
+        return Image.blend(frame, dim, .45 * (1 - q))
+    if effect == "crash-zoom":
+        # Outgoing punches toward the viewer while incoming lands from
+        # a deep zoom; anchor picks the punch center.
+        ax, ay = anchor
+        if t < .55:
+            q = _ease(t / .55)
+            z = 1.0 + 1.6 * q
+            bw, bh = max(1, round(w * z)), max(1, round(h * z))
+            big = a.resize((bw, bh), Image.Resampling.BICUBIC)
+            ox = min(max(round(bw * ax - w * ax), 0), bw - w)
+            oy = min(max(round(bh * ay - h * ay), 0), bh - h)
+            return big.crop((ox, oy, ox + w, oy + h))
+        q = _ease((t - .55) / .45)
+        z = 2.2 - 1.2 * q
+        bw, bh = max(1, round(w * z)), max(1, round(h * z))
+        big = b.resize((bw, bh), Image.Resampling.BICUBIC)
+        ox = min(max(round(bw * ax - w * ax), 0), bw - w)
+        oy = min(max(round(bh * ay - h * ay), 0), bh - h)
+        return big.crop((ox, oy, ox + w, oy + h))
     # Zoom-through: incoming scene expands from anchor while outgoing
     # recedes; clipped to canvas with no external image references.
     scale = .3 + .7*t

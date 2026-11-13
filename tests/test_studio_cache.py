@@ -146,5 +146,42 @@ class StudioRenderCacheTests(unittest.TestCase):
             self.assertEqual(result["export_quality"]["status"], "pass")
 
 
+class TrimCacheTests(unittest.TestCase):
+    def test_evicts_oldest_and_keeps_protected(self):
+        import os
+        import time
+        from reels_maker.renderers.studio_cache import trim_cache
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "old.mp4"
+            mid = root / "chunks" / "mid.mp4"
+            mid.parent.mkdir()
+            keep = root / "keep.mp4"
+            for path, size in ((old, 100), (mid, 100), (keep, 100)):
+                path.write_bytes(b"x" * size)
+            now = time.time()
+            os.utime(old, (now - 300, now - 300))
+            os.utime(mid, (now - 200, now - 200))
+            os.utime(keep, (now - 100, now - 100))
+            result = trim_cache(root, 150, keep={keep})
+            self.assertEqual(result["evicted"], 2)
+            self.assertFalse(old.exists())
+            self.assertFalse(mid.exists())
+            self.assertTrue(keep.exists())
+            self.assertLessEqual(result["bytes_remaining"], 150)
+
+    def test_keep_after_protects_current_render(self):
+        import os
+        import time
+        from reels_maker.renderers.studio_cache import trim_cache
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fresh = root / "fresh.mp4"
+            fresh.write_bytes(b"x" * 500)
+            result = trim_cache(root, 100, keep_after=time.time() - 60)
+            self.assertEqual(result["evicted"], 0)
+            self.assertTrue(fresh.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

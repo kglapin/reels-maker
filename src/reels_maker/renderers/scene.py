@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import math
 import copy
+import random
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageOps
 
 from ..components.base import BuiltScene
 from ..core.scene_graph import Node
@@ -107,6 +108,12 @@ class SceneRenderer:
         # Resolved-path -> (mtime_ns, size) signatures. Media cannot change
         # mid-render, so stat once per renderer instead of once per frame.
         self._path_stats: dict[str, tuple[int, int]] = {}
+        # (seed, w, h) -> deterministic two-octave value-noise field for the
+        # burn exit. Bounded LRU; fields are shared across frames of one
+        # disintegrating node.
+        self._burn_noise: OrderedDict[tuple, Image.Image] = OrderedDict()
+        self._burn_noise_bytes = 0
+        self._burn_noise_budget = int(96 * 1024 * 1024 * cache_scale)
         self._media = SceneMediaRenderer(self)
 
     # ------------------------------------------------------------------ public
@@ -130,11 +137,14 @@ class SceneRenderer:
         if transition and transition != "cut":
             self._transition(image, transition, time,
                              scene.meta.get("transition_duration", .30))
+        if image.mode != "RGB":
+            # Convert before the supersample downscale: the canvas is always
+            # opaque here, so resampling a single RGB buffer is identical to
+            # resampling RGBA and dropping alpha afterwards — at ~half the cost.
+            image = image.convert("RGB")
         if self.ss > 1:
             image = image.resize((self.width, self.height),
                                  Image.Resampling.LANCZOS)
-        if image.mode != "RGB":
-            image = image.convert("RGB")
         if (self.options.reuse_settled_frames and settled_at is not None
                 and time >= settled_at):
             self._remember_settled_frame(scene_key, image)
@@ -157,7 +167,7 @@ class SceneRenderer:
             if id(node) in seen:
                 continue
             seen.add(id(node))
-            if node.kind in ("video", "mesh3d", "sequence"):
+            if node.kind in ("video", "mesh3d", "sequence", "iso-world"):
                 self._settled_frame_times[key] = (scene, None)
                 return None
             pending.extend(node.children or [])
@@ -205,7 +215,7 @@ class SceneRenderer:
         return self.render(scene, time).convert("RGBA").tobytes("raw", "BGRA")
 
     # -------------------------------------------------------------- sprites
-    _SPRITE_MEDIA_KINDS = {"video", "sequence", "mesh3d"}
+    _SPRITE_MEDIA_KINDS = {"video", "sequence", "mesh3d", "iso-world"}
 
     def _subtree_profile(self, node: Node) -> tuple:
         """(latest settle time, contains media, contains negative text).
@@ -371,6 +381,13 @@ class SceneRenderer:
             if spec.get("tint"):
                 image = cv.tint(image, _rgb(spec["tint"]),
                                 float(spec.get("tint_amount", .14)))
+            uniform = float(spec.get("scrim_uniform") or 0)
+            if uniform > 0:
+                if not 0 <= uniform <= .95:
+                    raise ValueError("scrim_uniform must be between 0 and 0.95")
+                veil = Image.new("RGBA", image.size,
+                                 (0, 0, 0, int(255 * uniform)))
+                image = Image.alpha_composite(image, veil)
             image = cv.scrim(image, float(spec.get("scrim", .55)))
         else:
             raise ValueError(f"Unknown background kind {kind!r}")
@@ -397,6 +414,16 @@ class SceneRenderer:
             return
         rotation = float(node.props.get(
             "_carousel_rotation", node.rotation))
+        burn = node.props.get("burn_progress")
+        if burn is not None:
+            self._draw_burn_node(target, node, ox, oy, progress,
+                                 rotation, float(burn))
+            return
+        tear = node.props.get("tear_progress")
+        if tear is not None:
+            self._draw_tear_node(target, node, ox, oy, progress,
+                                 rotation, float(tear))
+            return
         needs_layer = (node.opacity < .999
                        or node.effective_scale() != (1.0, 1.0)
                        or abs(rotation) > 1e-6
@@ -664,6 +691,279 @@ class SceneRenderer:
                                     matrix, resample=Image.Resampling.BICUBIC)
         return layer
 
+    # ------------------------------------------------------------------ burn
+    _BURN_CHAR = (30, 22, 16)
+    _BURN_EMBER = (255, 96, 24)
+
+    def _draw_burn_node(self, target: Image.Image, node: Node,
+                        ox: float, oy: float, progress: float,
+                        rotation: float, burn: float) -> None:
+        """Draw a node whose ``burn_progress`` prop disintegrates it.
+
+        The node is rasterized through the normal path (transforms and
+        opacity included), then only the pixels inside its world bounds are
+        re-masked: a seeded value-noise threshold consumes the asset from
+        random clusters, a narrow front band chars to near-black and a
+        slightly wider band picks up a restrained ember tint. No strobe:
+        the threshold moves monotonically and the noise field is static.
+        """
+        if burn <= 0.0:
+            self._draw_node_plain(target, node, ox, oy, progress, rotation)
+            return
+        if burn >= 1.0:
+            return
+        layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        draw_node = node
+        if node.opacity < .999 or "burn_progress" in node.props:
+            draw_node = copy.copy(node)
+            draw_node.props = dict(node.props)
+            draw_node.props.pop("burn_progress", None)
+            if node.opacity < .999:
+                draw_node.opacity = 1.0
+        self._content(layer, draw_node, ox, oy)
+        layer = self._apply_node_state(layer, node, ox, oy, progress,
+                                       rotation)
+        box = node.world_bounds()
+        if box is None:
+            return
+        pad = int(14 * self.ss)
+        x0 = max(0, int(math.floor((box[0] + ox) * self.ss)) - pad)
+        y0 = max(0, int(math.floor((box[1] + oy) * self.ss)) - pad)
+        x1 = min(self.W, int(math.ceil((box[2] + ox) * self.ss)) + pad)
+        y1 = min(self.H, int(math.ceil((box[3] + oy) * self.ss)) + pad)
+        if x1 <= x0 or y1 <= y0:
+            return
+        region = layer.crop((x0, y0, x1, y1))
+        masked = self._burn_region(region, burn, node)
+        target.alpha_composite(masked, (x0, y0))
+
+    def _draw_node_plain(self, target: Image.Image, node: Node,
+                         ox: float, oy: float, progress: float,
+                         rotation: float) -> None:
+        """Normal draw path for a burn node before its exit starts."""
+        needs_layer = (node.opacity < .999
+                       or node.effective_scale() != (1.0, 1.0)
+                       or abs(rotation) > 1e-6
+                       or node.clip is not None or progress < .999)
+        if not needs_layer:
+            draw_node = node
+            if "burn_progress" in node.props \
+                    or "tear_progress" in node.props:
+                draw_node = copy.copy(node)
+                draw_node.props = dict(node.props)
+                draw_node.props.pop("burn_progress", None)
+                draw_node.props.pop("tear_progress", None)
+            self._content(target, draw_node, ox, oy)
+            return
+        layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        draw_node = node
+        if node.opacity < .999 or "burn_progress" in node.props \
+                or "tear_progress" in node.props:
+            draw_node = copy.copy(node)
+            draw_node.props = dict(node.props)
+            draw_node.props.pop("burn_progress", None)
+            draw_node.props.pop("tear_progress", None)
+            if node.opacity < .999:
+                draw_node.opacity = 1.0
+        self._content(layer, draw_node, ox, oy)
+        layer = self._apply_node_state(layer, node, ox, oy, progress,
+                                       rotation)
+        target.alpha_composite(layer)
+
+    # ------------------------------------------------------------------ tear
+    _TEAR_EDGE = (255, 252, 240)
+
+    def _draw_tear_node(self, target: Image.Image, node: Node,
+                        ox: float, oy: float, progress: float,
+                        rotation: float, tear: float) -> None:
+        """Draw a node whose ``tear_progress`` prop rips it in two.
+
+        The rasterized node is split along a deterministic jagged vertical
+        seam; the halves translate apart with a slight shear and pick up a
+        pale cut edge, like a sheet of paper being torn open.
+        """
+        if tear <= 0.0:
+            self._draw_node_plain(target, node, ox, oy, progress, rotation)
+            return
+        if tear >= 1.0:
+            return
+        layer = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        draw_node = node
+        if node.opacity < .999 or "tear_progress" in node.props:
+            draw_node = copy.copy(node)
+            draw_node.props = dict(node.props)
+            draw_node.props.pop("tear_progress", None)
+            if node.opacity < .999:
+                draw_node.opacity = 1.0
+        self._content(layer, draw_node, ox, oy)
+        layer = self._apply_node_state(layer, node, ox, oy, progress,
+                                       rotation)
+        box = node.world_bounds()
+        if box is None:
+            return
+        pad = int(8 * self.ss)
+        x0 = max(0, int(math.floor((box[0] + ox) * self.ss)) - pad)
+        y0 = max(0, int(math.floor((box[1] + oy) * self.ss)) - pad)
+        x1 = min(self.W, int(math.ceil((box[2] + ox) * self.ss)) + pad)
+        y1 = min(self.H, int(math.ceil((box[3] + oy) * self.ss)) + pad)
+        if x1 <= x0 or y1 <= y0:
+            return
+        region = layer.crop((x0, y0, x1, y1))
+        torn, tx, ty = self._tear_region(region, tear, node)
+        # ``torn`` is padded so separating halves may overflow the region;
+        # keep the part that lands on canvas and clip the rest.
+        dest_x, dest_y = x0 + tx, y0 + ty
+        sx0 = max(0, -dest_x)
+        sy0 = max(0, -dest_y)
+        sx1 = min(torn.width, self.W - dest_x)
+        sy1 = min(torn.height, self.H - dest_y)
+        if sx1 > sx0 and sy1 > sy0:
+            target.alpha_composite(
+                torn.crop((sx0, sy0, sx1, sy1)),
+                (dest_x + sx0, dest_y + sy0))
+
+    def _tear_region(self, region: Image.Image, tear: float,
+                     node: Node) -> tuple[Image.Image, int, int]:
+        """Split ``region`` along a seeded jagged seam and part the halves.
+
+        Returns ``(image, x_offset, y_offset)`` where the image is padded so
+        the separating halves never clip at the region edge.
+        """
+        width, height = region.size
+        rng = random.Random(int(node.meta.get("tear_seed", 0)))
+        step = max(6, height // 90)
+        seam: list[tuple[float, float]] = []
+        # Pin the seam to the horizontal centre exactly on the top and
+        # bottom edges so the rip visibly starts and ends on the borders;
+        # jitter lives only in the interior rows.
+        seam.append((width * .5, 0.0))
+        y = step
+        while y < height:
+            seam.append((width * .5 + rng.uniform(-width * .07,
+                                                  width * .07), y))
+            y += step
+        seam.append((width * .5, float(height)))
+        # Peel: each half rotates a few degrees around the seam midpoint as
+        # it parts, so the rip reads as paper peeling away, not sliding
+        # cut-outs. PIL rotates counter-clockwise for positive angles.
+        # Small peel only: larger angles swing the bottom corners of the
+        # halves back toward each other and visually close the rip before
+        # it reaches the lower edge.
+        seam_mid = (seam[len(seam) // 2][0], height * .5)
+        peel = 1.8 * tear
+        # Each half is mounted on a margin so the rotational swing never
+        # clips real pixels at the region edge.
+        margin = int(math.ceil(height * math.sin(math.radians(2.0)))) + 8
+        sep_max = width * .34
+        sep = sep_max * tear
+        drift = height * .035 * tear
+        pad_x = int(math.ceil(sep_max)) + margin
+        pad_y = int(math.ceil(drift)) + margin
+        out = Image.new("RGBA", (width + 2 * pad_x, height + 2 * pad_y),
+                        (0, 0, 0, 0))
+
+        left_mask = Image.new("L", (width, height), 0)
+        ImageDraw.Draw(left_mask).polygon(
+            seam + [(0.0, float(height)), (0.0, 0.0)], fill=255)
+        transparent = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        left_half = Image.composite(region, transparent, left_mask)
+        right_mask = ImageChops.invert(left_mask)
+        right_half = Image.composite(region, transparent, right_mask)
+
+        # Pale cut edge stroked onto each half before peeling, so the fibre
+        # highlight rotates with the paper instead of floating on top.
+        edge_width = max(1, int(round(3 * self.ss)))
+        edge_colour = (*self._TEAR_EDGE, 150)
+        seam_points = [(px, py) for px, py in seam]
+        ImageDraw.Draw(left_half).line(
+            seam_points, fill=edge_colour, width=edge_width,
+            joint="curve")
+        ImageDraw.Draw(right_half).line(
+            seam_points, fill=edge_colour, width=edge_width,
+            joint="curve")
+
+        big_w, big_h = width + 2 * margin, height + 2 * margin
+        pivot = (seam_mid[0] + margin, seam_mid[1] + margin)
+        halves = []
+        for half, angle, sx, sy in (
+                (left_half, peel, -sep, -drift),
+                (right_half, -peel, sep, drift)):
+            mounted = Image.new("RGBA", (big_w, big_h), (0, 0, 0, 0))
+            mounted.alpha_composite(half, (margin, margin))
+            mounted = mounted.rotate(
+                angle, resample=Image.Resampling.BICUBIC, center=pivot)
+            halves.append((mounted, sx, sy))
+        for mounted, sx, sy in halves:
+            out.alpha_composite(
+                mounted,
+                (int(round(pad_x + sx - margin)),
+                 int(round(pad_y + sy - margin))))
+        return out, -pad_x, -pad_y
+
+    def _burn_region(self, region: Image.Image, burn: float,
+                     node: Node) -> Image.Image:
+        """Apply the disintegration mask to one cropped RGBA region."""
+        width, height = region.size
+        noise = self._burn_noise_field(node, width, height)
+        tau = 0.05 + 0.98 * burn
+        edge = 0.12
+        alpha_lut = []
+        char_lut = []
+        ember_lut = []
+        for value in range(256):
+            v = value / 255.0
+            front = (v - tau) / edge
+            front = 0.0 if front <= 0 else (1.0 if front >= 1 else front)
+            front = front * front * (3.0 - 2.0 * front)
+            alpha_lut.append(int(round(255.0 * front)))
+            in_char = 1.0 if tau < v <= tau + 0.10 else 0.0
+            char_lut.append(int(round(255.0 * in_char)))
+            ember = 0.0
+            if tau + 0.10 < v <= tau + 0.30:
+                ember = 0.55 * (1.0 - (v - tau - 0.10) / 0.20)
+            ember_lut.append(int(round(255.0 * ember)))
+        factor = noise.point(alpha_lut)
+        char_mask = noise.point(char_lut)
+        ember_mask = noise.point(ember_lut)
+        red, green, blue, alpha = region.split()
+        rgb = Image.merge("RGB", (red, green, blue))
+        if char_mask.getbbox() is not None:
+            char_img = Image.new("RGB", region.size, self._BURN_CHAR)
+            rgb = Image.composite(char_img, rgb, char_mask)
+        if ember_mask.getbbox() is not None:
+            ember_img = Image.new("RGB", region.size, self._BURN_EMBER)
+            rgb = Image.composite(ember_img, rgb, ember_mask)
+        new_alpha = ImageChops.multiply(alpha, factor)
+        return Image.merge("RGBA", (*rgb.split(), new_alpha))
+
+    def _burn_noise_field(self, node: Node, width: int,
+                          height: int) -> Image.Image:
+        """Deterministic two-octave value noise for one burn region."""
+        seed = int(node.meta.get("burn_seed", 0))
+        key = (seed, width, height)
+        cached = self._burn_noise.get(key)
+        if cached is not None:
+            self._burn_noise.move_to_end(key)
+            return cached
+        rng = random.Random(seed)
+
+        def grid(cw: int, ch: int) -> Image.Image:
+            cells = Image.frombytes("L", (cw, ch),
+                                    rng.randbytes(cw * ch))
+            return cells.resize((width, height), Image.Resampling.BILINEAR)
+
+        coarse = grid(max(2, width // 7), max(2, height // 7))
+        fine = grid(max(2, width // 26), max(2, height // 26))
+        noise = Image.blend(coarse, fine, 0.38)
+        size = noise.width * noise.height
+        self._burn_noise[key] = noise
+        self._burn_noise_bytes += size
+        while self._burn_noise_bytes > self._burn_noise_budget \
+                and self._burn_noise:
+            _, evicted = self._burn_noise.popitem(last=False)
+            self._burn_noise_bytes -= evicted.width * evicted.height
+        return noise
+
     def _draw_negative_text(self, target: Image.Image, node: Node,
                             ox: float, oy: float) -> None:
         """Invert pixels only inside marked glyphs on an opaque scene surface."""
@@ -827,6 +1127,9 @@ class SceneRenderer:
         if kind == "mesh3d":
             self._mesh3d(target, node, dx, dy)
             return
+        if kind == "iso-world":
+            self._iso_world(target, node, dx, dy)
+            return
         if kind == "text":
             block = props["block"]
             cv.text_block(target, block, (props["x"] + dx, props["y"] + dy),
@@ -937,6 +1240,9 @@ class SceneRenderer:
 
     def _mesh3d(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
         self._media.mesh3d(target, node, dx, dy)
+
+    def _iso_world(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
+        self._media.iso_world(target, node, dx, dy)
 
     # -------------------------------------------------------------- transitions
     def _transition(self, image: Image.Image, name: str, time: float,

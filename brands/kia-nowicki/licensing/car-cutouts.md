@@ -23,3 +23,21 @@ repository (files stay in git-ignored imports/).
 
 Preferred before publishing: replace with the dealership's own licensed KIA
 press assets if available.
+
+## HEV_SUV v3 — official KIA configurator side profiles (dealer-authorized)
+Owner instruction 2026-11-09: use photos from official KIA websites.
+Downloaded from kia.com 360-viewer DAM (used by the dealer principal's own
+advertising; files stay in git-ignored imports/, background removed locally
+with rembg to transparent cutouts).
+
+| Model | Source file (kia.com DAM) | Derivative |
+|---|---|---|
+| Sportage HEV GLS MY26, black pearl, side | `360vr/sportage/my26/sportage-hev-gls-my26/1K-black-pearl/18_alloy_wheel/kia-sportage-hev-my26-1kblackpearl-18_0009.jpg` | `imports/photos/hevsuv_sportage_hev_cut.png` |
+| Sorento HEV GLS MY25, aurora black, side | `360vr/sorento-my25/sorento-hev-my25/abp-aurora-black-pearl/19_alloy_wheel/kia-sorento-hev-gls-my25-abpaurorablackpearl-19_0009.jpg` | `imports/photos/hevsuv_sorento_hev_cut.png` |
+| Niro HEV SX MY23/24, aurora black, side | `360vr/niro-hev-sx-my24/abp-aurora-black/18_alloy_wheel/kia-niro-hev-sx-my23-abpaurorablackpearl-18_0009.jpg` | `imports/photos/hevsuv_niro_hev_cut.png` |
+
+Human rights/content review: PENDING (owner) — standard KIA dealer advertising
+use; replace only if KIA press portal issues other guidance.
+
+Front 3/4 (v4): same DAM paths, frame _0004 instead of _0009
+(`..._18_0004.jpg` / `..._19_0004.jpg`), derivatives `*_front_cut.png`.

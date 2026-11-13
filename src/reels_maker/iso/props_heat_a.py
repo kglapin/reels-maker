@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 
-from .world import _cylinder, _on_cylinder
+from .world import _cylinder, _on_cylinder, chamfered_box
 
 BRASS_F, BRASS_S, BRASS_T = (208, 160, 94), (158, 116, 66), (228, 182, 112)
 BRASS_D = (120, 86, 50)
@@ -30,11 +30,12 @@ def hydrobox(q, cx, cy, P):
                   (110, 124, 112), (88, 102, 92), (128, 142, 130))
             q.box((fx - 0.04, fy - 0.04, 0.04), (fx + 0.04, fy + 0.04, 0.16),
                   (70, 86, 74), (70, 86, 74), (70, 86, 74))
-    # Hero body + overlapping lid.
-    q.box((cx - 0.35, cy - 0.25, 0.10), (cx + 0.35, cy + 0.25, 1.40),
-          BODY_F, BODY_S, BODY_T)
-    q.box((cx - 0.36, cy - 0.26, 1.36), (cx + 0.36, cy + 0.26, 1.46),
-          BODY_S, BODY_S, BODY_T)
+    # Hero body + overlapping lid: chamfered edges catch light like a
+    # manufactured enclosure instead of a card block.
+    chamfered_box(q, (cx - 0.35, cy - 0.25, 0.10), (cx + 0.35, cy + 0.25, 1.40),
+                  chamfer=0.035, c=BODY_F)
+    chamfered_box(q, (cx - 0.36, cy - 0.26, 1.36), (cx + 0.36, cy + 0.26, 1.46),
+                  chamfer=0.03, c=BODY_S)
     # Screen panel + abstract bars + status dot on the +Y face.
     q.fp(cx - 0.20, cx + 0.20, cy + 0.252, 0.95, 1.22, PANEL)
     for j, (hgt, col) in enumerate(((0.10, (110, 190, 170)),
@@ -163,11 +164,11 @@ def plate_hx(q, cx, cy, P):
               (110, 124, 112), (88, 102, 92), (128, 142, 130))
         q.box((cx - 0.18, fy - 0.035, 0.04), (cx + 0.18, fy + 0.035, 0.16),
               TRIM, TRIM, TRIM)
-    # Hero ribbed body + overlapping top cap.
-    q.box((cx - 0.25, cy - 0.18, 0.10), (cx + 0.25, cy + 0.18, 0.80),
-          CREAM_F, CREAM_S, CREAM_T)
-    q.box((cx - 0.26, cy - 0.19, 0.76), (cx + 0.26, cy + 0.19, 0.85),
-          STEEL_S, STEEL_S, STEEL_T)
+    # Hero ribbed body + overlapping top cap: chamfered edges.
+    chamfered_box(q, (cx - 0.25, cy - 0.18, 0.10), (cx + 0.25, cy + 0.18, 0.80),
+                  chamfer=0.025, c=CREAM_F)
+    chamfered_box(q, (cx - 0.26, cy - 0.19, 0.76), (cx + 0.26, cy + 0.19, 0.85),
+                  chamfer=0.02, c=STEEL_S)
     # Chevron ribs proud of the +Y face, then the +X face (after body).
     for i in range(6):
         rx = cx - 0.20 + i * 0.08

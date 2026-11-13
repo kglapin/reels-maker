@@ -9,6 +9,18 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+try:
+    import aggdraw as _aggdraw
+except ImportError:  # optional accelerator: anti-aliased rasterizer
+    _aggdraw = None
+
+# REELS_ISO_RASTER=pil forces the legacy aliased ImageDraw path.
+_USE_AGG = _aggdraw is not None and os.environ.get("REELS_ISO_RASTER", "agg") != "pil"
+# REELS_ISO_DEPTH=1 enables the per-pixel depth buffer: opaque geometry
+# resolves visibility from world depth (x+y+z, larger = nearer) instead of
+# painter call order, so parts behind walls can never paint on top.
+_USE_DEPTH = os.environ.get("REELS_ISO_DEPTH", "") == "1"
+
 C = math.sqrt(3) / 2
 W, H = 1080, 1920
 FPS = 30
@@ -87,12 +99,20 @@ class Canvas:
         # never pay for the 1840x1500 raster.
         self._im = None
         self._d = None
+        self._agg = None
+        self._agg_dirty = False
+        self._zbuf = None
         self._stack: list = []
 
     @property
     def im(self):
         if self._im is None:
             self._im = Image.new("RGB", (1840, 1500), self.bg)
+        if self._agg is not None and self._agg_dirty:
+            # aggdraw buffers ops; commit before anyone reads or
+            # composites the raster directly (grad_poly, ao, decal).
+            self._agg.flush()
+            self._agg_dirty = False
         return self._im
 
     @property
@@ -100,6 +120,12 @@ class Canvas:
         if self._d is None:
             self._d = ImageDraw.Draw(self.im, "RGBA")
         return self._d
+
+    @property
+    def agg(self):
+        if self._agg is None:
+            self._agg = _aggdraw.Draw(self.im)
+        return self._agg
 
     def _raw(self, p):
         u, v = iso(p)
@@ -130,16 +156,165 @@ class Canvas:
         rgb = mix(c[:3], self.bg, self.dim) if self.dim else c[:3]
         return tuple(int(round(v)) for v in rgb) + tuple(int(round(v)) for v in c[3:])
 
+    def _depth_plane(self, ps, pts2):
+        """Least-squares affine map screen(x,y) -> world depth x+y+z.
+
+        The iso projection is affine, so depth stays an affine function
+        of screen coordinates over any (near-)planar polygon; lstsq
+        absorbs slight non-planarity instead of trusting 3 points.
+        """
+        A = np.array([[p[0], p[1], 1.0] for p in pts2], dtype=float)
+        b = np.array([p[0] + p[1] + p[2] for p in ps], dtype=float)
+        coef, *_ = np.linalg.lstsq(A, b, rcond=None)
+        return coef
+
+    def _z_composite(self, mask, dmap, col, opaque, box):
+        """Blend ``col`` through ``mask``.
+
+        Opaque fragments depth-test against the buffer and then claim
+        their depth. Translucent fragments always draw in call order —
+        they are screen-space overlays (AO grades, glass, light shafts),
+        not occluders, and must keep painter semantics."""
+        x0, y0, x1, y1 = box
+        zb = self._zbuf[y0:y1, x0:x1]
+        if opaque:
+            vis = (mask > 0.0) & (dmap >= zb - 1e-3)
+        else:
+            vis = mask > 0.0
+        if not vis.any():
+            return
+        alpha = (col[3] / 255.0) if len(col) > 3 else 1.0
+        a = np.where(vis, mask * alpha, 0.0)[..., None]
+        region = np.asarray(self.im.crop((x0, y0, x1, y1)),
+                            dtype=np.float32)
+        src = np.array(col[:3], dtype=np.float32)
+        out = region * (1.0 - a) + src * a
+        self.im.paste(Image.fromarray(out.astype(np.uint8), mode="RGB"),
+                      (x0, y0))
+        if opaque:
+            claim = vis & (mask > 0.5)
+            zb[claim] = np.maximum(zb[claim], dmap[claim])
+
+    def _poly_z(self, ps, c):
+        col = self._c(c)
+        if self._zbuf is None:
+            self._zbuf = np.full((1500, 1840), -np.inf, dtype=np.float32)
+        pts2 = [self.P(p) for p in ps]
+        xs = [p[0] for p in pts2]
+        ys = [p[1] for p in pts2]
+        x0 = max(0, int(min(xs)) - 1)
+        x1 = min(1840, int(max(xs)) + 2)
+        y0 = max(0, int(min(ys)) - 1)
+        y1 = min(1500, int(max(ys)) + 2)
+        if x1 <= x0 or y1 <= y0:
+            return
+        mask_im = Image.new("L", (x1 - x0, y1 - y0), 0)
+        ImageDraw.Draw(mask_im).polygon(
+            [(x - x0, y - y0) for x, y in pts2], fill=255)
+        mask = np.asarray(mask_im, dtype=np.float32) / 255.0
+        if not mask.any():
+            return
+        coef = self._depth_plane(ps, pts2)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        dmap = (coef[0] * xx + coef[1] * yy + coef[2]).astype(np.float32)
+        opaque = len(col) <= 3 or col[3] >= 250
+        self._z_composite(mask, dmap, col, opaque, (x0, y0, x1, y1))
+
+    def _dot_z(self, p, r, c):
+        col = self._c(c)
+        if self._zbuf is None:
+            self._zbuf = np.full((1500, 1840), -np.inf, dtype=np.float32)
+        x, y = self.P(p)
+        depth = p[0] + p[1] + p[2]
+        rr = r * 2
+        x0 = max(0, int(x - rr) - 1)
+        x1 = min(1840, int(x + rr) + 2)
+        y0 = max(0, int(y - rr) - 1)
+        y1 = min(1500, int(y + rr) + 2)
+        if x1 <= x0 or y1 <= y0:
+            return
+        mask_im = Image.new("L", (x1 - x0, y1 - y0), 0)
+        ImageDraw.Draw(mask_im).ellipse(
+            (x - rr - x0, y - rr - y0, x + rr - x0, y + rr - y0), fill=255)
+        mask = np.asarray(mask_im, dtype=np.float32) / 255.0
+        dmap = np.full(mask.shape, depth, dtype=np.float32)
+        opaque = len(col) <= 3 or col[3] >= 250
+        self._z_composite(mask, dmap, col, opaque, (x0, y0, x1, y1))
+
     def poly(self, ps, c):
-        self.d.polygon([self.P(p) for p in ps], fill=self._c(c))
+        if _USE_DEPTH:
+            self._poly_z(ps, c)
+            return
+        col = self._c(c)
+        if _USE_AGG:
+            self.agg.polygon([v for p in ps for v in self.P(p)],
+                             _aggdraw.Brush(col))
+            self._agg_dirty = True
+        else:
+            self.d.polygon([self.P(p) for p in ps], fill=col)
+
+    def _line_z(self, ps, c, w):
+        col = self._c(c)
+        if self._zbuf is None:
+            self._zbuf = np.full((1500, 1840), -np.inf, dtype=np.float32)
+        pts2 = [self.P(p) for p in ps]
+        width = max(1, int(round(w * 2)))
+        xs = [p[0] for p in pts2]
+        ys = [p[1] for p in pts2]
+        x0 = max(0, int(min(xs) - width) - 1)
+        x1 = min(1840, int(max(xs) + width) + 2)
+        y0 = max(0, int(min(ys) - width) - 1)
+        y1 = min(1500, int(max(ys) + width) + 2)
+        if x1 <= x0 or y1 <= y0 or len(pts2) < 2:
+            return
+        mask_im = Image.new("L", (x1 - x0, y1 - y0), 0)
+        md = ImageDraw.Draw(mask_im)
+        flat = [v - (x0 if i % 2 == 0 else y0)
+                for i, v in enumerate(
+                    [c for p in pts2 for c in p])]
+        if _USE_AGG and _aggdraw is not None:
+            mdraw = _aggdraw.Draw(mask_im)
+            mdraw.line(flat, _aggdraw.Pen(255, width))
+            mdraw.flush()
+        else:
+            md.line(flat, fill=255, width=width, joint="curve")
+        mask = np.asarray(mask_im, dtype=np.float32) / 255.0
+        if not mask.any():
+            return
+        A = np.array([[p[0], p[1], 1.0] for p in pts2], dtype=float)
+        b = np.array([p[0] + p[1] + p[2] for p in ps], dtype=float)
+        coef, *_ = np.linalg.lstsq(A, b, rcond=None)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        dmap = (coef[0] * xx + coef[1] * yy + coef[2]).astype(np.float32)
+        opaque = len(col) <= 3 or col[3] >= 250
+        self._z_composite(mask, dmap, col, opaque, (x0, y0, x1, y1))
 
     def line(self, ps, c, w=1):
-        self.d.line([self.P(p) for p in ps], fill=self._c(c),
-                    width=max(1, int(round(w * 2))), joint="curve")
+        if _USE_DEPTH:
+            self._line_z(ps, c, w)
+            return
+        col = self._c(c)
+        width = max(1, int(round(w * 2)))
+        if _USE_AGG:
+            self.agg.line([v for p in ps for v in self.P(p)],
+                          _aggdraw.Pen(col, width))
+            self._agg_dirty = True
+        else:
+            self.d.line([self.P(p) for p in ps], fill=col,
+                        width=width, joint="curve")
 
     def dot(self, p, r, c):
+        if _USE_DEPTH:
+            self._dot_z(p, r, c)
+            return
         x, y = self.P(p)
-        self.d.ellipse((x - r * 2, y - r * 2, x + r * 2, y + r * 2), fill=self._c(c))
+        box = (x - r * 2, y - r * 2, x + r * 2, y + r * 2)
+        col = self._c(c)
+        if _USE_AGG:
+            self.agg.ellipse(box, _aggdraw.Brush(col))
+            self._agg_dirty = True
+        else:
+            self.d.ellipse(box, fill=col)
 
     def box(self, a, b, front=(239, 244, 232), side=(171, 193, 164), top=(250, 252, 241)):
         x, y, z = a
@@ -223,9 +398,11 @@ class Canvas:
         full = self.im.copy()
         full.paste(dark, (x0, y0))
         self._im = full
-        # The draw handle targets the old raster: drop it so the next
+        # The draw handles target the old raster: drop them so the next
         # poly/line/dot rebinds lazily to the darkened image.
         self._d = None
+        self._agg = None
+        self._agg_dirty = False
 
     def fp(self, x, X, y, z, Z, c):
         self.poly([(x, y, z), (X, y, z), (X, y, Z), (x, y, Z)], c)

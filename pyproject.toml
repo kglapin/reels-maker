@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 # exact-pixel studio golden strips in tests/fixtures/studio-golden. Keep the
 # rasterizer family the fixtures were captured with until they are
 # deliberately recaptured and reviewed.
-dependencies = ["Pillow>=10,<12", "fontTools>=4.50,<5"]
+dependencies = ["Pillow>=10,<12", "fontTools>=4.50,<5", "aggdraw>=1.3,<2"]
 
 [project.optional-dependencies]
 pdf = ["reportlab>=4,<5"]

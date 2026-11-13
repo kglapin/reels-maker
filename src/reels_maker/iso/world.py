@@ -306,6 +306,46 @@ def _on_cylinder(cx, cy, r, theta, z):
     return (cx + r * math.cos(theta), cy + r * math.sin(theta), z)
 
 
+def _shade(c, f):
+    return tuple(max(0, min(255, int(round(v * f)))) for v in c[:3])
+
+
+def chamfered_box(q, a, b, chamfer=0.04, c=(200, 205, 195), dl=0.14):
+    """Machined-product box: octagonal footprint, azimuth-shaded faces.
+
+    The four vertical edges are cut by ``chamfer`` world units, so every
+    side face gets its own light response — chamfer faces catch highlights
+    differently from the main walls, which is what reads as a real
+    manufactured part instead of a card block. ``c`` is the base color;
+    the top face is lightened and rimmed with a hairline highlight.
+    """
+    x, y, z = a
+    X, Y, Z = b
+    ch = min(float(chamfer), (X - x) * 0.45, (Y - y) * 0.45)
+    if ch <= 0.0:
+        q.boxg(a, b, c, dl=dl)
+        return
+    foot = [(x + ch, y), (X - ch, y), (X, y + ch), (X, Y - ch),
+            (X - ch, Y), (x + ch, Y), (x, Y - ch), (x, y + ch)]
+    c_light = _shade(c, 1.04)
+    c_dark = _shade(c, 0.72)
+    n = len(foot)
+    for i in range(n):
+        p0, p1 = foot[i], foot[(i + 1) % n]
+        ex, ey = p1[0] - p0[0], p1[1] - p0[1]
+        ln = math.hypot(ex, ey) or 1.0
+        facing = (ey / ln - ex / ln) / 2
+        col = mix(c_dark, c_light, 0.5 + 0.5 * facing)
+        q.poly([(p0[0], p0[1], z), (p1[0], p1[1], z),
+                (p1[0], p1[1], Z), (p0[0], p0[1], Z)],
+               tuple(int(round(v)) for v in col))
+    top = _shade(c, 1.0 + dl)
+    q.poly([(px, py, Z) for px, py in foot], top)
+    hi = _shade(c, 1.0 + dl * 1.6) + (255,)
+    ring = [(px, py, Z) for px, py in foot] + [(foot[0][0], foot[0][1], Z)]
+    q.line(ring, hi, 1)
+
+
 def buffer_tank(q, cx, cy, P, level=0.65, font_path=None):
     """Domestic buffer vessel, fully dressed: welds, gauge, dial, valves."""
     r, z0, z1 = 0.56, 0.16, 1.52

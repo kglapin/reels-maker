@@ -63,3 +63,10 @@ Resolve quality warnings or document an intentional exception before omitting st
 - Some source videos are Git LFS assets (`git lfs pull`). Synthetic tests do not need large footage. Archived scripts under `legacy/` may contain machine-specific paths; do not run without porting.
 
 See `docs/AGENTS.md` for the JSON-first CLI contract and `docs/CLI.md` for command and manifest details.
+
+## LLM-led creative product direction (owner priority, 2026-11-13)
+- Read `docs/LLM_CREATIVE_LOOP_PLAN.md` before creative-intelligence work. It is the detailed LC sub-backlog of `docs/MASTER_PLAN.md`, not a replacement master or evidence of implementation.
+- The owner prioritizes creative concepts, aesthetics, non-template composition and fewer artistic corrections. LLMs should own creative decisions; deterministic code supplies tools, compilation, rendering and hard safety/factual validation.
+- Do not treat additional presets, higher resolution, heuristic rankings or green tests as proof of improved taste. Recipes are optional shortcuts; explicit valid LLM plans must not be silently flattened into templates.
+- Implement and evaluate the brief -> concepts -> art direction -> render -> multimodal critique -> revision loop, with scoped preference memory and bounded costs. Never claim a model saw/heard media it did not receive.
+- All LC tasks start as planned. Keep mocks, native integration, live model calls and human creative acceptance separate. Follow the existing branch/PR, confidentiality, licensing and delivery policies; saving this plan is not blanket authorization for future writes or paid calls.

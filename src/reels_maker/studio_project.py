@@ -33,6 +33,10 @@ class StudioProject:
     cue_plan: CuePlan | None = None
     warnings: list[dict] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        from .design.carbon_defaults import configure_project
+        configure_project(self)
+
     @property
     def duration(self) -> float:
         return sum(float(scene["duration"]) for scene in self.scenes)

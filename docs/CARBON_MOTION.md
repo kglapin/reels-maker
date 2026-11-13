@@ -1,84 +1,52 @@
-# Carbon v10 Motion integration (experimental)
+# Carbon Motion in reels-maker
 
-This implements Carbon's six source cubic-bezier curves and six duration
-constants in `motionkit.carbon`, not merely reference URLs. No npm dependency
-is required. IBM's source is the v10 overview linked in the module.
+The ordinary StudioProject path now inherits productive Carbon motion by
+default. See CARBON_ENGINE_DEFAULTS.md for the current policy, overrides,
+spacing and sequence/stagger integration. The low-level scene adapter still
+requires an effective `carbon_motion` object; StudioProject supplies it on
+scene copies before QA/render/cache. Direct builder calls without that field
+remain unchanged.
 
-## Actual render integration
+## Profiles and override
 
-A scene opts in with `"carbon_motion": {"mode": "productive"}`. The shared
-`components.scenes.build_scene` boundary applies the profile to actual native
-Keyframe/Track objects. The renderer and scene QA therefore receive the same
-modified graph. Without this field (or with null), behavior is unchanged.
-This is not automatic replacement of all existing brand motion.
+Modes: productive and expressive. Phases: standard, entrance, exit. The six
+source curves and six duration tokens live in motionkit/carbon.py. Native
+cubic-bezier Keyframes/Tracks are modified, not just metadata. Only simple,
+nonconstant two-key appearance tracks are affected. Data/counters/progress
+and complex choreography are preserved and reported as skipped.
 
-Modes: productive and expressive. Phases: standard, entrance, exit. By default
-opacity direction selects entrance/exit; transforms returning to neutral use
-entrance, and other simple transforms use standard. Override ambiguous cases
-explicitly per role. Do not treat this heuristic as semantic scene analysis.
+A scene can use `"carbon_motion":{"mode":"expressive"}` or disable motion
+with false/null. Project default: `"export":{"carbon_motion":false}` disables
+implicit Carbon while retaining any explicitly opted-in scene. Camera Canvas
+is not implicitly migrated. Colors, fonts, media and source numbers stay owned
+by the brand/project.
 
-Only nonconstant two-key appearance tracks are modified. Data/counter/progress
-tracks, multi-key paths and complex choreography are preserved and listed in
-`built.meta.carbon_motion.skipped`. No new motion is invented for static nodes.
-The adapter preserves values and, by default, timings. It changes both keys'
-easing and native cubic-bezier params, not only metadata. Reports record each
-modified role/property and explicitly withhold visual approval.
+Timing remains authored unless a role explicitly selects a duration token.
+film_scale and minimum_hold are video adaptations, not Carbon UI standards.
+Raw source durations: 70/110/150/240/400/700ms. Retimed intervals round up to
+frames and are validated before track replacement. See the engine policy
+reference for opt-in spacing and sequence controls.
 
-## Compile a Creative Spec
-
-```sh
-python -m reels_maker.motionkit.carbon input.creative.json --root . --expressive-shot hook --output renders/brand/project/carbon.studio.json
-```
-
-Use actual brand/project paths and a real shot ID instead of the placeholders.
-This calls the previously added craft compiler, retains its QA gate and
-produces a normal Studio manifest with productive scenes and selected
-expressive accents. `--allow-warnings` exports for review only. Existing
-outputs and the input cannot be overwritten.
-
-For a source-only demo with no external media:
+## Demo and acceptance
 
 ```sh
 reels-maker studio-qa examples/carbon-motion-demo.json --profile review --strict --json
 reels-maker studio-render examples/carbon-motion-demo.json --profile review --json
 ```
 
-These commands are instructions, not evidence that an MP4 was rendered.
+The separate Carbon compiler remains available, but is not required for
+ordinary Studio rendering. Source-only demo commands are not render evidence.
+Tests/test_carbon_motion.py covers isolated and native adapter contracts;
+tests/test_carbon_defaults.py covers default policy and Studio integration.
+Run native tests, full regressions, golden comparisons and MP4 review before
+claiming full integration quality. The approved standalone curve demo is not
+full-engine acceptance. No fonts, media or third-party assets are imported.
 
-## Optional duration tokens
-
-Per-scene example:
-
-```json
-{"carbon_motion": {"mode": "productive", "minimum_hold": 0.8,
-  "roles": {"headline": {"mode": "expressive", "phase": "entrance",
-    "duration_token": "slow-01", "film_scale": 1.5}}}}
-```
-
-An explicit nonempty roles map limits the adapter to those exact node roles;
-unknown roles fail instead of silently doing nothing. Source values are
-fast-01=70, fast-02=110, moderate-01=150, moderate-02=240, slow-01=400,
-slow-02=700 milliseconds. These are UI tokens, NOT universal film durations.
-`film_scale` and `minimum_hold` are authored film adaptations, not IBM rules.
-Retimed intervals round up to whole frame durations at actual export FPS;
-start times and values are preserved. Invalid settings, scene overflow or
-consumed minimum hold fail atomically before replacing any tracks.
-
-## Tests and limits
-
-`tests/test_carbon_motion.py` separates eight isolated policy/adapter tests
-(using explicit fixtures) from three native engine/builder integration tests.
-Run the whole module and full regression suite in the installed checkout.
-A fixture-class pass is not a native renderer/integration or MP4 pass.
-
-This stage does not implement Carbon typography, grid/spacing tokens, rounded
-orthogonal paths, full semantic/spatial choreography, cross-scene shared
-objects, a multimodal critic or automatic creative approval. Added search/note
-nodes attached after the central builder do not receive the scene adapter.
-Keep brand colors/fonts and manually review actual video, sound and safe zones.
-All outputs remain experimental until independent visual acceptance.
+This is not the complete Carbon design system: full grid, responsive
+expressive typography, rounded orthogonal paths, shared-object transitions
+and an aesthetic critic are not claimed as implemented.
 
 Sources:
 - https://v10.carbondesignsystem.com/guidelines/motion/overview/
-- https://v10.carbondesignsystem.com/guidelines/motion/code/
 - https://v10.carbondesignsystem.com/guidelines/motion/choreography/
+- https://v10.carbondesignsystem.com/guidelines/spacing/overview/

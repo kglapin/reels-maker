@@ -123,7 +123,13 @@ class IsoCopyOverrideTests(unittest.TestCase):
 
 class TitleWrapTests(unittest.TestCase):
     def test_fitting_title_passes_through(self):
+        from reels_maker.iso.film import TITLE_MAX_WIDTH, asset
         title = "Cykl trwa zazwyczaj kilka minut."
+        # Font metrics differ across environments (resolve_font picks the
+        # first installed candidate): only assert passthrough when the
+        # resolved font actually fits the title inside the margins.
+        if asset(title, 52, (255, 255, 255), None).width > TITLE_MAX_WIDTH:
+            self.skipTest("title overflows margins with this font")
         self.assertEqual(wrap_title(title, None), [title])
 
     def test_overflowing_title_breaks_within_margins(self):

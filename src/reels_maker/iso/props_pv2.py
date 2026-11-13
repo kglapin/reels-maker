@@ -18,8 +18,8 @@ WOOD = ((196, 158, 108), (160, 124, 82), (210, 174, 124))
 
 
 def panel_single(q, cx, cy, P):
-    """Single PV module: 18 gapped navy cells on backsheet, alu frame,
-    rail racking, clamps, jbox with conduits into rails and panel."""
+    """Single PV module: 18 raised navy cells with a hairline gap grid,
+    alu frame, rail racking, clip clamps, jbox with conduits."""
     for px in (cx - 0.45, cx + 0.45):
         for ry in (cy - 0.14, cy + 0.14):
             q.boxg((px - 0.035, ry - 0.035, -0.02),
@@ -27,29 +27,40 @@ def panel_single(q, cx, cy, P):
     for ry in (cy - 0.14, cy + 0.14):
         q.boxg((cx - 0.62, ry - 0.045, -0.02), (cx + 0.62, ry + 0.045, 0.24),
               *ALU_D)
-    # Alu frame: front/back rails + side rails, cells nest inside.
+    # Panel slab: dark backsheet, top at 0.375.
+    q.boxg((cx - 0.55, cy - 0.265, 0.20), (cx + 0.55, cy + 0.265, 0.375),
+          (16, 24, 38), (12, 18, 30), (24, 34, 52))
+    # Alu frame rails rising around the raised cell field.
     for fy in (cy - 0.265, cy + 0.265):
-        q.boxg((cx - 0.55, fy - 0.025, 0.22), (cx + 0.55, fy + 0.025, 0.37),
+        q.boxg((cx - 0.55, fy - 0.025, 0.36), (cx + 0.55, fy + 0.025, 0.495),
               *ALU)
     for fx in (cx - 0.525, cx + 0.525):
-        q.boxg((fx - 0.025, cy - 0.265, 0.22), (fx + 0.025, cy + 0.265, 0.37),
+        q.boxg((fx - 0.025, cy - 0.265, 0.36), (fx + 0.025, cy + 0.265, 0.495),
               *ALU)
-    # Dark backsheet, then 6x3 gapped navy cells (real gaps, not lines).
-    q.boxg((cx - 0.49, cy - 0.23, 0.30), (cx + 0.49, cy + 0.23, 0.325),
-          (16, 24, 38), (12, 18, 30), (24, 34, 52))
+    # Hairline grid recessed in the cell gaps, just above the backsheet.
+    for i in range(1, 6):
+        gx = cx - 0.48 + i * 0.162 - 0.006
+        q.line([(gx, cy - 0.222, 0.382), (gx, cy + 0.222, 0.382)],
+               (150, 170, 200), 1)
+    for j in range(1, 3):
+        gy = cy - 0.222 + j * 0.152 - 0.006
+        q.line([(cx - 0.48, gy, 0.382), (cx + 0.48, gy, 0.382)],
+               (150, 170, 200), 1)
+    # 6x3 raised navy cells with real gaps (not painted lines).
     for i in range(6):
         x0 = cx - 0.48 + i * (0.15 + 0.012)
         for j in range(3):
             y0 = cy - 0.222 + j * (0.14 + 0.012)
-            q.boxg((x0, y0, 0.32), (x0 + 0.15, y0 + 0.14, 0.365),
+            q.boxg((x0, y0, 0.37), (x0 + 0.15, y0 + 0.14, 0.48),
                   (30, 54, 98), (22, 40, 74), (44, 72, 128))
-    # Three silver busbar strips on the row centers, 4 clamps on rails.
+    # Three silver busbar strips on the row centers.
     for by in (cy - 0.152, cy, cy + 0.152):
-        q.fp(cx - 0.47, cx + 0.47, by, 0.366, 0.373, (190, 200, 215))
+        q.fp(cx - 0.47, cx + 0.47, by, 0.481, 0.488, (190, 200, 215))
+    # Slim clip clamps straddling the side rails above the cell tops.
     for sx in (cx - 0.525, cx + 0.525):
         for sy in (cy - 0.10, cy + 0.10):
-            q.boxg((sx - 0.03, sy - 0.02, 0.36), (sx + 0.03, sy + 0.02, 0.40),
-                  *STEEL_D)
+            q.boxg((sx - 0.028, sy - 0.018, 0.455),
+                  (sx + 0.028, sy + 0.018, 0.50), *STEEL_D)
     # Jbox sunk into the frame back, bridge boxes into the frame,
     # long conduits rail -> backsheet (every end buried).
     q.boxg((cx - 0.12, cy + 0.28, 0.16), (cx + 0.12, cy + 0.365, 0.23), *GREY)

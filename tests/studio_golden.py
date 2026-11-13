@@ -33,6 +33,11 @@ from reels_maker.studio import load_studio
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "brands/asta-energy/projects/asta-motion-system-demo.json"
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "studio-golden"
+# Golden strips must not depend on which fonts happen to be installed on
+# the runner: pin the bundled DejaVu faces (Bitstream Vera license, see
+# fixtures/fonts/LICENSE-DejaVu.txt) for both weights.
+FONT_REGULAR = FIXTURES.parent / "fonts" / "DejaVuSans.ttf"
+FONT_BOLD = FIXTURES.parent / "fonts" / "DejaVuSans-Bold.ttf"
 
 # hook, spotlight photo, hero counter, energy-flow, closing CTA.
 SAMPLE_SCENES = (0, 1, 2, 8, 12)
@@ -40,6 +45,10 @@ SAMPLE_SCENES = (0, 1, 2, 8, 12)
 
 def build_demo():
     project = load_studio(DEMO, root=ROOT, profile="preview")
+    project.fonts.regular = str(FONT_REGULAR)
+    project.fonts.bold = str(FONT_BOLD)
+    project.fonts.family = None
+    project.fonts._cache.clear()
     timeline = project.timeline()
     built = project.build(timeline)
     renderer = SceneRenderer(project.width, project.height, project.tokens,

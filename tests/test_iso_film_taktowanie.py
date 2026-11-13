@@ -46,13 +46,19 @@ class TaktFilmTest(unittest.TestCase):
         self.assertEqual(im.size, (270, 480))
 
     def test_photo_scene_keeps_copy_layout(self):
-        photo = ("imports/photos/blog-taktowanie/"
-                 "taktowanie-pompy-ciepla-hero.jpg")
-        im, boxes = frame_at(2.0, dict(DEFAULT_PALETTE), None, None, None,
-                             snow=0, film="taktowanie",
-                             copy_override={"title": "FOTO TEST",
-                                            "body": ["linia"]},
-                             scene_time=2.0, photo_path=photo)
+        # brands/*/imports/ is gitignored quarantine: generate a stand-in
+        # photo so the test does not depend on untracked client media.
+        import tempfile
+        from pathlib import Path
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as td:
+            photo = str(Path(td) / "probe.jpg")
+            Image.new("RGB", (64, 64), (200, 120, 40)).save(photo)
+            im, boxes = frame_at(2.0, dict(DEFAULT_PALETTE), None, None, None,
+                                 snow=0, film="taktowanie",
+                                 copy_override={"title": "FOTO TEST",
+                                                "body": ["linia"]},
+                                 scene_time=2.0, photo_path=photo)
         texts = [b[0] for b in boxes]
         self.assertIn("FOTO TEST", texts)
         plain, _ = frame_at(2.0, dict(DEFAULT_PALETTE), None, None, None,

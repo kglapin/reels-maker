@@ -102,3 +102,6 @@
 
 ## v5m (2026-11-13)
 - Word cascade: nowy meta `entrance_duration_scale` (0.25–4.0) w apply_entrance; fragmenty wyrazów = 1.7 (fade ~0.64s zamiast ~0.38s). cues headline-0..4 co 0.32s — każdy wyraz to wyraźny beat, ostatni kończy ~2.2s przed rozdarciem 3.2s.
+
+## v5n (2026-11-13)
+- Word cascade final: `entrance_distance: 0.0` dla fragmentów wyrazów — fade Czysto w miejscu. Poprzednie podejścia (26px→10px rise) rozjeżdżały linię w pionie w trakcie staggeru i wyglądało to na "skok do wyrównania". Teraz wyrazy pojawiają się sekwencyjnie tylko przez opacity, baseline zawsze wyrównany.

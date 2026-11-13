@@ -1,0 +1,7 @@
+DejaVuSans.ttf and DejaVuSans-Bold.ttf are distributed under the
+DejaVu Fonts license (Bitstream Vera Fonts license with additional
+permissions). They are bundled here so the studio golden-strip fixtures
+render with identical glyphs on every machine and CI runner.
+
+License text: https://dejavu-fonts.github.io/License.html
+Source: https://github.com/dejavu-fonts/dejavu-fonts

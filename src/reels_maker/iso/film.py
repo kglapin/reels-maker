@@ -1199,6 +1199,8 @@ def _photo_bg(photo_path, P):
     the shared copy layout keeps its contrast. None when unavailable."""
     from PIL import Image as _I
     from PIL import ImageOps as _Ops
+    if isinstance(photo_path, (list, tuple)):
+        photo_path = photo_path[0] if photo_path else None
     try:
         im = _I.open(photo_path).convert("RGB")
     except Exception:
@@ -1223,9 +1225,6 @@ def _full_frame(u, P, font_path, logo, logo_path, snow=1.0,
         ue = min(max(u, 0.0), 100 - 1e-3)
         im = Image.new("RGB", (W, H), P["bg"])
         boxes: list = []
-        if isinstance(photo_path, (list, tuple)) and photo_path:
-            # Montage: fast photo cycle (1.5 s each), copy stays put.
-            photo_path = photo_path[int(ue / 1.5) % len(photo_path)]
         photo = _photo_bg(photo_path, P) if photo_path else None
         if photo is None:
             win, _q = _prop_window(prop, ue, P, camera, stage)
@@ -1472,6 +1471,13 @@ def frame_at(tv, P, font_path, logo, logo_path=None, snow=1.0,
             lay = _typed_layout(title, key, tsize, font_path, _y0, _by0)
             boxes.append((title, (128, round(_y0), 128 + TITLE_MAX_WIDTH,
                                   round(_y0) + shift + tsize)))
+            _vj = 0
+            for _txt, _side in key:
+                for _vt in wrap_body_lines([_txt], _rf):
+                    boxes.append((_vt, (128, round(_by0 + _bstep * _vj),
+                                        128 + TITLE_MAX_WIDTH,
+                                        round(_by0 + _bstep * _vj) + _bsize)))
+                    _vj += 1
             _paste_typed_layer(im, lay, t, a)
         else:
             for k, line in enumerate(lines):

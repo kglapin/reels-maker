@@ -347,6 +347,13 @@ class Canvas:
                                + cb[None, None, :] * t,
                                (y1 - y0, x1 - x0, 3)).astype(np.uint8)
         self.im.paste(Image.fromarray(grad, "RGB"), (x0, y0), mask)
+        # aggdraw's buffer is a snapshot taken at Draw() time: the next
+        # flush() would composite it back over this direct paste and
+        # erase the gradient. Drop the handle so the next agg op
+        # re-snapshots the current raster (pending ops already flushed
+        # by the self.im access above).
+        self._agg = None
+        self._agg_dirty = False
 
     def boxg(self, a, b, c=(200, 205, 195), *rest, dl=0.14):
         """Gradient box (house look M1+M2): faces shade vertically from
@@ -518,6 +525,10 @@ def decal(q, s, O, U, V, u, v, height, col, font_path, maxw=2.6):
                      (inv[0, 0], inv[0, 1], b[0], inv[1, 0], inv[1, 1], b[1]),
                      Image.Resampling.BICUBIC)
     q.im.paste(zz, tuple(lo), zz)
+    # Same aggdraw snapshot rule as grad_poly: a stale buffer would
+    # erase this decal on the next flush.
+    q._agg = None
+    q._agg_dirty = False
 
 
 @functools.lru_cache(maxsize=1)

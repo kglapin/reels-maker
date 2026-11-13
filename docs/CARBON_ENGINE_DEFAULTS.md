@@ -1,85 +1,92 @@
-# Carbon in the ordinary Studio engine
+# Carbon engine policies and advanced choreography
 
-## Default behavior
+## Existing defaults
 
-StudioProject construction now normalizes scene copies before the ordinary
-QA/build/render/cache path. Scenes without a local policy use productive
-Carbon motion. `studio-render` no longer needs the separate Carbon compiler.
-An explicit scene profile wins; false/null disables that scene. A project can
-set `export.carbon_motion` to false/null, true, or a validated profile object.
-Changing export options after construction does not reconfigure the snapshot:
-reload/recreate the project for a different policy.
+Ordinary StudioProject rendering inherits productive Carbon motion. Scene
+`carbon_motion` overrides the default; false/null disables it. Project setting
+`export.carbon_motion` accepts true, false/null or the existing profile object.
+Explicit scene profiles win. Camera Canvas and non-Studio FFmpeg/Cairo paths
+are not implicitly migrated. Recreate projects from source manifests after
+changing policies; construction resolves a scene snapshot.
 
-```json
-{"export":{"carbon_motion":true}}
-```
+Optional `export.carbon_spacing: true` uses the 13-token Carbon spacing scale,
+mapping xs/sm/md/lg/xl/xxl to 8/16/32/48/64/96 design units, then canvas scaling.
+A role-token object overrides that mapping. This intentionally replaces those
+spacing roles, not brand fonts/colors/safe areas. Optional `carbon_sequence`
+adds frame-aligned text-role cues only when no authored cues already exist.
+The .12s default gap and .5s span are video adaptations, not IBM specifications.
 
-For an expressive accent use a Studio scene's existing field:
+## New: bounded accent director
 
-```json
-{"carbon_motion":{"mode":"expressive"}}
-```
+Set `export.carbon_director: true`, optionally `carbon_accent_limit: 1` (0..3).
+Known proof/reveal/statistics/hook/opening intents are ranked deterministically.
+The remaining expressive budget accounts for already expressive scenes.
+Disabled profiles and `carbon_lock: true` are respected. Opting in authorizes
+upgrading unlocked productive scenes. This is an authored rule set, not an
+LLM, aesthetic critic or an official IBM algorithm. Resolved modes are stored
+in project.scenes so normal cache keys reflect the decision.
 
-Camera Canvas is not implicitly migrated. Classic FFmpeg/Cairo paths that do
-not instantiate StudioProject remain unchanged. Existing explicit scenes stay
-author-controlled. Productive is the default, not an automatic classifier of
-creative intent; expressive accents remain deliberate choices.
-
-Only the previously implemented adapter's eligible appearance tracks change.
-No new movement is added to static nodes; complex/data tracks remain intact.
-Colors, font files, copy, data, durations, audio, logos and safe areas are not
-replaced. The approved standalone demo is not proof of full Studio parity.
-
-## Additional Carbon element: spacing
-
-The complete 13-token v10 spacing scale is available. Optional
-`export.carbon_spacing: true` maps the engine roles xs/sm/md/lg/xl/xxl to
-8/16/32/48/64/96 design units. Existing canvas scaling then applies normally.
-This is an authored video mapping, not a claim that IBM specifies video pixels.
+## New: explicit role choreography in Studio manifests
 
 ```json
-{"export":{"carbon_spacing":{"md":"spacing-06","xl":"spacing-10"}}}
+{"carbon_choreography":{"attention_limit":3,"roles":{
+  "headline":{"relation":"reveal","segments":{"opacity":[
+    {"index":1,"phase":"entrance"},{"index":3,"phase":"exit"}]}},
+  "visual":{"path":{"to":[0.2,0.1],"at":1.0,"duration":0.8,"axis":"x"}}
+}}}
 ```
 
-Unspecified roles inherit that mapping. Enabling it intentionally replaces the
-six spacing roles, including prior per-style/per-project role values; keep it
-off to retain bespoke spacing. Palette, typography and safe zones are untouched.
-Source: https://v10.carbondesignsystem.com/guidelines/spacing/overview/
+Segment indices identify destination keys in an existing track. Only selected
+appearance segments change; values, times and intervening holds remain intact.
+Data/progress tracks are excluded. Inspect native tracks before choosing indices.
 
-## Additional Carbon element: sequence and stagger
+A role can instead use `adaptive: {"properties":["dx","dy"],"minimum_hold":0.8}`.
+Its two-key tracks must share a time interval. Duration grows with normalized
+distance and log scale change, is frame-quantized and refuses insufficient
+reading room rather than compressing text or shifting narration. The formula
+and .18.. .9s bounds are original video policy, not Carbon source constants.
 
-Optional `export.carbon_sequence: true` adds frame-aligned text-role cues only
-when the scene has no existing cues. A scene may override/disable this with
-`carbon_sequence`. Existing narration/authored cue plans are never overwritten.
-Automatic roles are kicker, headline (or amount), body, if corresponding copy
-exists. Custom roles can be supplied explicitly.
+Spatial paths offset horizontal/vertical timing (at least three frames), giving
+a rounded-corner-like trajectory, not an exact circular arc. `to` is a pair of
+canvas-fraction offsets from base geometry, not absolute screen coordinates.
+Root nodes only; active authored translations cannot be overwritten. Adaptive,
+segment and path ownership conflicts fail explicitly. Relation labels
+replace/reveal/detail/result guide curve choice, not automatic layer creation.
 
-```json
-{"export":{"carbon_sequence":{"gap":0.12,"span":0.5}}}
-```
+## New: limited shared-object bridges
 
-The gap is adapted down to fit the span at actual FPS. Invalid settings or an
-unrenderable role count fail, rather than create coincident starts. The .12s
-gap is our video adaptation, NOT Carbon's table-row 20ms example. Cue creation
-is not speech alignment or proof of sufficient reading hold; run real QA.
-Source: https://v10.carbondesignsystem.com/guidelines/motion/choreography/
+On adjacent scenes bind the same stable ID: `carbon_shared: {"photo":"visual"}`.
+Optional outgoing `carbon_bridge_duration` defaults to .7s. Currently supported:
+leaf root image, unstroked rect, or circle, same content/style and aspect ratio.
+No groups, text morphs, videos, clipping, rotated/nonuniform objects, or other
+scene transitions. The object must fit the rectangular content safe area.
 
-## Cache, tests and acceptance
+The bridge moves/scales the source into the target's base geometry by the LAST
+ENCODED frame. The target's appearance entrance/exit is intentionally removed:
+a shared object stays visible, rather than fading out and reappearing. Bindings
+therefore own that object's lifetime. Conflicting authored transforms or role
+choreography fail. This is geometry continuity, not verified pixel identity,
+occlusion, full-background continuity, or arbitrary-object morphing. Platform
+UI polygons and collisions still require normal QA and actual MP4 inspection.
 
-Effective scene policies are stored in project.scenes and spacing in project.tokens
-before existing cache keys are calculated. The existing engine fingerprint
-includes design modules and studio_project.py, so changed code also invalidates
-old segments. No cache deletion or fixture recapture is performed here.
+The source cache key includes a hash of the next scene when shared IDs match;
+target changes therefore invalidate its predecessor too. Graph edits occur on
+clones; errors do not half-modify original built nodes. Settled caches are
+cleared. The ordinary Studio build path invokes this stage after construction.
 
-The test module separates ten dependency-free policy tests from three native
-Studio integration tests. Run both, full regression, and actual MP4 checks.
-Default motion intentionally changes pixels: historical golden fixtures may
-need independently reviewed, versioned updates. Do not weaken or recapture
-fixtures automatically just to make tests pass. Disable the default explicitly
-when a project must reproduce legacy motion.
+Concurrency diagnostics report simultaneous animated roles after all edits.
+They are warnings for review, not measurements of perceptual attention/taste.
 
-This remains experimental pending native rendering and visual acceptance.
-It does not install IBM fonts, copy IBM palettes, implement the full 2x Grid,
-change all typography, add rounded motion paths or provide an aesthetic critic.
-Carbon expressive typography is a useful next reference, but its UI sizes and
-fonts are not imposed on branded social video.
+## Acceptance and limits
+
+Advanced settings are opt-in; no advanced config preserves the existing graph.
+These fields belong to Studio manifests, not unchanged Creative Spec v1 schema.
+The test module separates ten dependency-free policy tests from five native
+graph/Studio tests. Run both, full regressions, golden comparisons and real
+MP4/mobile/audio review. Do not auto-recapture fixtures or claim visual approval
+from a numerical test. Full-engine native rendering is still required.
+
+Sources for principles, not for our duration/selection algorithms:
+- https://v10.carbondesignsystem.com/guidelines/motion/overview/
+- https://v10.carbondesignsystem.com/guidelines/motion/choreography/
+- https://v10.carbondesignsystem.com/guidelines/spacing/overview/

@@ -36,6 +36,8 @@ class StudioProject:
     def __post_init__(self) -> None:
         from .design.carbon_defaults import configure_project
         configure_project(self)
+        from .motionkit.carbon_choreography import prepare_project
+        prepare_project(self)
 
     @property
     def duration(self) -> float:
@@ -101,7 +103,8 @@ class StudioProject:
                 float(scene.get("transition_seconds", .30))
                 if transition_type not in (None, "cut") else 0.0)
             built.append(item)
-        return built
+        from .motionkit.carbon_choreography import apply_project
+        return apply_project(self, built)
 
     def to_dict(self) -> dict:
         return {

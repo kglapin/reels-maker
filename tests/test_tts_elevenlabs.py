@@ -189,6 +189,8 @@ class TtsElevenLabsTests(unittest.TestCase):
                     "--root", temp, "--text", "Cześć", "--json"]
             with patch("reels_maker.tts_elevenlabs.urllib.request.urlopen",
                        side_effect=fake_urlopen), \
+                    patch.dict("os.environ",
+                               {"ELEVENLABS_API_KEY": "test-key"}), \
                     patch("sys.argv", args), \
                     contextlib.redirect_stdout(stdout):
                 code = main()

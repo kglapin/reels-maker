@@ -109,12 +109,12 @@ order is far → near (smaller `x+y` first, larger last).
 `REELS_ISO_DEPTH=1` enables a per-pixel depth buffer: opaque `poly`/`dot`/`line`
 calls resolve visibility from world depth, so **call order stops mattering
 for opaque geometry** — parts behind walls cannot paint on top, period.
-Translucent overlays (alpha < ~250) still composite in call order and never
-claim depth — shadows, glass, sheen and light bands keep painter semantics
-by design.
+`grad_poly`/`boxg` faces are depth-tested too (gradient composites only
+where depth wins, then claims depth). Translucent overlays (alpha < ~250)
+still composite in call order and never claim depth — shadows, glass,
+sheen and light bands keep painter semantics by design.
 
 Still painter-order regardless of mode:
-- `grad_poly` / `boxg` side faces — draw in far→near order.
 - `decal` — always composites on top; use only for intentional overlays
   (labels, gauges) and keep it small.
 

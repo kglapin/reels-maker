@@ -16,6 +16,103 @@ COPPER_L, COPPER_D, COPPER_T = (196, 138, 88), (150, 100, 62), (210, 156, 104)
 TERRA = ((186, 116, 84), (150, 90, 64), (202, 134, 100))
 WOOD = ((196, 158, 108), (160, 124, 82), (210, 174, 124))
 
+ROOF_EDGE_F, ROOF_EDGE_S, ROOF_EDGE_T = (112, 119, 127), (88, 96, 106), (139, 146, 153)
+ROOF_F, ROOF_S, ROOF_T = (145, 152, 160), (119, 128, 138), (166, 173, 180)
+BALLAST_F, BALLAST_S, BALLAST_T = (178, 171, 157), (147, 141, 130), (199, 192, 178)
+SUPPORT_F, SUPPORT_S, SUPPORT_T = (129, 144, 158), (96, 111, 127), (160, 175, 188)
+FRAME_F, FRAME_S, FRAME_T = (186, 198, 209), (143, 159, 175), (215, 224, 231)
+PV_F, PV_S, PV_T = (72, 100, 132), (62, 81, 109), (80, 115, 151)
+CELL_LINE = (130, 157, 183)
+
+
+def _tilted_panel(q, x0, x1, y0, y1, zlo, zhi, cs, cf, ct):
+    """Slab tilted around X: bottom zlo(y), top zhi(y), both linear in y.
+    zlo/zhi are (value at y0, value at y1). Draws +X side, +Y edge, top."""
+    l0, l1 = zlo
+    h0, h1 = zhi
+
+    def lo(y):
+        return l0 + (l1 - l0) * (y - y0) / (y1 - y0)
+
+    def hi(y):
+        return h0 + (h1 - h0) * (y - y0) / (y1 - y0)
+
+    q.poly([(x1, y0, lo(y0)), (x1, y1, lo(y1)),
+            (x1, y1, hi(y1)), (x1, y0, hi(y0))], cs)
+    q.poly([(x0, y1, lo(y1)), (x1, y1, lo(y1)),
+            (x1, y1, hi(y1)), (x0, y1, hi(y1))], cf)
+    q.poly([(x0, y0, hi(y0)), (x1, y0, hi(y0)),
+            (x1, y1, hi(y1)), (x0, y1, hi(y1))], ct)
+
+
+def _pv_zbot(y, y0, y1):
+    return 0.205 + 0.100 * (y - y0) / (y1 - y0)
+
+
+def _support_wedge(q, fx0, fx1, ys0, ys1, zt0, zt1):
+    """Solid wedge over one ballast foot: flat bottom z=0.125, sloped top
+    from zt0 (at ys0) to zt1 (at ys1), width 0.035 centred on the foot."""
+    xc = (fx0 + fx1) / 2
+    xs0, xs1 = xc - 0.0175, xc + 0.0175
+    zb = 0.125
+    q.poly([(xs1, ys0, zb), (xs1, ys1, zb),
+            (xs1, ys1, zt1), (xs1, ys0, zt0)], SUPPORT_S)
+    q.poly([(xs0, ys1, zb), (xs1, ys1, zb),
+            (xs1, ys1, zt1), (xs0, ys1, zt1)], SUPPORT_F)
+    q.poly([(xs0, ys0, zt0), (xs1, ys0, zt0),
+            (xs1, ys1, zt1), (xs0, ys1, zt1)], SUPPORT_T)
+
+
+def flat_roof_pv_array(q, cx, cy, P):
+    """Cztery pochylone moduły fotowoltaiczne na konstrukcjach balastowych
+    na płaskim dachu."""
+    q.box((cx - 0.60, cy - 0.525, 0.0), (cx + 0.60, cy + 0.525, 0.065),
+          ROOF_EDGE_F, ROOF_EDGE_S, ROOF_EDGE_T)
+    q.box((cx - 0.595, cy - 0.520, 0.055), (cx + 0.595, cy + 0.520, 0.095),
+          ROOF_F, ROOF_S, ROOF_T)
+
+    cols = [(-0.49, -0.03), (0.03, 0.49)]
+    rows = [(-0.40, -0.06), (0.06, 0.40)]
+    modules = []
+    for (x0, x1) in cols:
+        for (y0, y1) in rows:
+            modules.append((x0, x1, y0, y1))
+    modules.sort(key=lambda m: (m[0] + m[1]) / 2 + (m[2] + m[3]) / 2)
+
+    for x0, x1, y0, y1 in modules:
+        X0, X1 = cx + x0, cx + x1
+        Y0, Y1 = cy + y0, cy + y1
+        foot_x = [(x0 + 0.045, x0 + 0.135), (x1 - 0.135, x1 - 0.045)]
+        for fx0, fx1 in foot_x:
+            q.box((cx + fx0, Y0 + 0.015, 0.085),
+                  (cx + fx1, Y1 - 0.015, 0.135),
+                  BALLAST_F, BALLAST_S, BALLAST_T)
+        ys0, ys1 = Y0 + 0.02, Y1 - 0.02
+        for fx0, fx1 in foot_x:
+            zt0 = _pv_zbot(ys0, Y0, Y1) + 0.010
+            zt1 = _pv_zbot(ys1, Y0, Y1) + 0.010
+            _support_wedge(q, cx + fx0, cx + fx1, ys0, ys1, zt0, zt1)
+        _tilted_panel(q, X0, X1, Y0, Y1,
+                      (0.205, 0.305), (0.230, 0.330),
+                      FRAME_S, FRAME_F, FRAME_T)
+        xa, xb = X0 + 0.016, X1 - 0.016
+        ya, yb = Y0 + 0.016, Y1 - 0.016
+        zlo = (0.205 + 0.019, 0.305 + 0.019)
+        zhi = (0.205 + 0.031, 0.305 + 0.031)
+
+        def pv_top(y):
+            return _pv_zbot(y, Y0, Y1) + 0.031
+
+        _tilted_panel(q, xa, xb, ya, yb, zlo, zhi, PV_S, PV_F, PV_T)
+        eps = 0.004
+        xmid = (xa + xb) / 2
+        q.line([(xmid, ya, pv_top(ya) + eps), (xmid, yb, pv_top(yb) + eps)],
+               CELL_LINE, 0.9)
+        for k in (1, 2, 3):
+            yt = ya + (yb - ya) * k / 4
+            z = pv_top(yt) + eps
+            q.line([(xa, yt, z), (xb, yt, z)], CELL_LINE, 0.9)
+
 
 def panel_single(q, cx, cy, P):
     """Single PV module: 18 raised navy cells with a hairline gap grid,
@@ -358,6 +455,10 @@ def tile_plain(q, cx, cy, P):
 
 
 PROPS = {
+    "flat-roof-pv-array": {"fn": flat_roof_pv_array,
+                           "focus": (0.0, 0.15, 0.16), "k": 420,
+                           "plinth": (0.0, 0.15, 0.66, 0.58),
+                           "brief": "Cztery pochylone moduły fotowoltaiczne na konstrukcjach balastowych na płaskim dachu"},
     "panel-single": {"fn": panel_single, "focus": (0.0, 0.15, 0.35), "k": 480,
                      "plinth": (0.0, 0.15, 0.72, 0.44),
                      "brief": "single PV module close-up with frame cells and backsheet"},

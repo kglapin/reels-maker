@@ -88,6 +88,33 @@ def cover(image: Image.Image, width: int, height: int,
     return scaled.crop((x, y, x + width, y + height))
 
 
+def contain(image: Image.Image, width: int, height: int,
+            camera: Camera | None = None) -> Image.Image:
+    """Fit the whole image inside the target, letterboxing with transparency.
+
+    Unlike :func:`cover` nothing is cropped; the returned RGBA canvas is
+    exactly ``width`` x ``height`` so callers can alpha-composite it onto a
+    card or panel without opaque bars.
+    """
+    if width < 1 or height < 1:
+        raise ValueError("Target size must be positive")
+    camera = camera or Camera()
+    if camera.zoom <= 0:
+        raise ValueError("Camera zoom must be positive")
+    scale = min(width / image.width, height / image.height) * camera.zoom
+    scaled = image.convert("RGBA").resize(
+        (max(1, round(image.width * scale)),
+         max(1, round(image.height * scale))),
+        Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    pan_x = float(camera.x) * max(0, (width - scaled.width) / 2)
+    pan_y = float(camera.y) * max(0, (height - scaled.height) / 2)
+    x = int(round((width - scaled.width) / 2 + pan_x))
+    y = int(round((height - scaled.height) / 2 + pan_y))
+    canvas.alpha_composite(scaled, (x, y))
+    return canvas
+
+
 def gradient_image(width: int, height: int, start: tuple[int, int, int],
                    end: tuple[int, int, int], angle: float = 90) -> Image.Image:
     """Linear two-stop gradient. Cache this at scene level, never per frame."""

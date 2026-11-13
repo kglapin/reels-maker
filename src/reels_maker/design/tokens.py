@@ -218,7 +218,8 @@ def resolve_tokens(style: str, brand: Mapping | None = None,
     if not isinstance(palette_values, Mapping):
         raise ValueError("Brand palette must be an object of hex colours")
     palette = make_palette({**system.palette, **palette_values},
-                           background=system.palette.get("background"))
+                           background=palette_values.get("background",
+                           system.palette.get("background")))
     overrides = dict(overrides or {})
     typography = replace(system.typography,
                          **{key: value for key, value in overrides.items()

@@ -128,6 +128,13 @@ def _collisions(elements: list[dict], allowed: set[frozenset[str]],
             if (frozenset((a["role"], b["role"])) in allowed
                     or frozenset((a_path, b_path)) in allowed):
                 continue
+            split_a = a.get("meta", {}).get("split_from")
+            split_b = b.get("meta", {}).get("split_from")
+            if split_a is not None and split_a == split_b:
+                # Fragments of one typeset block animate as a staggered
+                # sequence; transient mid-entrance contact is choreography,
+                # not a layout collision.
+                continue
             if a["class"] == "decor" or b["class"] == "decor":
                 continue
             if not _overlaps(a["bounds"], b["bounds"], -1.5):
@@ -237,7 +244,7 @@ def _vertical_reels_content_zone(built) -> list[Issue]:
 
         asset_role = str(node.meta.get("asset_role", ""))
         is_asset_illustration = (
-            node.kind in ("image", "video", "icon")
+            node.kind in ("image", "video", "icon", "iso-world")
             and asset_role not in ("background", "marquee-photo")
             and not node.meta.get("background")
             and not any(token in node.role.lower()

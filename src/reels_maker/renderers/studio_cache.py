@@ -16,8 +16,16 @@ from ..studio import StudioProject
 STUDIO_CACHE_SCHEMA = 4
 
 
+# Only frame-producing code belongs in the fingerprint: touching the CLI,
+# QA or docs tooling must not invalidate every cached scene segment.
+_FINGERPRINT_DIRS = ("components", "core", "creative", "design", "iso",
+                     "layout", "motionkit", "renderers", "textkit")
+_FINGERPRINT_FILES = ("ffmpeg.py", "spec.py", "studio.py",
+                      "studio_project.py", "transitions.py")
+
+
 def _engine_fingerprint() -> str:
-    """Fingerprint the installed engine sources for cache invalidation.
+    """Fingerprint the frame-producing engine sources for cache keys.
 
     Scene cache keys hash the manifest and assets but not renderer code, so a
     visual/logic change (new chart grammar, fixed easing) would otherwise keep
@@ -25,8 +33,11 @@ def _engine_fingerprint() -> str:
     stats once per render keeps keys honest at negligible cost.
     """
     package_root = Path(__file__).resolve().parents[1]
+    candidates = [package_root / name for name in _FINGERPRINT_FILES]
+    for dirname in _FINGERPRINT_DIRS:
+        candidates.extend(sorted((package_root / dirname).rglob("*.py")))
     entries = []
-    for path in sorted(package_root.rglob("*.py")):
+    for path in sorted(set(candidates)):
         try:
             stat = path.stat()
         except OSError:
@@ -36,9 +47,50 @@ def _engine_fingerprint() -> str:
     return hashlib.sha256(repr(entries).encode("utf-8")).hexdigest()
 
 
+def trim_cache(cache_root: Path, max_bytes: int, *,
+               keep: set[Path] | None = None,
+               keep_after: float | None = None) -> dict:
+    """Evict oldest cache objects until the tree fits ``max_bytes``.
+
+    Kept paths and anything modified at/after ``keep_after`` (the current
+    render's outputs) are never evicted. Returns eviction accounting.
+    """
+    if max_bytes <= 0 or not cache_root.is_dir():
+        return {"evicted": 0, "bytes_freed": 0, "bytes_remaining": 0}
+    keep_resolved = {Path(p).resolve() for p in (keep or set())}
+    files = []
+    total = 0
+    for path in cache_root.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        files.append((stat.st_mtime, stat.st_size, path))
+        total += stat.st_size
+    evicted = 0
+    freed = 0
+    for mtime, size, path in sorted(files):
+        if total - freed <= max_bytes:
+            break
+        if path.resolve() in keep_resolved:
+            continue
+        if keep_after is not None and mtime >= keep_after:
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        evicted += 1
+        freed += size
+    return {"evicted": evicted, "bytes_freed": freed,
+            "bytes_remaining": total - freed}
+
+
 _ASSET_PATH_FIELDS = frozenset({
-    "asset", "file", "image", "logo", "mesh_path", "path", "photo", "video",
-    "photo_source", "photos", "video_source",
+    "asset", "clock_face_asset", "file", "image", "logo", "mesh_path",
+    "path", "photo", "video", "photo_source", "photos", "video_source",
 })
 
 

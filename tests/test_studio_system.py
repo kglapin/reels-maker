@@ -24,7 +24,8 @@ from reels_maker.design.tokens import resolve_tokens
 from reels_maker.ffmpeg import RenderError
 from reels_maker.qa.report import _audio_report, audit
 from reels_maker.renderers.scene import RenderOptions, SceneRenderer
-from reels_maker.renderers.studio import probe_output, render_studio
+from reels_maker.renderers.studio import (
+    _plan_chunks, probe_output, render_studio, resolve_scene_supersample)
 from reels_maker.spec import Project
 from reels_maker.studio import StudioError, load_kinetic_studio, load_studio
 from reels_maker.textkit.typesetter import FontBook, Run
@@ -738,6 +739,103 @@ class FlashCheckTests(unittest.TestCase):
             still_result = _flash_check(still)
             self.assertEqual(still_result["status"], "pass")
             self.assertEqual(still_result["blink_frames"], 0)
+
+
+class StudioFixedCostCacheTests(unittest.TestCase):
+    def test_flash_check_memoizes_unchanged_file(self):
+        from unittest.mock import patch
+        from reels_maker.renderers import studio_output
+        path = Path(__file__).resolve()
+        studio_output._FLASH_MEMO.pop(
+            (str(path), path.stat().st_size, path.stat().st_mtime_ns), None)
+        with patch.object(studio_output, "_luma_series",
+                          return_value=[0.1] * 10) as luma:
+            first = studio_output._flash_check(path)
+            second = studio_output._flash_check(path)
+        self.assertEqual(first, second)
+        self.assertEqual(luma.call_count, 1)
+
+    def test_verify_can_skip_flash_on_warm_render(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from reels_maker.renderers import studio_output
+        project = SimpleNamespace(fps=30, width=1080, height=1920,
+                                  audio={"music": {"file": "x.mp3"}})
+        timeline = SimpleNamespace(total_frames=90, duration=3.0)
+        metadata = {"fps": "30", "width": 1080, "height": 1920,
+                    "codec": "h264", "pix_fmt": "yuv420p", "frames": 90,
+                    "video_duration": 3.0, "audio_streams": 1,
+                    "audio_codec": "aac"}
+        with patch.object(studio_output, "probe_output",
+                          return_value=dict(metadata)), \
+             patch.object(studio_output, "_flash_check") as flash:
+            result = studio_output._verify_studio_output(
+                Path("dummy.mp4"), project, timeline, skip_flash=True)
+        self.assertEqual(result["flash_check"]["status"], "skipped_warm")
+        flash.assert_not_called()
+
+    def test_audio_cache_key_stable_and_sensitive(self):
+        from types import SimpleNamespace
+        from reels_maker.renderers.studio import _audio_cache_key
+        project = SimpleNamespace(
+            root=ROOT, brand="asta-energy",
+            path=ROOT / "brands/asta-energy/projects/asta-vamos-beat.json")
+        music = {"file": "media/audio/mewwwwwww-vamos-porra-591078.mp3",
+                 "start": 0, "volume": 0.65, "fade_out": 1.2}
+        key1 = _audio_cache_key(project, voice=None, music=dict(music),
+                                sfx_tracks=[], duration=110.0)
+        key2 = _audio_cache_key(project, voice=None, music=dict(music),
+                                sfx_tracks=[], duration=110.0)
+        self.assertEqual(key1, key2)
+        changed = dict(music, volume=0.7)
+        self.assertNotEqual(
+            key1, _audio_cache_key(project, voice=None, music=changed,
+                                   sfx_tracks=[], duration=110.0))
+        self.assertNotEqual(
+            key1, _audio_cache_key(project, voice=None, music=dict(music),
+                                   sfx_tracks=[], duration=100.0))
+
+
+class ChunkPlanTests(unittest.TestCase):
+    def test_chunks_cover_scene_without_gaps(self):
+        chunks = _plan_chunks(330, 60, has_transition=False)
+        self.assertEqual(chunks[0][0], 0)
+        self.assertEqual(sum(count for _s, count in chunks), 330)
+        for (start, count), (next_start, _n) in zip(chunks, chunks[1:]):
+            self.assertEqual(start + count, next_start)
+
+    def test_transition_scene_stays_whole(self):
+        self.assertEqual(_plan_chunks(330, 60, has_transition=True),
+                         [(0, 330)])
+
+    def test_short_scene_is_single_chunk(self):
+        self.assertEqual(_plan_chunks(45, 60, has_transition=False),
+                         [(0, 45)])
+
+    def test_invalid_chunk_size_rejected(self):
+        with self.assertRaises(RenderError):
+            _plan_chunks(90, 0, has_transition=False)
+
+
+class SceneSupersampleTests(unittest.TestCase):
+    def test_auto_renders_iso_explainer_at_native_resolution(self):
+        scene = {"id": "s1", "composition": "iso-explainer"}
+        self.assertEqual(resolve_scene_supersample(scene, 2), 1)
+
+    def test_auto_falls_back_to_project_default(self):
+        scene = {"id": "s1", "composition": "spotlight"}
+        self.assertEqual(resolve_scene_supersample(scene, 2), 2)
+        self.assertEqual(resolve_scene_supersample({}, 1), 1)
+
+    def test_explicit_pin_is_respected(self):
+        scene = {"id": "s1", "composition": "iso-explainer",
+                 "supersample": 2}
+        self.assertEqual(resolve_scene_supersample(scene, 1), 2)
+
+    def test_invalid_pin_is_rejected(self):
+        for bad in (0, 5, "2", 1.5, True, None):
+            with self.assertRaises(RenderError, msg=f"supersample={bad!r}"):
+                resolve_scene_supersample({"id": "s1", "supersample": bad}, 2)
 
 
 if __name__ == "__main__":

@@ -58,7 +58,9 @@ def build_amount(ctx: SceneContext, scene: dict) -> BuiltScene:
     headline_copy = format_value(value, fmt)
     width = ctx.layout.safe.w
     kicker_style = resolve_text_style(ctx.tokens, "kicker", theme["accent"], align="center")
-    hero_style = resolve_text_style(ctx.tokens, "hero", theme["accent"], align="center")
+    amount_role = str(scene.get("amount_size_role") or "hero")
+    hero_style = resolve_text_style(ctx.tokens, amount_role, theme["accent"],
+                                    align="center")
     body_style = resolve_text_style(ctx.tokens, "subtitle", theme["muted"],
                                     align="center", line_height=1.3)
     measurements = {
@@ -72,9 +74,9 @@ def build_amount(ctx: SceneContext, scene: dict) -> BuiltScene:
                                    layout.region("kicker"), ctx.fonts,
                                    align="center", valign="bottom")
     elements["amount"] = number_node("amount", value, layout.region("headline"),
-                                     ctx.tokens, fmt=fmt, size_role="hero",
+                                     ctx.tokens, fmt=fmt, size_role=amount_role,
                                      color=theme["accent"], align="center",
-                                     meta={"font_size": "hero"})
+                                     meta={"font_size": amount_role})
     elements["body"] = text_node("body", subtitle, body_style,
                                  layout.region("body"), ctx.fonts,
                                  align="center", valign="center")
@@ -607,36 +609,54 @@ def build_europe(ctx: SceneContext, scene: dict) -> BuiltScene:
 def build_stats(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     headline = _headline(scene) or "LICZBY, KTÓRE MAJĄ ZNACZENIE"
-    stats = scene.get("stats") or [
-        {"label": "WSKAŹNIK A", "value": 42, "suffix": "%"},
-        {"label": "WSKAŹNIK B", "value": 18, "suffix": "%"},
-        {"label": "WSKAŹNIK C", "value": 7, "suffix": ""},
-        {"label": "WSKAŹNIK D", "value": 2027, "suffix": ""},
-    ]
-    if not isinstance(stats, list) or len(stats) != 4:
-        raise ValueError("stat-grid requires exactly four stats")
+    stats = scene.get("stats")
+    if stats is None:
+        stats = [
+            {"label": "WSKAŹNIK A", "value": 42, "suffix": "%"},
+            {"label": "WSKAŹNIK B", "value": 18, "suffix": "%"},
+            {"label": "WSKAŹNIK C", "value": 7, "suffix": ""},
+            {"label": "WSKAŹNIK D", "value": 2027, "suffix": ""},
+        ]
+    if not isinstance(stats, list) or not 1 <= len(stats) <= 4:
+        raise ValueError("stat-grid requires between one and four stats")
     width = ctx.layout.safe.w
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
                                         align="center", balance=True)
     layout = ctx.layout.layout("stat-grid", {
         "headline": _measure(headline, headline_style, width, ctx)})
+    base_cells = [layout.region(f"stat-{index}") for index in range(1, 5)]
+    if len(stats) == 4:
+        cells = base_cells
+    else:
+        rest = Rect(min(cell.x for cell in base_cells),
+                    min(cell.y for cell in base_cells),
+                    max(cell.right for cell in base_cells)
+                    - min(cell.x for cell in base_cells),
+                    max(cell.bottom for cell in base_cells)
+                    - min(cell.y for cell in base_cells))
+        cell_h = (rest.h - ctx.layout.gap) / 2
+        row = Rect(rest.x, rest.y + (rest.h - cell_h) / 2,
+                   rest.w, cell_h)
+        cells = row.grid(len(stats), 1, ctx.layout.gap)
     elements: dict[str, Node] = {
         "headline": text_node("headline", headline, headline_style,
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center")}
     specs = [_spec("headline", 7)]
     for index, item in enumerate(stats):
-        region = layout.region(f"stat-{index + 1}")
+        region = cells[index]
         value = safe_number(item.get("value", 0))
         fmt = {"suffix": item.get("suffix", ""),
                "prefix": item.get("prefix", ""), "thousands": " "}
         panel = panel_node(f"stat-panel-{index}", region, ctx.tokens,
                            fill=_card_fill(theme), radius="lg", shadow=True)
+        size_role = str(item.get("size_role")
+                        or scene.get("stat_size_role") or "title")
         number = number_node(f"stat-value-{index}", value,
                              Rect(region.x + region.w * .06,
                                   region.y + region.h * .16,
                                   region.w * .88, region.h * .44),
-                             ctx.tokens, fmt=fmt, size_role="title",
+                             ctx.tokens, fmt=fmt, size_role=size_role,
                              color=theme["accent"], align="center")
         label_style = TextStyle(ctx.tokens.px(23), theme["ink"]
                                 if theme["light"] else theme["muted"],

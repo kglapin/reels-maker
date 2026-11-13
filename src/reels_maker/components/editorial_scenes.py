@@ -1,6 +1,7 @@
 """Scene builders for the editorial family."""
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from ..core.scene_graph import Node
@@ -62,23 +63,26 @@ def build_announcement(ctx: SceneContext, scene: dict) -> BuiltScene:
         elements["headline"] = text_node("headline", headline_copy,
                                          headline_style, region, ctx.fonts,
                                          align="center", valign="center")
-    calendar_region = layout.region("visual")
-    day = str(scene.get("day", "20"))
-    month = str(scene.get("calendar_label", "PAŹDZIERNIKA 2026"))
-    card = Node(kind="group", role="visual",
-                children=_calendar_card(ctx, calendar_region, day, month, theme))
-    elements["visual"] = card
+    if scene.get("visual", True) is not False:
+        calendar_region = layout.region("visual")
+        day = str(scene.get("day", "20"))
+        month = str(scene.get("calendar_label", "PAŹDZIERNIKA 2026"))
+        card = Node(kind="group", role="visual",
+                    children=_calendar_card(ctx, calendar_region, day, month, theme))
+        elements["visual"] = card
     if subtitle:
         elements["body"] = text_node("body", subtitle, body_style,
                                      layout.region("body"), ctx.fonts,
                                      align="center", valign="top")
-    specs = [_spec("kicker", 3), _spec("headline", 10, "display"),
-             _spec("visual", 5, "control", hint="pop-settle"),
-             _spec("body", 4)]
+    specs = [_spec("kicker", 3), _spec("headline", 10, "display")]
+    if "visual" in elements:
+        specs.append(_spec("visual", 5, "control", hint="pop-settle"))
+    specs.append(_spec("body", 4))
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
-                   meta={"component": "calendar", "day": day,
-                         "calendar_label": month})
+                   meta={"component": "calendar",
+                         "day": scene.get("day"),
+                         "calendar_label": scene.get("calendar_label")})
 
 
 def _calendar_card(ctx: SceneContext, region: Rect, day: str, month: str,
@@ -131,21 +135,83 @@ def build_deadline(ctx: SceneContext, scene: dict) -> BuiltScene:
         "headline": text_node("headline", date, date_style,
                               layout.region("headline"), ctx.fonts,
                               align="center", valign="center"),
-        "timeline": Node(kind="group", role="timeline",
-                         children=_timeline_graphic(
-                             ctx, layout.region("timeline"),
-                             scene.get("milestones"), theme),
-                         qa_class="control"),
     }
+    specs = [_spec("kicker", 3), _spec("headline", 10, "display")]
+    extra_decor: list[Node] = []
+    if str(scene.get("timeline_orientation") or "horizontal") == "vertical":
+        labels = scene.get("milestones")
+        items = labels if isinstance(labels, list) and labels else []
+        region = layout.region("timeline")
+        count = max(1, len(items))
+        rail_x = region.x + ctx.tokens.px(64)
+        # A vertical rail needs far more travel than the compact horizontal
+        # strip: extend the span downward into free space and stop above the
+        # body copy when a subtitle is present.
+        if subtitle:
+            rail_bottom = layout.region("body").y - ctx.tokens.px(30)
+        else:
+            rail_bottom = ctx.layout.safe.bottom - ctx.tokens.px(40)
+        span_h = max(region.h, rail_bottom - region.y)
+        row_h = span_h / count
+        rail_top = region.y + row_h * .5
+        if items:
+            extra_decor.append(Node(
+                kind="round", role="timeline-rail",
+                props={"x": rail_x - ctx.tokens.px(3), "y": rail_top,
+                       "w": ctx.tokens.px(6), "h": span_h - row_h,
+                       "r": ctx.tokens.px(3),
+                       "fill": mix(theme["base"], theme["ink"], .25)},
+                opacity=.55))
+        for index, item in enumerate(items):
+            cy = rail_top + row_h * index
+            accent = index == len(items) - 1
+            if isinstance(item, dict):
+                label_text = str(item.get("label", ""))
+                value_text = str(item.get("value", ""))
+            else:
+                label_text, value_text = str(item), ""
+            text_x = rail_x + ctx.tokens.px(56)
+            text_w = region.right - text_x
+            children = [
+                node for node in (
+                    Node(kind="circle", role="milestone-dot",
+                         props={"cx": rail_x, "cy": cy,
+                                "r": ctx.tokens.px(20 if accent else 14),
+                                "fill": (theme["accent"] if accent
+                                         else theme["ink"])}),
+                    text_node("milestone-label", label_text,
+                              TextStyle(ctx.tokens.px(34), theme["muted"],
+                                        "bold", uppercase=True, tracking=1.5),
+                              Rect(text_x, cy - ctx.tokens.px(72), text_w,
+                                   ctx.tokens.px(46)), ctx.fonts,
+                              align="left", valign="bottom"),
+                    text_node("milestone-value", value_text,
+                              TextStyle(ctx.tokens.px(54), theme["ink"],
+                                        "bold"),
+                              Rect(text_x, cy + ctx.tokens.px(10), text_w,
+                                   ctx.tokens.px(74)), ctx.fonts,
+                              align="left", valign="top"),
+                ) if node is not None]
+            role = f"milestone-{index}"
+            elements[role] = Node(kind="group", role=role, children=children,
+                                  qa_class="control")
+            specs.append(_spec(role, 10 - index, "control",
+                               hint="pop-settle", order=index))
+    else:
+        elements["timeline"] = Node(kind="group", role="timeline",
+                                    children=_timeline_graphic(
+                                        ctx, layout.region("timeline"),
+                                        scene.get("milestones"), theme),
+                                    qa_class="control")
+        specs.append(_spec("timeline", 6, "control", hint="reveal-right"))
     if subtitle:
         elements["body"] = text_node("body", subtitle, body_style,
                                      layout.region("body"), ctx.fonts,
                                      align="center", valign="center")
-    specs = [_spec("kicker", 3), _spec("headline", 10, "display"),
-             _spec("timeline", 6, "control", hint="reveal-right"),
-             _spec("body", 4)]
+        specs.append(_spec("body", 4))
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
-                   elements, specs, decor=_decor(ctx, scene, theme),
+                   elements, specs,
+                   decor=extra_decor + _decor(ctx, scene, theme),
                    meta={"component": "timeline", "date": date,
                          "budget_consumption_shown": False})
 
@@ -243,10 +309,20 @@ def build_urgency(ctx: SceneContext, scene: dict) -> BuiltScene:
     hands.track("rotation", Track([
         Keyframe(0.0, 0.0, "smooth"),
         Keyframe(max(.8, ctx.duration * .9), 16.0, "smooth")]))
+    face_asset = scene.get("clock_face_asset")
+    if isinstance(face_asset, str) and face_asset:
+        side = size * .86
+        face_rect = Rect(region.center_x - side / 2, cy - side / 2,
+                         side, side)
+        face = image_node("clock-face", face_asset, face_rect,
+                          qa_class="visual")
+        face.anchor = (region.center_x, cy)
+        face_children = [face]
+    else:
+        face_children = [icons.clock(region.center_x, cy, size,
+                                     theme["ink"])]
     clock = Node(kind="group", role="visual",
-                 children=[icons.clock(region.center_x, cy, size,
-                                       theme["ink"]),
-                           hands],
+                 children=[*face_children, hands],
                  qa_class="control")
     elements["visual"] = clock
     if subtitle:
@@ -272,7 +348,10 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
     headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
                                         align="center", balance=True)
     button_text = ensure_contrast(theme["surface"], theme["accent"], 4.5)
-    phone_style = TextStyle(ctx.tokens.px(72), button_text, "bold",
+    phone_size = int(scene.get("phone_size", 72))
+    if not 24 <= phone_size <= 220:
+        raise ValueError("phone_size must be between 24 and 220 px")
+    phone_style = TextStyle(ctx.tokens.px(phone_size), button_text, "bold",
                             align="center")
     body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
                                     align="center")
@@ -288,11 +367,12 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
     card_region = layout.region("cta")
     panel = panel_node("cta-panel", card_region, ctx.tokens,
                        fill=theme["accent"], radius="lg", shadow=True)
+    tall_phone = phone_size > 96
     phone_node = Node(kind="text", role="phone", props={
         "x": card_region.x + ctx.tokens.space("md"),
-        "y": card_region.y + card_region.h * .30,
+        "y": card_region.y + card_region.h * (.20 if tall_phone else .30),
         "w": card_region.w - ctx.tokens.space("md") * 2,
-        "h": card_region.h * .32,
+        "h": card_region.h * (.46 if tall_phone else .32),
         "block": typeset(phone, phone_style,
                          card_region.w - ctx.tokens.space("md") * 2,
                          ctx.fonts),
@@ -304,9 +384,9 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
                           align="center", uppercase=True, tracking=1.5)
     tag = text_node("cta-tag", line_one, tag_style,
                     Rect(card_region.x + ctx.tokens.space("md"),
-                         card_region.y + card_region.h * .66,
+                         card_region.y + card_region.h * (.68 if tall_phone else .66),
                          card_region.w - ctx.tokens.space("md") * 2,
-                         card_region.h * .20), ctx.fonts,
+                         card_region.h * (.18 if tall_phone else .20)), ctx.fonts,
                     align="center", valign="center", fit=False)
     elements["cta"] = Node(kind="group", role="cta",
                            children=[panel, phone_node, tag],
@@ -340,6 +420,56 @@ def build_cta(ctx: SceneContext, scene: dict) -> BuiltScene:
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "cta", "phone": phone,
+                         "website": website})
+
+
+def build_cta_minimal(ctx: SceneContext, scene: dict) -> BuiltScene:
+    """Minimalist closing card: kick, phone, contact lines, nothing else.
+
+    No panel, no photo, no logo — a centered stack on the plain brand
+    background. The phone number carries the single entrance motion.
+    """
+    theme = _theme(ctx, scene)
+    kicker = str(scene.get("kicker") or "")
+    phone = str(scene.get("phone") or "")
+    website = str(scene.get("website") or "")
+    email = str(scene.get("email") or "")
+    contact = "\n".join(part for part in (website, email) if part)
+    width = ctx.layout.safe.w
+    kicker_style = TextStyle(ctx.tokens.px(28), theme["muted"], "bold",
+                             align="center", uppercase=True, tracking=2.0)
+    phone_size = ctx.tokens.px(88)
+    probe = TextStyle(phone_size, theme["ink"], "bold", align="center")
+    # Long numbers shrink to hold 100 px side margins on both sides.
+    over = _measure(phone, probe, width, ctx)[0]
+    if over > width - 200:
+        phone_size = max(ctx.tokens.px(48),
+                         int(phone_size * (width - 200) / over))
+    phone_style = TextStyle(phone_size, theme["ink"], "bold",
+                            align="center")
+    body_style = resolve_text_style(ctx.tokens, "body", theme["muted"],
+                                    align="center")
+    layout = ctx.layout.layout("stack-center", {
+        "kicker": _measure(kicker, kicker_style, width, ctx),
+        "headline": _measure(phone, phone_style, width, ctx),
+        "body": _measure(contact, body_style, width, ctx)})
+    elements: dict[str, Node] = {
+        "kicker": text_node("kicker", kicker, kicker_style,
+                            layout.region("kicker"), ctx.fonts,
+                            align="center", valign="center"),
+        "headline": text_node("headline", phone, phone_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center"),
+        "body": text_node("body", contact, body_style,
+                          layout.region("body"), ctx.fonts,
+                          align="center", valign="center"),
+    }
+    specs = [_spec("kicker", 2), _spec("headline", 10, "control",
+                                       hint="pop-settle"),
+             _spec("body", 4)]
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   elements, specs, decor=[],
+                   meta={"component": "cta-minimal", "phone": phone,
                          "website": website})
 
 
@@ -385,9 +515,11 @@ def build_spotlight(ctx: SceneContext, scene: dict) -> BuiltScene:
 def build_statement(ctx: SceneContext, scene: dict) -> BuiltScene:
     theme = _theme(ctx, scene)
     width = ctx.layout.safe.w
-    headline_style = resolve_text_style(ctx.tokens, "display", theme["ink"],
-                                        align="center", balance=True,
-                                        line_height=.98)
+    headline_role = str(scene.get("headline_size_role") or "display")
+    headline_style = resolve_text_style(
+        ctx.tokens, headline_role, theme["ink"],
+        align="center", balance=True,
+        line_height=scene.get("headline_line_height", .98))
     body_style = resolve_text_style(ctx.tokens, "subtitle", theme["muted"],
                                     align="center")
     headline = _headline(scene) or _subtitle(scene)
@@ -397,6 +529,19 @@ def build_statement(ctx: SceneContext, scene: dict) -> BuiltScene:
         "body": _measure(body, body_style, width, ctx),
     }
     layout = ctx.layout.layout("statement", measurements)
+    lift = scene.get("lift")
+    if lift is not None:
+        if isinstance(lift, bool) or not isinstance(lift, (int, float)) \
+                or not math.isfinite(float(lift)) \
+                or not -0.5 <= float(lift) <= 0.5:
+            raise ValueError("statement lift must be a finite number in [-0.5, 0.5]")
+        shift = -float(lift) * ctx.layout.safe.h
+        for name in ("headline", "body"):
+            rect = layout.regions.get(name)
+            if rect is not None:
+                layout.regions[name] = Rect(
+                    rect.x, max(ctx.layout.safe.y, rect.y + shift),
+                    rect.w, rect.h)
     elements: dict[str, Node] = {}
     runs = _runs(scene, ctx.tokens, theme["ink"], theme["accent"])
     if runs:
@@ -443,10 +588,12 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
     specs = [_spec("headline", 8)]
     list_region = layout.region("list")
     row_h = min(ctx.tokens.px(118), list_region.h / max(1, len(items)))
+    rows_h = row_h * len(items)
+    rows_top = list_region.y + max(0.0, (list_region.h - rows_h) / 2)
     item_style = resolve_text_style(ctx.tokens, "subtitle", theme["ink"],
                                     line_height=1.2)
     for index, item in enumerate(items):
-        region = Rect(list_region.x, list_region.y + index * row_h,
+        region = Rect(list_region.x, rows_top + index * row_h,
                       list_region.w, row_h)
         icon_size = min(row_h * .58, region.w * .10)
         check = (_external_icon(scene, "check",
@@ -469,6 +616,55 @@ def build_checklist(ctx: SceneContext, scene: dict) -> BuiltScene:
     return _finish(ctx, scene, layout, _background(ctx, scene, theme),
                    elements, specs, decor=_decor(ctx, scene, theme),
                    meta={"component": "checklist", "items": list(items)})
+
+
+def build_pillars(ctx: SceneContext, scene: dict) -> BuiltScene:
+    """Centered 2x2 icon grid with short captions.
+
+    Icons come from one pinned pack (``icon_library`` + ``icon_names``
+    overrides); every pillar shares the same stroke family and accent color.
+    """
+    theme = _theme(ctx, scene)
+    headline = _headline(scene) or "ATUTY OFERTY"
+    items = scene.get("items") or []
+    if (not isinstance(items, list) or len(items) != 4
+            or not all(isinstance(item, str) and item.strip() for item in items)):
+        raise ValueError("pillars requires exactly four non-empty items")
+    width = ctx.layout.safe.w
+    headline_style = resolve_text_style(ctx.tokens, "title", theme["ink"],
+                                        align="center", balance=True)
+    layout = ctx.layout.layout("pillars", {
+        "headline": _measure(headline, headline_style, width, ctx)})
+    caption_style = resolve_text_style(ctx.tokens, "subtitle", theme["ink"],
+                                       align="center", line_height=1.2)
+    elements: dict[str, Node] = {
+        "headline": text_node("headline", headline, headline_style,
+                              layout.region("headline"), ctx.fonts,
+                              align="center", valign="center"),
+    }
+    specs = [_spec("headline", 7)]
+    for index, item in enumerate(items):
+        region = layout.region(f"pillar-{index + 1}")
+        icon_size = min(region.h * .36, region.w * .34)
+        icon_cy = region.y + region.h * .30
+        icon = (_external_icon(scene, f"pillar-{index}", region.center_x,
+                               icon_cy, icon_size, theme["accent"])
+                or icons.check(region.center_x, icon_cy, icon_size,
+                               theme["accent"]))
+        caption = text_node(f"pillar-caption-{index}", str(item).upper(),
+                            caption_style,
+                            Rect(region.x, region.y + region.h * .52,
+                                 region.w, region.h * .44),
+                            ctx.fonts, align="center", valign="center")
+        elements[f"pillar-{index}"] = Node(
+            kind="group", role=f"pillar-{index}",
+            children=[icon, caption], qa_class="control")
+        specs.append(_spec(f"pillar-{index}", 6 - index * .5, "control",
+                           hint="pop-settle" if index == 0 else None,
+                           order=index))
+    return _finish(ctx, scene, layout, _background(ctx, scene, theme),
+                   elements, specs, decor=_decor(ctx, scene, theme),
+                   meta={"component": "pillars", "items": list(items)})
 
 
 def build_energy(ctx: SceneContext, scene: dict) -> BuiltScene:
@@ -545,9 +741,16 @@ def build_quote(ctx: SceneContext, scene: dict) -> BuiltScene:
         "body": _measure(attribution, body_style, width, ctx)})
     mark_style = TextStyle(ctx.tokens.px(150), theme["accent"], "bold",
                            align="center")
-    mark = text_node("quote-mark", "„", mark_style,
-                     Rect(ctx.layout.safe.x, ctx.layout.safe.y,
-                          ctx.tokens.px(180), ctx.tokens.px(180)), ctx.fonts,
+    mark_cfg = scene.get("quote_mark")
+    if isinstance(mark_cfg, dict):
+        mark_rect = Rect(ctx.width * float(mark_cfg.get("x", 0.0)),
+                         ctx.height * float(mark_cfg.get("y", 0.0)),
+                         ctx.width * float(mark_cfg.get("w", 0.16)),
+                         ctx.height * float(mark_cfg.get("h", 0.16)))
+    else:
+        mark_rect = Rect(ctx.layout.safe.x, ctx.layout.safe.y,
+                         ctx.tokens.px(180), ctx.tokens.px(180))
+    mark = text_node("quote-mark", "„", mark_style, mark_rect, ctx.fonts,
                      valign="top")
     elements: dict[str, Node] = {
         "headline": text_node("headline", quote, quote_style,

@@ -75,9 +75,17 @@ def _instantiate(data: bytes, coordinates: dict) -> bytes:
     from fontTools.varLib.instancer import instantiateVariableFont
     font = TTFont(io.BytesIO(data))
     try:
-        instantiateVariableFont(font, coordinates, updateFontNames=True)
-        buffer = io.BytesIO()
-        font.save(buffer)
+        # instantiateVariableFont returns a new font unless inplace=True;
+        # saving the input would keep the unpinned variable default.
+        instantiated = instantiateVariableFont(
+            font, coordinates, updateFontNames=True)
+        target = instantiated if instantiated is not None else font
+        try:
+            buffer = io.BytesIO()
+            target.save(buffer)
+        finally:
+            if target is not font:
+                target.close()
     finally:
         font.close()
     return buffer.getvalue()

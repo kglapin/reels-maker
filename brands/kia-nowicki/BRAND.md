@@ -49,6 +49,90 @@ used by every project under `projects/`.
   burned-in graphics (`source_is_prebranded` strict gate).
 - The dealership's own licensed font (KiaDesignK) is used for all overlays.
 
+## Standard endcard (mandatory for every new film)
+
+All new KIA Nowicki films end with the same **9.1 s endcard**. Do not design a
+new outro and do not reintroduce the “Więcej na…” line.
+
+Timeline (absolute output time; `<dip_start>` is where the outgoing film ends):
+
+```
+0 .. dip_start                 outgoing captioned film
+dip_start .. dip_start + 1.1   1.1 s dip-to-white from its last 1.1 s
+dip_start + 1.1 .. dip_start + 9.1  8.0 s dealership drone (fade-from-white 0.30 s)
+```
+
+Assets and config:
+
+- `projects/endcard-standard.json` — canonical timings, captions and mix.
+- `projects/_build_endcard_standard.py` — rebuilds the reusable assets.
+- `imports/footage/endcard-standard-drone_cap.mp4` — 8.0 s captioned drone.
+- `imports/audio/endcard-standard-voice.wav` — 7.39 s address + KIA tag.
+- `projects/endcard-standard-captions.json` — two caption plates.
+- `imports/footage/endcard-standard-full.mp4` — **9.1 s ready-to-append clip**
+  (1.1 s white lead-in + captioned drone + standard voiceover).
+- `renders/kia-nowicki/endcard-standard.mp4` — same clip as the delivery copy
+  for easy access.
+
+Voiceover:
+
+- **„Nowicki zaprasza. Kalisz, ulica Stanczukowskiego 18.”** — hard cut at
+  **3.74 s**, immediately after “osiemnaście”, in the natural decay,
+  **without any fade**. The “Więcej na…” sentence is never used.
+- **0.55 s breath**, then the female **„Kia – movement that inspires”** tag
+  from `imports/audio/kia-movement-that-inspires-tag.mp3` (source
+  **27.10–30.20 s**, 0.05 s fade-in, 0.20 s fade-out from 2.90 s).
+- Mix volume **0.55**; `voiceover.offset_seconds = <dip_start> + 1.4`
+  (drone cut + 0.30 s, after the fade-from-white). The tag is a sonic logo
+  and is **not captioned**.
+
+Captions:
+
+- Only **„Nowicki zaprasza.”** (0.30–1.48 s local to the drone) and
+  **„Kalisz, ulica Stanczukowskiego 18.”** (1.48–4.02 s), 62 px, y=1000.
+- No website line. No tag caption.
+
+Per-film dip (built from the outgoing captioned film):
+
+```sh
+ffmpeg -ss <dip_start> -t 1.1 -i <film_cap.mp4> \
+  -vf "fade=t=out:st=0.08:d=1.02:color=white" -an ...
+```
+
+The drone already starts with a 0.30 s fade-from-white, so the dip resolves
+into visible camera motion immediately.
+
+### Ready-to-append clip
+
+`renders/kia-nowicki/endcard-standard.mp4` is the whole ending as one file:
+**9.1 s**, 1080×1920, 30 fps, with the 1.1 s white lead-in, captioned drone
+and standard voiceover. Append it at the end of a film and you are done.
+It is intentionally **not loudness-normalised**: it carries the same
+voiceover level as the film mix, so do not re-normalise it when appending.
+
+- If the film already fades to white, trim the first 1.1 s and use
+  `imports/footage/endcard-standard-drone_cap.mp4` plus
+  `imports/audio/endcard-standard-voice.wav` with the manifest recipe above.
+- Rebuild everything with
+  `python brands/kia-nowicki/projects/_build_endcard_standard.py`.
+
+Manifest recipe:
+
+```json
+"scenes": [
+  {"file": "<film_cap.mp4>", "start": 0.0, "duration": "<dip_start>"},
+  {"file": "<project>_dip.mp4", "start": 0.0, "duration": 1.1},
+  {"file": "imports/footage/endcard-standard-drone_cap.mp4",
+   "start": 0.0, "duration": 8.0}
+],
+"voiceover": {
+  "file": "imports/audio/endcard-standard-voice.wav",
+  "start": 0.0,
+  "offset_seconds": "<dip_start + 1.4>",
+  "volume": 0.55
+}
+```
+
 ## Production notes (lessons from PITBULL reel, 2026-10-30)
 
 Reference implementation: `projects/_pitbull_build_media.py`,
@@ -83,15 +167,9 @@ Reference implementation: `projects/_pitbull_build_media.py`,
 
 ### Endcard (drone + teleadresowa)
 
-- Scheme: 1.1 s dip-to-white from the master tail, then the drone with a short
-  fade-from-white. Trim the first ~1 s of the drone so camera motion toward the
-  building is visible immediately; 0.3 s fade is enough for the dip.
-- The teleadresowa VO starts **together with the drone cut**
-  (`voiceover.offset_seconds` = drone start), not on the white dip.
-- `nowicki-kalisz-radio-dogrywka-teleadresowa.wav` has speech from 0.00 s
-  (not ~0.6 s), so drone captions must follow its real word onsets:
-  Nowicki 0.00, zaprasza 0.44, Kalisz 1.22, ulica 1.76,
-  Stanczukowskiego 2.10, `18.` 2.84.
+Superseded by **“Standard endcard”** above (2026-11-12). The PITBULL-era
+scheme (voiceover starting at the drone cut, website line captioned) is
+historical only; do not use it for new films.
 
 ### Pipeline gotchas
 
@@ -104,6 +182,61 @@ Reference implementation: `projects/_pitbull_build_media.py`,
   the speaker while he talks.
 - Burning PIL overlays for a ~60 s reel takes ~2 min — run it in the background
   and always finish with storyboard review on the final MP4.
+
+## Production notes — SEN film (2026-11-12)
+
+Reference implementation: `projects/_sen_build_media.py`,
+`_sen_build_captions.py`, `_sen_captions_table.py`,
+`_generate_sen_manifest.py`; output
+`renders/kia-nowicki/kia-nowicki-sen.mp4` (138.43 s, 30 fps, 1080×1920).
+
+### Grade
+
+- Source mixes orange exterior, cool showroom glass, warm wood and a dark car
+  interior. Use per-frame highlight white balance + one restrained S-curve,
+  not a fixed teal/orange LUT: `colorcorrect=analyze=average:saturation=1.04`,
+  `eq=contrast=1.08:brightness=0.004:gamma=1.02`,
+  `curves=all='0/0 0.22/0.19 0.5/0.53 0.78/0.82 1/1'`,
+  `vibrance=intensity=0.10`, `unsharp=5:5:0.5`.
+- The drone is a summer shot; mute green/contrast it slightly and bridge with
+  the 1.1 s dip-to-white, otherwise the season mismatch is obvious.
+
+### Captions
+
+- 57 karaoke plates: 55 in the film, 2 on the drone. y=1000 everywhere except
+  the 11.7–16.0 s showroom exterior voice-over (y=780, where the walking
+  speaker occupies the lower centre).
+- Deliberate size hierarchy (owner request): 58 px base dialogue; 62–70 px
+  for important information; 76–86 px for punchlines/reveals; and the three
+  remaining “Wąsik!” calls escalate 64 → 78 → 92 px with one extra
+  exclamation mark each. Stroke, shadow and caption plate scale with the
+  type, so the hierarchy stays optical rather than arbitrary.
+- Source ASR errors that were corrected: `Brzonka` → `Żonka`, `potawi` →
+  `potrafi`, `tą` → `tę`, `G-T-Line` → `GT Line`, `dopięć` → `dopiąć`,
+  `kabinetu` → `gabinetu`, `wyzwano` → `wezwano`, `nieże` → `nieźle`,
+  `Coś tu narobił` → `Co żeś tu narobił`, `Patrz się` → `Bać się?`.
+- Owner decisions: keep the spoken colloquial **„Sportki”** in Polish
+  quotation marks (not “Sportage”); punctuation is **„Żonka to potrafi rozbudzić! Ale mi się
+  dobrze zaczął dzień.”**; the final quiet “Wąsik.” at 129.04 is removed.
+- The “Więcej na…” line is cut from the teleadresowa. The drone endcard
+  keeps only “Nowicki zaprasza.” and “Kalisz, ulica Stanczukowskiego 18.”,
+  then plays the owner-supplied female **„Kia – movement that inspires”**
+  tag (`imports/audio/kia-movement-that-inspires-tag.mp3`, source
+  27.10–30.20 s). The tag is a sonic logo and is intentionally not captioned.
+
+### Ending / audio
+
+- The last quiet “Wąsik.” at 129.04–129.80 is intentionally not captioned
+  (owner request); the picture fades to white without a caption on the dip.
+- Dialogue is denoised and normalised to -14.5 LUFS / -1.4 dBTP. The new
+  combined voiceover (`sen_voiceover.wav`) is address 0–3.74 s (hard cut
+  right after “osiemnaście”, no fade) + 0.55 s breath + KIA tag
+  4.29–7.39 s; it starts 0.30 s after the drone cut
+  (offset 130.733) so the first caption is not white-on-white during the
+  fade-from-white; volume 0.55.
+- This is the canonical **standard endcard** (see the section above). The
+  SEN `sen_voiceover.wav` and `drone_sen_cap.mp4` are byte-identical to
+  `endcard-standard-voice.wav` and `endcard-standard-drone_cap.mp4`.
 
 ## Delivery gates (unchanged, per repo AGENTS.md)
 

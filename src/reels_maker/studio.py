@@ -331,6 +331,23 @@ def _load_studio_data(path: Path, data: dict, *,
             if not source.is_file():
                 raise StudioError(f"Missing editorial_media asset: {source}")
             media["asset"] = str(source)
+        if scene.get("clock_face_asset"):
+            source = _resolve_asset(str(scene["clock_face_asset"]),
+                                    brand_root, root)
+            if not source.is_file():
+                raise StudioError(
+                    f"Missing clock_face_asset: {source}")
+            scene["clock_face_asset"] = str(source)
+        for overlay in scene.get("overlays") or []:
+            if not isinstance(overlay, dict) or not overlay.get("asset"):
+                raise StudioError("overlays items require asset paths")
+            source = _resolve_asset(str(overlay["asset"]), brand_root, root)
+            if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+                raise StudioError(
+                    "overlays currently supports still images only")
+            if not source.is_file():
+                raise StudioError(f"Missing overlays asset: {source}")
+            overlay["asset"] = str(source)
         burst = scene.get("polaroid_burst")
         if burst is not None:
             if not isinstance(burst, dict):
@@ -354,6 +371,11 @@ def _load_studio_data(path: Path, data: dict, *,
             scene["polaroid_burst"] = burst
         photo = scene.get("photo")
         background = scene.get("background")
+        if isinstance(photo, list):
+            # Montage: fast photo cycle resolved item by item.
+            scene["photo"] = [str(_resolve_asset(str(p), brand_root, root))
+                               for p in photo]
+            continue
         asset_value = photo or (background.get("asset")
                                 if isinstance(background, dict) else None)
         if not asset_value:

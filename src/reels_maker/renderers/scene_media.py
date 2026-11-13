@@ -36,18 +36,24 @@ class SceneMediaRenderer:
         blur_radius = min(blur, 24.0) * scale if blur > 0 else 0.0
         radius = float(props["radius"]) * scale if props.get("radius") else None
         width, height = int(max(1, w)), int(max(1, h))
+        fit = str(props.get("fit", "cover")).strip().lower()
         framed_key = (source_key, width, height, zoom,
                       float(props.get("pan_x", 0)),
-                      float(props.get("pan_y", 0)), blur_radius, radius)
+                      float(props.get("pan_y", 0)), blur_radius, radius,
+                      fit)
         image = owner._framed_images.get(framed_key)
         if image is not None:
             owner._framed_images.move_to_end(framed_key)
         else:
-            image = cv.cover(
-                source, width, height,
-                cv.Camera(zoom=zoom,
-                          x=float(props.get("pan_x", 0)),
-                          y=float(props.get("pan_y", 0))))
+            camera = cv.Camera(zoom=zoom,
+                               x=float(props.get("pan_x", 0)),
+                               y=float(props.get("pan_y", 0)))
+            if fit == "contain":
+                image = cv.contain(source, width, height, camera)
+            elif fit == "cover":
+                image = cv.cover(source, width, height, camera)
+            else:
+                raise ValueError(f"Unsupported image fit {fit!r}")
             if blur_radius > 0:
                 image = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
             if radius is not None:
@@ -99,3 +105,22 @@ class SceneMediaRenderer:
             dict(props.get("spec") or {}), width, height,
             time=float(props.get("playback_time", 0.0)))
         target.alpha_composite(rendered, (x, y))
+
+    def iso_world(self, target: Image.Image, node: Node, dx: float, dy: float) -> None:
+        from ..iso import render_iso_frame
+
+        owner = self.owner
+        scale = owner.ss
+        props = node.props
+        x = int(round((props["x"] + dx) * scale))
+        y = int(round((props["y"] + dy) * scale))
+        width = int(max(4, round(props["w"] * scale)))
+        height = int(max(4, round(props["h"] * scale)))
+        rendered = render_iso_frame(
+            dict(props.get("spec") or {}), width, height,
+            time=float(props.get("playback_time", 0.0)))
+        if rendered.size != (width, height):
+            from PIL import Image as _Image
+
+            rendered = rendered.resize((width, height), _Image.Resampling.LANCZOS)
+        target.alpha_composite(rendered.convert("RGBA"), (x, y))

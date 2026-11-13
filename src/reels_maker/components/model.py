@@ -60,7 +60,7 @@ class BuiltScene:
 
     # Kinds whose sampled props depend on the frame time itself; their
     # subtrees can never reuse a settled sample.
-    _TIME_DEPENDENT = frozenset({"video", "mesh3d", "sequence"})
+    _TIME_DEPENDENT = frozenset({"video", "mesh3d", "sequence", "iso-world"})
 
     def _subtree_settle(self, node: Node) -> float:
         """Latest time at which any track in this subtree can still change.

@@ -21,12 +21,26 @@
 - Never downscale text into unreadability to fit a crowded layout. Prefer shorter copy, deliberate line breaking and additional shots. Keep intentional Polish diacritics intact, preserve platform UI-safe polygons, and inspect audio/speech holds.
 - Accessibility distinction: WCAG 1.4.12 is an adjustable-markup text-spacing override test, not a fixed 1.5 line-height requirement for titles burned into MP4 video.
 
+## Brand learnings and Studio manifest capabilities
+- Before generating clips for a brand, check `brands/<slug>/LEARNINGS.md` if it
+  exists — it records owner feedback, rejected approaches and approved patterns
+  from previous iterations (e.g. `brands/staniszewska-nieruchomosci/LEARNINGS.md`).
+  Append new owner corrections there; do not rely on conversation memory alone.
+- Studio scenes support (all shared, brand-agnostic): `split_lines` (per-line
+  staggered text entrances), `perspective` with `settle`/`drift`/`push` modes and
+  `path` keyframes `{t, yaw, pitch, zoom, pan_x, pan_y}`, `editorial_media[].enter`
+  staggered reveals, `cues` for explicit entrance onsets, `quote_mark` positioning,
+  `icon_library`/`icon_names`/`icon_assets`, and `export.pixel_format`
+  (`yuv420p` or `yuv420p10le` for smoother gradients).
+
 ## Media, paths and renders
 - Keep reusable engine code in `src/reels_maker/`; brand identity, media, and project manifests belong under `brands/<slug>/`.
 - Rendering and asset operations must go through the documented CLI/API contracts; do not inject a parallel rendering implementation or silently bypass validation.
 - Manifest media paths resolve from that brand directory, not the shell cwd; do not use traversal to access another brand. Keep footage/audio on disk, not in Python source.
 - Before reusing video, run `reels-maker catalog --brand <slug> --json` and inspect `editorial_state` and `overlay_ready`. Unknown/unreviewed media is not clean; finished promos must not get new titles/logos without review.
 - `brands/*/imports/` is ignored quarantine, not approved media. New renders go under `renders/<slug>/`; `legacy/` and `archives/` are reference-only.
+- One project = one folder: every render (mp4, work file, storyboard, QA stills) lives in `renders/<slug>/<project>/`, never loose at the brand root.
+- Unapproved working versions are deleted at the end of the task; only the current/approved version stays in the project folder (plus its review stills).
 
 ## Validate and render in order
 From the repository root, install the active checkout (Python 3.11+, FFmpeg/FFprobe required):

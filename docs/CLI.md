@@ -225,14 +225,30 @@ metadata and settings, cached, and assembled by stream-copy. FFmpeg only encodes
 cache misses. Audio is encoded separately and multiplexed without re-encoding
 video. Scene frame counts are computed from cumulative cut points.
 Use `--jobs 1..8` based on available CPU and memory for classic video
-renders. `studio-render --jobs 1..8` encodes independent scene segments
-concurrently (default `2`); each worker owns a private renderer and decode
-metrics, and camera-canvas projects stay serial. Parallel and serial Studio
-renders produce identical decoded frames; the encoder thread count is
-deliberately not varied with `--jobs`, because varying it changes decoded
-pixels. Studio rendering uses
+renders. `studio-render --jobs 1..8` encodes scenes concurrently
+(default `4`); on fork-capable platforms scenes are split into frame
+chunks (`--chunk-frames`, default 60) and encoded in worker processes
+(capped at 4), each owning a private renderer, and camera-canvas projects
+stay serial. Chunk files are cached under the scene cache key
+(`chunks/`), so an interrupted render resumes at chunk granularity.
+The encoder thread count is deliberately not varied with `--jobs`,
+because varying it changes decoded pixels. Studio rendering uses
 `.cache/reels-maker/studio/` by default; `--cache-dir` selects another
-location and `--no-cache` forces a full rebuild.
+location and `--no-cache` forces a full rebuild. `--cache-max-gb N`
+evicts the oldest cache objects beyond N GB after a successful render
+(the current render's outputs are never evicted).
+
+For a quick check of one fix, `studio-render --scenes 3,4` or
+`--range 3:5` renders only those 1-based scenes into an explicitly named
+`--output` (music stays aligned to the film timeline); the partial render
+still warms the shared scene/chunk cache for the full render. Note that
+chunked encodes start a fresh GOP at each chunk boundary: the rasterized
+source frames are identical to a serial render, but the encoded bitstream
+(and therefore decoded pixels after lossy coding) can differ marginally
+at the same CRF. A scene may
+pin `"supersample": 1..4` in the manifest; the default `"auto"` renders
+natively-rasterized compositions (`iso-explainer`) at 1x and everything
+else at the project supersample.
 
 A manifest may select a hardware H.264/HEVC encoder in
 `export.codec` (`h264_videotoolbox`, `hevc_videotoolbox`, `h264_nvenc`,
@@ -360,6 +376,113 @@ Deliberate entrance styles: `fade_stagger` (opacity only),
 stops; it is not applied by default. Use one style per scene and prefer short,
 stable reading windows rather than continuous gimmicks.
 
+## Animated image overlays (per-object motion)
+
+A scene may place still-image overlays through `overlays`. Each entry accepts
+the base fields `asset`, `x`, `y`, `w`, `h` (normalized canvas coordinates),
+`entrance`, `anchor`, `travel`, `scale_from`, `easing`, `rotation`, plus
+optional authored dynamics applied after entrance choreography:
+
+```json
+{"asset": "media/ui/cursor.png", "x": 0.1, "y": 0.1, "w": 0.08, "h": 0.08,
+ "entrance": "none", "appear": {"at": 2.8, "duration": 0.3},
+ "path": [{"t": 2.8, "x": 0.1, "y": 0.1},
+          {"t": 3.2, "x": 0.44, "y": 0.6, "easing": "in-out-cubic"}]}
+```
+
+- `path` — absolute normalized top-left positions `[{t, x, y, easing?}]`;
+  times must strictly increase and every position must keep the overlay
+  inside the canvas. Incompatible with entrances that translate on x/y
+  (`fade-up`, `rise`, `slide-*`, `mask-rise`, `pop-settle`, `word-cascade`,
+  `anticipate-pop`); use `none`, `scale-focus` or `tracking-in` instead.
+- `appear` — `{at, duration}` opacity fade-in; pair with `entrance: "none"`.
+- `press` — `{at, depth, duration}` quick scale dip for a click beat;
+  merges into the `scale` track (avoid scale entrances on the same overlay).
+- `ripple` — `{at, cx, cy, radius, color, duration, width}` expanding ring
+  drawn above the overlays, for click feedback.
+- `exit` — `{style, at, duration, seed?}`; `"fade"` is a restrained opacity
+  outro, `"burn"` disintegrates the asset through a seeded, monotonic
+  noise/char/ember front (no strobe), `"tear"` rips the asset along a
+  seeded jagged seam into two parting halves with a pale cut edge. Use
+  only when the destruction is motivated by the story.
+
+All times are scene-local seconds and must end inside the scene duration;
+conflicting keyframes raise a validation error rather than silently
+overwriting earlier tracks.
+
+## Per-element entrance presets
+
+A scene may pin choreography presets per element role through
+`entrance_presets`, overriding the style-menu rotation for named roles
+(`headline`, `body`, `cta`, `logo`, `kicker`, …). Unknown roles or preset
+names raise a validation error; `typography_motion` still wins for
+`headline*` roles when both are set.
+
+```json
+{"entrance_presets": {"cta": "fade-up", "logo": "fade-up"}}
+```
+
+Use it when a scene needs restrained, whole-text entrances
+(`fade-up`/`fade`) instead of clip wipes (`mask-rise`, `reveal-*`) or
+overshoot pops (`pop-settle`, `word-cascade`).
+
+## Animated number counters
+
+A scene may place animated readouts through `counters`. Each entry accepts
+normalized `x`, `y`, `w`, `h`, a final `value`, optional `format`
+(`decimals`, `thousands`, `prefix`, `suffix`), `size_role`, `color`,
+`align` (`left`/`center`/`right`), `rotation` (degrees around the readout
+center — e.g. to match a tilted card), plus timing:
+
+```json
+{"x": 0.2, "y": 0.6, "w": 0.6, "h": 0.08, "value": 1248,
+ "format": {"suffix": " zł", "decimals": 0, "thousands": " "},
+ "count": {"at": 1.0, "duration": 1.5, "from": 0, "easing": "out-cubic"},
+ "appear": {"at": 1.0, "duration": 0.3},
+ "exit": {"style": "fade", "at": 3.0, "duration": 0.3}}
+```
+
+`count` animates `value` from `from` over the scene-local window;
+`appear` fades the readout in (defaults to the count onset); `exit`
+reuses the overlay exit spec (`fade`/`burn`/`tear`) so a number can leave
+together with the surface it annotates.
+
+## Image fit and carousel cards
+
+Image nodes accept `fit: "cover"` (default, crops to fill) or
+`fit: "contain"` (whole image visible, transparent letterbox — composites
+cleanly onto cards/panels). `photo-carousel` scenes accept
+`carousel.card_aspect` (card height/width, default 1.38) and
+`carousel.photo_fit` (`cover`/`contain`) so photography is never cropped
+through logos or subjects.
+
+## Frame-blended scene transitions and photo scrims
+
+Studio scenes accept `transition_out` on the **outgoing** scene. Unlike the
+legacy `transition_in` overlay wipe, this composites real adjacent frames
+through `renderers/transition_engine.py` during the last `duration` seconds
+of the scene:
+
+```json
+{"transition_out": {"type": "color-takeover", "color": "#47A013",
+                    "duration": 0.8, "anchor": [0.5, 0.5],
+                    "easing": "smooth"}}
+```
+
+Effects: `color-takeover`, `radial-reveal`, `whip-pan`, `zoom-through`,
+`diagonal-wipe`, `iris-close-open`, `stripe-reveal`, `split-slide`,
+`spin-zoom`, `pixel-dissolve`. `color`/`anchor`/`direction`/`easing` are
+optional; cuts remain the default. Keep transitions motivated — a takeover
+in the brand accent after a click beat, for example — and vary them across
+a montage instead of decorating every cut.
+
+Photo backgrounds (`"photo"` or `background.asset`) accept `scrim`
+(bottom-weighted gradient, default from theme), `scrim_uniform` (0–0.95,
+even black veil over the whole frame — needed when bright skies sit under
+top-placed text), `tint` + `tint_amount` (0–1 color wash) and `blur`.
+`scrim` alone never darkens the top of the frame; use `scrim_uniform` for
+kickers/headlines near the top safe area.
+
 ## Format-independent safe areas and typography
 
 `branding.safe_areas.horizontal_pixels`, `top_pixels` and `bottom_pixels`
@@ -461,6 +584,30 @@ Warning: `voiceover.offset_seconds` is **global output time**;
 `motion.cue_seconds` refers to the start of the **individual scene**,
 including any scene-overlap implications. Editors must align them on the
 actual timeline and re-check timing when changing transitions.
+
+## ElevenLabs voiceover generation (TTS)
+
+`reels-maker tts-generate` synthesizes a voiceover script through the
+ElevenLabs API and stages it in `brands/<slug>/imports/audio/` quarantine —
+the same unreviewed area as `sfx-generate`. Set `ELEVENLABS_API_KEY` in the
+git-ignored `.env` (see `.env.example`). Nothing is written to approved
+`media/` directories.
+
+```sh
+reels-maker tts-voices --query "astra" --json          # pick a voice ID
+reels-maker tts-generate --brand asta-energy \
+  --text-file script.txt --timestamps --json
+```
+
+`--voice`, `--model` and `--format` default to the brand's
+`brand.json → voiceover.elevenlabs` section when present (ASTA Energy ships
+`voice_id` `xAVsdcJvD1uegu8lFEE2` there), then to
+`eleven_multilingual_v2` / `mp3_44100_128`. `--timestamps` requests
+character alignment and writes a `.alignment.json` sidecar with derived word
+timings to help spot `voiceover.sync_marks` — provider timings still need
+manual verification against the rendered audio, per the sync-marks rules.
+Reference the result from a manifest as
+`brands/<slug>/imports/audio/elevenlabs_<hash>.mp3`.
 
 ## Inspect the actual global visual cue timeline
 

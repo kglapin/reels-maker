@@ -1,0 +1,24 @@
+{
+ "imports": {
+  "ociaz-nowe-skalmierzyce": {
+   "source": "https://staniszewskanieruchomosci.pl/estate_property/dzialka-inwestycyjna-o-ogromnym-potencjale-ociaz-gm-nowe-skalmierzyce/",
+   "checked": "2026-11-12",
+   "files": [
+    "DJI_0147-scaled.jpg",
+    "DJI_0148-scaled.jpg",
+    "DJI_0149-scaled.jpg",
+    "DJI_0151-scaled.jpg",
+    "DJI_0152-scaled.jpg",
+    "DJI_0155-scaled.jpg",
+    "DJI_0158-scaled.jpg"
+   ],
+   "note": "Zdjęcia lotnicze (DJI) z galerii oferty; własność Staniszewska Nieruchomości — użyte za zgodą klienta w materiałach marketingowych."
+  }
+ },
+ "maps": {
+  "ociaz-nowe-skalmierzyce-map.png": {
+   "source": "OpenStreetMap tiles (tile.openstreetmap.org), zoom 12; markery: Ociąż 51.7035234,17.9333058 / Nowe Skalmierzyce 51.7109127,17.9943345 (Nominatim)",
+   "license": "ODbL — © OpenStreetMap contributors (atrybucja na obrazie)"
+  }
+ }
+}

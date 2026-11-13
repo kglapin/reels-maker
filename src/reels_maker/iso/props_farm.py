@@ -610,7 +610,7 @@ PROPS = {
     "orchard-tree": {"fn": orchard_tree, "focus": (0.0, 0.15, 0.58), "k": 360,
                      "plinth": (0.0, 0.15, 0.62, 0.40),
                      "brief": "small orchard tree with round fruits"},
-    "windmill": {"fn": windmill, "focus": (0.0, 0.15, 0.90), "k": 380,
+    "windmill": {"fn": windmill, "focus": (0.0, 0.15, 0.90), "k": 320,
                  "plinth": (0.0, 0.15, 0.62, 0.40),
                  "brief": "farm windmill tower with rotor"},
     "grain-auger": {"fn": grain_auger, "focus": (0.0, 0.15, 0.55), "k": 460,

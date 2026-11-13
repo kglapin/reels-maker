@@ -438,6 +438,11 @@ def cleaning_brush(q, cx, cy, P):
           (90, 104, 96), (76, 90, 82), (108, 122, 112))
     q.box((cx - 0.30, cy - 0.08, 0.06), (cx + 0.10, cy + 0.10, 0.20),
           (120, 150, 160), (96, 122, 132), (142, 172, 182))
+    # Bristle rows on the head top: thin dark strokes across X so the
+    # head reads as a brush, not a solid block.
+    for j, bx in enumerate((-0.26, -0.16, -0.06, 0.04)):
+        q.line([(cx + bx, cy - 0.05, 0.205), (cx + bx + 0.06, cy + 0.07, 0.205)],
+               (70, 84, 76), 0.9)
     q.box((cx + 0.08, cy - 0.015, 0.075), (cx + 0.62, cy + 0.045, 0.15), *ALU)
     q.box((cx + 0.48, cy - 0.025, 0.07), (cx + 0.62, cy + 0.055, 0.16),
           *STEEL_D)

@@ -324,7 +324,7 @@ _reg("bench", bench, (0.0, 0.15, 0.42), 480, (0.0, 0.15, 0.62, 0.36),
      "Park bench with slatted seat and backrest on side frames")
 _reg("trash-bin", trash_bin, (0.0, 0.15, 0.34), 550, (0.0, 0.15, 0.40, 0.30),
      "Street trash bin with rim, lid and dark opening")
-_reg("bike-rack", bike_rack, (0.0, 0.15, 0.28), 480, (0.0, 0.15, 0.60, 0.32),
+_reg("bike-rack", bike_rack, (0.0, 0.15, 0.28), 400, (0.0, 0.15, 0.60, 0.32),
      "Bike rack: three inverted-U hoops on a ground rail")
 _reg("fast-charger", fast_charger, (0.0, 0.15, 0.52), 480, (0.0, 0.15, 0.45, 0.32),
      "DC fast charger pillar with screen, cable holsters and base")

@@ -153,7 +153,7 @@ def cable_drum(q, cx, cy, P):
         q.box((bx - 0.02, cy - 0.295, 0.46), (bx + 0.02, cy + 0.295, 0.74),
               (110, 122, 112), (110, 122, 112), (110, 122, 112))
     # Winding grooves on the visible +Y/+X core faces (read as layers).
-    for gz in (0.46, 0.54, 0.62, 0.70):
+    for gz in (0.44, 0.47, 0.50, 0.54, 0.57, 0.60, 0.64, 0.67, 0.70):
         q.fp(cx - 0.19, cx + 0.19, cy + 0.292, gz, gz + 0.02, (60, 70, 64))
     # Back flange, then the axle (near flange covers its middle: the axle
     # reads as passing THROUGH the drum, not in front of it).

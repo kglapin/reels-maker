@@ -6,7 +6,9 @@ from reels_maker.core.scene_graph import Node
 from reels_maker.motionkit.easing import back, easing_extrema_progress, spring
 from reels_maker.motionkit.keyframes import Keyframe, Track
 from reels_maker.motionkit.presets import apply_entrance
-from reels_maker.qa.report import audit_camera_canvas, sample_geometry_frames
+from reels_maker.qa.report import (
+    _contrast_frame_indices, audit_camera_canvas, sample_geometry_frames,
+)
 from reels_maker.design.tokens import resolve_tokens
 from reels_maker.layout.composition_optimizer import solve_scene_layout
 from reels_maker.layout.engine import LayoutEngine
@@ -39,6 +41,23 @@ class TimelineGeometrySamplingTests(unittest.TestCase):
         timing = SimpleNamespace(frames=31)
         frames = sample_geometry_frames(built, timing, 30, samples_per_scene=4)
         self.assertEqual(frames, [0, 8, 10, 15, 20, 22, 30])
+
+    def test_strict_mode_samples_every_encoded_frame_without_changing_default(self):
+        built = SimpleNamespace(nodes=[Node(kind="rect")], duration=1.0)
+        timing = SimpleNamespace(frames=31)
+
+        strict_geometry = sample_geometry_frames(
+            built, timing, 30, samples_per_scene=4, strict=True)
+        default_geometry = sample_geometry_frames(
+            built, timing, 30, samples_per_scene=4)
+        self.assertEqual(strict_geometry, list(range(timing.frames)))
+        self.assertEqual(default_geometry, [0, 8, 10, 15, 20, 22, 30])
+
+        self.assertEqual(
+            _contrast_frame_indices(timing, 4, strict=True),
+            list(range(timing.frames)))
+        self.assertEqual(
+            _contrast_frame_indices(timing, 4, strict=False), [10, 20, 30])
 
     def test_invalid_sample_counts_fail_closed(self):
         built = SimpleNamespace(nodes=[], duration=1.0)

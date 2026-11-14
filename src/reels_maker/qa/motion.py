@@ -15,7 +15,7 @@ import math
 from ..core.scene_graph import Node
 from .models import Issue
 
-_SAMPLE_DT = 1.0 / 30.0
+_DEFAULT_FPS = 30
 _MAX_REVERSALS_PER_SECOND = 4
 _MIN_OPACITY = 0.15
 _MAX_SCALE = 2.2
@@ -54,11 +54,13 @@ def _numeric(value) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def _sampled_track_values(track, duration: float) -> list[float]:
-    steps = max(2, int(math.ceil(duration / _SAMPLE_DT)) + 1)
+def _sampled_track_values(track, duration: float, fps: int,
+                          frame_count: int) -> list[float]:
+    """Sample exactly the frame timestamps that can appear in the encoded clip."""
     values = []
-    for index in range(steps):
-        number = _numeric(track.value(index * _SAMPLE_DT))
+    for frame in range(frame_count):
+        time = min(frame / fps, duration)
+        number = _numeric(track.value(time))
         if number is None:
             return []
         values.append(number)
@@ -81,38 +83,58 @@ def _reversal_count(values: list[float]) -> int:
     return reversals
 
 
-def _flutter_issues(built) -> list[Issue]:
+def _peak_reversal_window(values: list[float], window: int) -> tuple[int, int]:
+    """Return peak one-second reversals and the first frame of that window."""
+    peak = 0
+    peak_start = 0
+    for start in range(0, max(1, len(values) - window + 1)):
+        reversals = _reversal_count_local(values, start, window)
+        if reversals > peak:
+            peak, peak_start = reversals, start
+    return peak, peak_start
+
+
+def _flutter_issues(built, *, fps: int, strict: bool,
+                    frame_count: int) -> list[Issue]:
     issues = []
     duration = built.duration
+    severity = "error" if strict else "warning"
     for node in _iter_nodes(built):
         for name, track in node.tracks.items():
-            values = _sampled_track_values(track, duration)
+            values = _sampled_track_values(track, duration, fps, frame_count)
             if not values:
                 continue
             label = f"{node.role}/{name}"
             if name == "opacity" and _reversal_count(values) >= 6:
                 dips = sum(1 for value in values if value < _MIN_OPACITY)
                 if dips >= 3:
+                    first_dip = next(i for i, value in enumerate(values)
+                                     if value < _MIN_OPACITY)
                     issues.append(Issue(
-                        "blink_cycle", "warning",
+                        "blink_cycle", severity,
                         f"Element {node.role!r} fades below {_MIN_OPACITY:.0%} "
                         "opacity repeatedly; strobe/blink cycles are a "
                         "photosensitivity risk and usually look like a bug.",
-                        built.index + 1, None, [node.role],
+                        built.index + 1, round(first_dip / fps, 3), [node.role],
                         "Replace the blink loop with a single motivated "
-                        "pulse or remove it."))
-            window = max(1, int(round(1.0 / _SAMPLE_DT)))
-            peak = 0
-            for start in range(0, len(values) - window + 1):
-                peak = max(peak, _reversal_count_local(values, start, window))
+                        "pulse or remove it.", first_dip))
+            # Keypresses are discrete, authored events rather than an
+            # oscillating continuous transform. Keep their intentional scale
+            # taps out of the aesthetic flutter detector; opacity blink checks
+            # and all other track properties remain subject to strict QA.
+            if (name == "scale"
+                    and node.meta.get("motion_intent") == "discrete_press"):
+                continue
+            window = max(2, fps)
+            peak, start = _peak_reversal_window(values, window)
             if peak > _MAX_REVERSALS_PER_SECOND:
                 issues.append(Issue(
-                    "motion_flutter", "warning",
+                    "motion_flutter", severity,
                     f"Track {label!r} oscillates {peak} times per second; "
                     "rapid back-and-forth motion reads as jitter, not style.",
-                    built.index + 1, None, [node.role],
+                    built.index + 1, round(start / fps, 3), [node.role],
                     "Smooth the curve, reduce the frequency or replace it "
-                    "with a single eased move."))
+                    "with a single eased move.", start))
                 break
     return issues
 
@@ -213,11 +235,29 @@ def _crowding_issue(built) -> list[Issue]:
     return []
 
 
-def audit_motion(built_scenes, project) -> list[Issue]:
-    """Per-scene motion hygiene plus project-level edit checks."""
+def audit_motion(built_scenes, project, *, fps: int = _DEFAULT_FPS,
+                 strict: bool = False,
+                 frame_counts: list[int] | tuple[int, ...] | None = None
+                 ) -> list[Issue]:
+    """Per-scene motion hygiene plus project-level edit checks.
+
+    Motion is sampled at the encoded FPS. In strict QA, detected blink and
+    flutter risks become blocking errors; other heuristic findings remain
+    warnings because they require editorial judgement.
+    """
+    if type(fps) is not int or fps < 1:
+        raise ValueError("fps must be a positive integer")
+    if frame_counts is None:
+        frame_counts = tuple(max(1, round(built.duration * fps))
+                             for built in built_scenes)
+    if (not isinstance(frame_counts, (list, tuple))
+            or len(frame_counts) != len(built_scenes)
+            or any(type(count) is not int or count < 1 for count in frame_counts)):
+        raise ValueError("frame_counts must contain one positive integer per scene")
     issues: list[Issue] = []
-    for built in built_scenes:
-        issues.extend(_flutter_issues(built))
+    for built, frame_count in zip(built_scenes, frame_counts):
+        issues.extend(_flutter_issues(
+            built, fps=fps, strict=strict, frame_count=frame_count))
         issues.extend(_endpoint_issues(built))
         issues.extend(_static_tail_issue(built))
         issues.extend(_crowding_issue(built))

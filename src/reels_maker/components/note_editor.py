@@ -158,6 +158,7 @@ def _build_keyboard(ctx: SceneContext, config: dict, *, enter: float,
             props={"x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
                    "r": radius, "fill": key_fill},
             qa_class="decor", anchor=(rect.center_x, rect.center_y),
+            meta={"motion_intent": "discrete_press"},
         )
         node.track("scale", _press_track(presses.get(role, [])))
         if label:

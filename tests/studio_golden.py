@@ -9,10 +9,12 @@ intended visual change — human review the new strips first. Running without
 ``--write`` verifies and exits 1 on any mismatch. Pixel comparison is exact:
 the studio graph is fully deterministic (fixed seeds, no time randomness).
 
-Exact pixels also depend on the rasterizer: Pillow bundles its own FreeType, and
-FreeType 2.14 (Pillow 12) anti-aliases glyph edges slightly differently from
-2.13 (Pillow 10-11). ``pyproject.toml`` therefore caps Pillow below 12. Raising
-that cap requires recapturing these strips and reviewing them, not just
+Exact pixels also depend on the rasterizer. These fixtures use Pillow 10.4.0
+(bundled FreeType 2.13.2); Pillow 11.3.0 (FreeType 2.13.3) changes glyph-edge
+pixels in scenes 00 and 12. The dedicated CI job and local golden-test
+environment must install ``tests/constraints-studio-golden.txt``. This pin is
+specific to exact-pixel QA; the package's broader Pillow range remains unchanged.
+Changing the pin requires recapturing and reviewing the strips, not just
 refreshing the files.
 
 QA renders are not creative approval: goldens catch unintended regressions,

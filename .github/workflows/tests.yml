@@ -181,7 +181,7 @@ jobs:
       - name: Create test virtualenv
         run: |
           python -m venv .venv
-          .venv/bin/pip install -e ".[brand]"
+          .venv/bin/pip install -c tests/constraints-studio-golden.txt -e ".[brand]"
       - name: Ensure reproducible FFmpeg and FFprobe binaries
         run: |
           set -euo pipefail

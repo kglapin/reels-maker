@@ -27,15 +27,14 @@ def icon_sun(q, cx, cy, P):
 
 
 def icon_drop(q, cx, cy, P):
-    """Water drop pictogram: base cylinder, stepped cone tip."""
-    _cylinder(q, cx, cy, 0.10, 0.35, 0.20,
-              (80, 140, 190), (80, 140, 190), (90, 150, 200), n=32)
-    _cylinder(q, cx, cy, 0.345, 0.47, 0.15,
-              (80, 140, 190), (80, 140, 190), (90, 150, 200), n=24)
-    _cylinder(q, cx, cy, 0.465, 0.58, 0.10,
-              (80, 140, 190), (80, 140, 190), (90, 150, 200), n=20)
-    _cylinder(q, cx, cy, 0.575, 0.68, 0.05,
-              (90, 150, 200), (90, 150, 200), (100, 160, 210), n=16)
+    """Water drop pictogram: spherical bulb (widest mid-body) tapering
+    to a point — overlapping tiers, never a constant-width stack."""
+    tiers = ((0.02, 0.14, 0.24), (0.12, 0.30, 0.30), (0.28, 0.44, 0.22),
+             (0.42, 0.56, 0.14), (0.54, 0.68, 0.07), (0.66, 0.80, 0.025))
+    for i, (z0, z1, r) in enumerate(tiers):
+        _cylinder(q, cx, cy, z0, z1, r,
+                  (80, 140, 190), (80, 140, 190), (92, 152, 202),
+                  n=28 - i * 2)
 
 
 def icon_flame(q, cx, cy, P):

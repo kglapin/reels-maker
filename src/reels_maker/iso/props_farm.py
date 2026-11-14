@@ -140,8 +140,10 @@ def silo(q, cx, cy, P):
     _cylinder(q, cx, cy, 1.72, 1.82, 0.05,
               (120, 130, 124), (96, 106, 100), (140, 150, 144), n=10)
     # Ladder rails buried at the drum face, rungs after the rails.
+    # Feet stop inside the base slab (top z=0.10) — starting at z=-0.01
+    # made them read as legs piercing the plinth.
     for rx in (cx - 0.07, cx + 0.07):
-        q.box((rx - 0.016, cy + 0.315, -0.01), (rx + 0.016, cy + 0.365, 1.45),
+        q.box((rx - 0.016, cy + 0.315, 0.05), (rx + 0.016, cy + 0.365, 1.45),
               (110, 120, 112), (88, 98, 90), (130, 140, 132))
     for z in [0.20 + i * 0.15 for i in range(8)]:
         q.line([(cx - 0.086, cy + 0.366, z), (cx + 0.086, cy + 0.366, z)],
@@ -608,7 +610,7 @@ PROPS = {
     "orchard-tree": {"fn": orchard_tree, "focus": (0.0, 0.15, 0.58), "k": 360,
                      "plinth": (0.0, 0.15, 0.62, 0.40),
                      "brief": "small orchard tree with round fruits"},
-    "windmill": {"fn": windmill, "focus": (0.0, 0.15, 0.90), "k": 380,
+    "windmill": {"fn": windmill, "focus": (0.0, 0.15, 0.90), "k": 320,
                  "plinth": (0.0, 0.15, 0.62, 0.40),
                  "brief": "farm windmill tower with rotor"},
     "grain-auger": {"fn": grain_auger, "focus": (0.0, 0.15, 0.55), "k": 460,

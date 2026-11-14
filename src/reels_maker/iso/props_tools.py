@@ -474,10 +474,11 @@ def tool_bag(q, cx, cy, P):
           (66, 70, 68), (66, 70, 68), (66, 70, 68))
     q.box((cx - 0.30, cy - 0.15, 0.48), (cx + 0.30, cy - 0.055, 0.62),
           (162, 80, 63), (132, 64, 50), (182, 98, 78))
-    # Tools peeking out of the mouth (bottoms buried, walls cover them).
-    q.box((cx - 0.16, cy - 0.03, 0.55), (cx - 0.10, cy + 0.03, 0.76),
+    # Tools peeking out of the mouth (bottoms buried in the mouth block,
+    # wide enough to read as contents, not floating slivers).
+    q.box((cx - 0.14, cy - 0.04, 0.54), (cx - 0.04, cy + 0.04, 0.76),
           (200, 150, 80), (200, 150, 80), (200, 150, 80))
-    q.box((cx + 0.02, cy - 0.03, 0.55), (cx + 0.08, cy + 0.03, 0.72),
+    q.box((cx - 0.01, cy - 0.04, 0.54), (cx + 0.11, cy + 0.04, 0.74),
           (90, 140, 160), (90, 140, 160), (90, 140, 160))
     q.box((cx - 0.30, cy + 0.055, 0.48), (cx + 0.30, cy + 0.15, 0.62),
           (182, 98, 78), (148, 78, 62), (202, 116, 94))

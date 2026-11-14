@@ -84,6 +84,11 @@ def oven(q, cx, cy, P):
           (150, 164, 152), (120, 136, 124), (172, 186, 174))
     for kx in (cx - 0.18, cx - 0.06, cx + 0.06, cx + 0.18):
         q.dot((kx, yf + 0.003, 0.945), 1.1, (90, 104, 94, 255))
+    # Control knobs along the top front edge, stems into the carcass.
+    for kx in (cx - 0.24, cx - 0.08, cx + 0.08, cx + 0.24):
+        q.box((kx - 0.028, yf - 0.005, 1.0), (kx + 0.028, yf + 0.05, 1.045),
+              (120, 134, 122), (96, 110, 98), (142, 156, 144))
+        q.dot((kx, yf + 0.052, 1.022), 0.9, (70, 84, 74, 255))
 
 
 def dishwasher(q, cx, cy, P):

@@ -96,9 +96,15 @@ def antenna(q, cx, cy, P):
           (120, 128, 134), (120, 128, 134), (120, 128, 134))
     _cylinder(q, cx, cy, 0.065, 1.55, 0.035,
               (160, 168, 174), (130, 138, 144), (160, 168, 174), n=16)
+    # Crossarms mount ON the mast surface (mast r=0.035): two segments
+    # per arm from the mast skin outward — never piercing through.
     for w, z0 in ((0.42, 0.90), (0.34, 1.10), (0.26, 1.28), (0.18, 1.42)):
-        q.box((cx - w, cy - 0.025, z0), (cx + w, cy + 0.025, z0 + 0.04),
-              (150, 158, 164), (150, 158, 164), (150, 158, 164))
+        for sx in (-1, 1):
+            xa = cx + sx * 0.033
+            xb = cx + sx * w
+            lo, hi = min(xa, xb), max(xa, xb)
+            q.box((lo, cy - 0.025, z0), (hi, cy + 0.025, z0 + 0.04),
+                  (150, 158, 164), (150, 158, 164), (150, 158, 164))
     q.dot((cx, cy, 1.615), 1.0, (180, 70, 60, 255))
 
 

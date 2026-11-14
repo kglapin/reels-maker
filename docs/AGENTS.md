@@ -32,6 +32,18 @@ No videos or large assets should be copied into Python source code. Source media
 must remain accessible locally to FFmpeg; a GitHub code connector alone does
 not guarantee that video bytes are available to the renderer.
 
+## Host-driven creative direction
+
+For model-led concept/art direction/revision, use
+[`CREATIVE_AGENT_WORKFLOW.md`](CREATIVE_AGENT_WORKFLOW.md). The active host
+model authors Creative Spec and optional scene-decisions JSON, invokes
+`creative-validate`, `creative-compile` or `creative-render` as subprocesses,
+and critiques actual storyboard evidence only when its modality supports it.
+No provider configuration or remote LLM call is required by the backend.
+For external craft synthesis applied to that workflow, read
+[`MOTION_DESIGN_RESEARCH.md`](MOTION_DESIGN_RESEARCH.md); the curated source
+library remains the required reference/anti-pattern retrieval layer.
+
 Note: original scripts in `legacy/asta-energy/scripts/` are archived and contain
 Mac-only paths. Do not execute them without explicit porting.
 

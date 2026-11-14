@@ -63,6 +63,57 @@ class StudioDesignTests(unittest.TestCase):
         self.assertEqual(built.choreography.entries["headline"].preset,
                          "fade-up")
 
+    def test_empty_optional_full_bleed_elements_receive_no_choreography(self):
+        tokens = resolve_tokens("editorial-premium", width=360, height=640)
+        context = SceneContext(360, 640, 30, 3.0, tokens,
+                               "editorial-premium", FontBook())
+        built = build_scene(context, {
+            "composition": "full-bleed-type", "duration": 3.0,
+            "headline": "REVEAL", "subtitle": "", "kicker": "",
+        })
+        self.assertEqual(set(built.choreography.entries), {"headline"})
+
+    def test_authored_graphic_elements_render_with_draw_and_entrance_tracks(self):
+        width, height = 360, 640
+        tokens = resolve_tokens("editorial-premium", width=width, height=height)
+        fonts = FontBook()
+        context = SceneContext(width, height, 30, 3.0, tokens,
+                               "editorial-premium", fonts)
+        built = build_scene(context, {
+            "type": "statement", "duration": 3.0, "decor": False,
+            "background": {"kind": "solid", "color": "#101820"},
+            "headline": "VECTOR STUDY",
+            "graphic_elements": [
+                {"id": "mark", "type": "rect", "x": .05, "y": .05,
+                 "w": .15, "h": .08, "fill": "#FF0000"},
+                {"id": "orbit", "type": "ring", "cx": .5, "cy": .58,
+                 "r": .2, "color": "#00FFCC", "stroke_width": .008,
+                 "draw": {"duration": .8},
+                 "enter": {"preset": "fade", "delay": .2,
+                           "duration": .4}},
+            ],
+        })
+        mark = next(node for node in built.nodes if node.role == "graphic:mark")
+        orbit = next(node for node in built.nodes if node.role == "graphic:orbit")
+        headline = next(node for node in built.nodes if node.role.startswith("headline"))
+        self.assertLess(built.nodes.index(mark), built.nodes.index(headline),
+                        "graphic backplates must render behind the typography")
+        self.assertEqual(mark.base_bounds(), (18.0, 32.0, 72.0, 83.2))
+        self.assertIn("prop.progress", orbit.tracks)
+        for actual, expected in zip(orbit.base_bounds(),
+                                    (106.56, 297.76, 253.44, 444.64)):
+            self.assertAlmostEqual(actual, expected, places=2)
+
+        renderer = SceneRenderer(width, height, tokens, fonts,
+                                 options=RenderOptions(supersample=1))
+        entering = renderer.render(built, .1)
+        settled = renderer.render(built, 1.3)
+        self.assertEqual(entering.getpixel((30, 45))[:3], (255, 0, 0))
+        difference = ImageChops.difference(
+            entering.crop((100, 420, 260, 580)),
+            settled.crop((100, 420, 260, 580)))
+        self.assertIsNotNone(difference.getbbox())
+
     def test_build_rejects_a_timeline_from_another_project(self):
         from dataclasses import replace
 

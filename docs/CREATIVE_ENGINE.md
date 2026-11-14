@@ -35,6 +35,23 @@ reels-maker creative-render examples/creative-engine-editorial-demo.json \
   --output renders/creative-demo.mp4 --storyboard renders/creative-storyboard.png --json
 ```
 
+For host-authored decisions, pass a JSON array with one decision per scene:
+
+```bash
+reels-maker creative-validate brands/<slug>/projects/<spec>.json \
+  --decisions renders/<slug>/<project>/decisions.json --json
+reels-maker creative-render brands/<slug>/projects/<spec>.json \
+  --decisions renders/<slug>/<project>/decisions.json \
+  --output renders/<slug>/<project>/preview.mp4 \
+  --storyboard renders/<slug>/<project>/storyboard.png --json
+```
+
+`creative-schema --json` returns both the Creative Spec schema and the
+host-authored scene-decisions schema. With `--decisions`, CLI compilation
+validates and preserves the host's choices; without it, the deterministic
+director remains an explicitly reported fallback. For the active-model
+workflow, see `CREATIVE_AGENT_WORKFLOW.md`.
+
 Compiling writes a Studio JSON and a companion `.creative-report.json` file. It does **not** render; rendering performs the compile, QA and MP4 encode. CLI exits nonzero for invalid schemes, missing media, unsupported effects and blocking QA errors. Add `--strict` to refuse warnings as well as errors.
 
 To edit a scene without hand-editing renderer files:
@@ -103,11 +120,19 @@ Example filenames are illustrative only. Use actual accessible media before comp
 - `creative-capabilities`: supported modes, families, transitions, layouts and clear limitations (not aspirational promises).
 - `creative-schema`: versioned JSON Schema with field types, limits and enumerations. It is not the sole authority for mode-specific rules.
 - `creative-validate`: strict procedural schema, asset existence and geometry/timing heuristics.
-- `creative-compile`: deterministic director + Studio-compatible manifest + reasons for each decision.
-- `creative-render`: Studio render and optional MP4-derived storyboard.
+- `creative-compile`: validated host-authored choices (`--decisions`) or a clearly labelled deterministic fallback; writes a Studio manifest and decision report.
+- `creative-render`: Studio render and optional MP4-derived storyboard; accepts the same `--decisions` file.
 - `creative-edit`: validated, versioned, atomic JSON Patch subset (add, replace, remove).
 
 The compiler rejects unsupported animation families rather than silently substituting simple fades for requested sophisticated effects.
+
+Creative Spec v1 also exposes renderer-backed Studio controls for
+`split_lines` (`true`, `words`, or selected text roles), per-role `cues`, and
+the scene-level `perspective` camera/path. These are validated against scene
+duration and existing content, advertised through `creative-capabilities`, and
+passed unchanged to Studio. They are expressive controls, not a promise of a
+fully arbitrary scene graph. See `MOTION_DESIGN_RESEARCH.md` for the external
+craft synthesis that informs the host's art-direction and review stages.
 
 ## Director selection
 

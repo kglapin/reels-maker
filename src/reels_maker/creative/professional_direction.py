@@ -62,7 +62,22 @@ def _choreography(shot, focus, motion):
     if not math.isfinite(duration) or duration <= 0:
         raise ValueError("Scene duration must be positive and finite")
     gap = min(.22, duration * .08)
-    order = list(dict.fromkeys([focus, "headline", "body", "kicker"]))
+    # Do not emit timing/preset entries for nodes this scene does not create.
+    present = []
+    if shot.get("asset") or shot.get("assets") or shot.get("chart"):
+        present.append("visual")
+    if _finite(shot.get("value")):
+        present.append("amount")
+    if shot.get("headline"):
+        present.append("headline")
+    if shot.get("subtitle"):
+        present.append("body")
+    roles = ([focus] if focus in present else [])
+    roles.extend(role for role in ("headline", "body")
+                 if role in present and role not in roles)
+    if not roles:
+        roles = present
+    order = list(dict.fromkeys(roles))
     cues = {role: round(index * gap, 4) for index, role in enumerate(order)}
     chars = len(str(shot.get("headline", ""))) + len(str(shot.get("subtitle", "")))
     minimum_hold = max(1.0, chars / 16.0)
@@ -76,8 +91,10 @@ def _choreography(shot, focus, motion):
                        "message": "Short estimated hold; shorten copy or add time/shots.",
                        "estimated_hold_s": round(available, 3),
                        "suggested_hold_s": round(minimum_hold, 3)})
+    entrance_presets = {role: (motion if role == focus else "fade-up")
+                        for role in roles}
     return {"cues": cues,
-            "entrance_presets": {"headline": motion, "body": "fade-up", "kicker": "fade-up", "amount": "fade-up"}}, {
+            "entrance_presets": entrance_presets}, {
         "focus": focus, "order": order, "estimated_hold_s": round(available, 3),
         "reading_characters_per_second": 16.0,
         "timing_basis": "authored estimate; inspect actual node tracks and MP4",

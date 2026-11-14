@@ -7,9 +7,11 @@ from pathlib import Path
 from PIL import Image
 
 from reels_maker.creative import CapabilityRegistry, capabilities, compile_creative_spec
+from reels_maker.creative.schema import creative_json_schema
 from reels_maker.creative.spec import CreativeSpecError, validate_creative_spec
 from reels_maker.creative.edit import CreativeEditError, edit_creative_spec
 from reels_maker.creative.quality import audit_creative_spec
+from reels_maker.creative.pipeline_core import creative_intent, plan_motion, render_graph
 
 class CreativeEngineTests(unittest.TestCase):
     def setUp(self):
@@ -42,6 +44,8 @@ class CreativeEngineTests(unittest.TestCase):
         self.assertEqual(cap["creative_spec_version"],1)
         self.assertEqual(cap["modes"]["camera_canvas"]["status"],"implemented")
         self.assertIn("mask-rise",cap["modes"]["camera_canvas"]["typography_motions"])
+        self.assertEqual(cap["modes"]["studio"]["scene_controls"],
+                         ["split_lines", "cues", "perspective", "graphic_elements"])
 
     def test_registry_reports_provider_icon_and_feature_status_truthfully(self):
         cap=CapabilityRegistry().describe()
@@ -90,6 +94,29 @@ class CreativeEngineTests(unittest.TestCase):
         report=validate_creative_spec(self.spec)
         self.assertEqual(report["shot_count"],2)
         self.assertEqual(report["mode"],"camera_canvas")
+
+    def test_graphic_elements_json_schema_matches_bounded_scene_contract(self):
+        schema = creative_json_schema()
+        shot = schema["properties"]["shots"]["items"]
+        elements = shot["properties"]["graphic_elements"]
+        self.assertEqual(elements["type"], "array")
+        self.assertEqual((elements["minItems"], elements["maxItems"]), (1, 12))
+        item = elements["items"]
+        self.assertFalse(item["additionalProperties"])
+        self.assertEqual(item["required"], ["id", "type"])
+        props = item["properties"]
+        self.assertEqual(props["type"]["enum"],
+                         ["rect", "round", "circle", "ring", "line", "path"])
+        self.assertEqual((props["x"]["minimum"], props["x"]["maximum"]), (0, 1))
+        self.assertEqual((props["w"]["exclusiveMinimum"], props["w"]["maximum"]), (0, 1))
+        self.assertEqual((props["stroke_width"]["minimum"],
+                          props["stroke_width"]["maximum"]), (0.001, 0.05))
+        points = props["points"]
+        self.assertEqual((points["minItems"], points["maxItems"]), (2, 32))
+        self.assertEqual(points["items"]["items"]["minimum"], 0)
+        self.assertEqual(points["items"]["items"]["maximum"], 1)
+        self.assertFalse(props["enter"]["additionalProperties"])
+        self.assertFalse(props["draw"]["additionalProperties"])
     def test_reject_unknown_animation(self):
         self.spec["shots"][0]["typography"]={"family":"magical-3d"}
         with self.assertRaises(CreativeSpecError):
@@ -171,6 +198,130 @@ class CreativeEngineTests(unittest.TestCase):
         self.spec["shots"][0]["camera"]={"angle":15}
         with self.assertRaises(CreativeSpecError):
             validate_creative_spec(self.spec)
+
+    def test_authored_motion_decisions_survive_pipeline_without_heuristic_rewrite(self):
+        self.spec["mode"] = "studio"
+        authored = [
+            {"id": "opening", "layout": "statement", "typography_motion": "tracking-in",
+             "layout_reason": "Open on one deliberate typographic gesture.",
+             "entrance_presets": {"body": "none"}},
+            {"id": "next", "layout": "split-editorial", "typography_motion": "mask-rise",
+             "layout_reason": "Reveal the supporting idea after the opening."},
+        ]
+        intent = creative_intent(self.spec)
+        plan = plan_motion(intent, authored, decision_source="llm")
+        graph = render_graph(intent, plan, source_dir=self.root, check_assets=False)
+        self.assertEqual(graph.report["decision_source"], "llm")
+        self.assertEqual(
+            [scene["composition"] for scene in graph.to_renderer_input()["scenes"]],
+            ["statement", "split-editorial"],
+        )
+        self.assertEqual(
+            [scene["typography_motion"] for scene in graph.to_renderer_input()["scenes"]],
+            ["tracking-in", "mask-rise"],
+        )
+        self.assertEqual(
+            graph.to_renderer_input()["scenes"][0]["entrance_presets"],
+            {"body": "none"},
+        )
+
+    def test_authored_motion_plan_rejects_unsupported_capability(self):
+        self.spec["mode"] = "studio"
+        intent = creative_intent(self.spec)
+        authored = [
+            {"id": shot["id"], "layout": "statement", "typography_motion": "invented-3d"}
+            for shot in self.spec["shots"]
+        ]
+        with self.assertRaises(CreativeSpecError):
+            plan_motion(intent, authored, decision_source="llm")
+
+    def test_studio_scene_choreography_camera_and_split_type_survive_compile(self):
+        self.spec["mode"] = "studio"
+        first = self.spec["shots"][0]
+        first.update({
+            "composition": "quote",
+            "split_lines": ["headline", "body"],
+            "cues": {"headline": 0.12, "body": 0.48, "quote-mark": 0.0},
+            "perspective": {"mode": "settle", "yaw": -7.0,
+                            "pitch": 2.0, "zoom": 1.04,
+                            "duration": 1.1, "delay": 0.1},
+            "graphic_elements": [{
+                "id": "orbit", "type": "ring", "cx": 0.5, "cy": 0.55,
+                "r": 0.12, "color": "accent", "stroke_width": 0.005,
+                "draw": {"delay": 0.2, "duration": 0.8},
+                "enter": {"preset": "fade-up", "delay": 0.1, "duration": 0.4},
+            }],
+        })
+        decisions = [
+            {"id": shot["id"], "layout": shot.get("composition", "statement"),
+             "typography_motion": "mask-rise"}
+            for shot in self.spec["shots"]
+        ]
+        manifest, _ = compile_creative_spec(
+            self.spec, source_dir=self.root, decisions=decisions,
+            decision_source="llm")
+        scene = manifest["scenes"][0]
+        self.assertEqual(scene["split_lines"], ["headline", "body"])
+        self.assertEqual(scene["cues"], first["cues"])
+        self.assertEqual(scene["perspective"], first["perspective"])
+        self.assertEqual(scene["graphic_elements"], first["graphic_elements"])
+
+    def test_graphic_elements_validation_rejects_unsafe_geometry_and_timing(self):
+        self.spec["mode"] = "studio"
+        valid = {
+            "id": "marker", "type": "rect", "x": 0.2, "y": 0.2,
+            "w": 0.2, "h": 0.1, "fill": "accent",
+        }
+        invalid_elements = [
+            [valid, {**valid}],
+            [{**valid, "fill": "url(https://example.invalid/image.svg)"}],
+            [{"id": "edge", "type": "line", "x1": 0.001, "y1": 0.2,
+              "x2": 0.8, "y2": 0.7, "color": "ink", "stroke_width": 0.05}],
+            [{"id": "late", "type": "path", "points": [[0.2, 0.2], [0.8, 0.8]],
+              "color": "ink", "stroke_width": 0.005,
+              "draw": {"delay": 2.6, "duration": 0.2}}],
+        ]
+        for elements in invalid_elements:
+            with self.subTest(elements=elements):
+                candidate = copy.deepcopy(self.spec)
+                candidate["shots"][0]["graphic_elements"] = elements
+                with self.assertRaises(CreativeSpecError):
+                    validate_creative_spec(candidate)
+
+    def test_scene_program_rejects_stale_cue_and_overlong_camera_path(self):
+        self.spec["mode"] = "studio"
+        shot = self.spec["shots"][0]
+        shot["cues"] = {"visual": 0.3}
+        with self.assertRaises(CreativeSpecError):
+            validate_creative_spec(self.spec)
+        shot.pop("cues")
+        shot["perspective"] = {
+            "path": [{"t": 0.0}, {"t": 2.8}],
+            "duration": 1.0,
+        }
+        with self.assertRaises(CreativeSpecError):
+            validate_creative_spec(self.spec)
+
+    def test_authored_per_element_presets_reject_unsupported_motion(self):
+        self.spec["mode"] = "studio"
+        authored = [
+            {"id": shot["id"], "layout": "statement",
+             "typography_motion": "fade-up",
+             "entrance_presets": {"body": "teleport"}}
+            for shot in self.spec["shots"]
+        ]
+        with self.assertRaises(CreativeSpecError):
+            plan_motion(creative_intent(self.spec), authored, decision_source="llm")
+
+    def test_camera_canvas_rejects_studio_only_per_element_presets(self):
+        authored = [
+            {"id": shot["id"], "layout": "photo-above",
+             "typography_motion": "fade",
+             "entrance_presets": {"headline": "none"}}
+            for shot in self.spec["shots"]
+        ]
+        with self.assertRaises(CreativeSpecError):
+            plan_motion(creative_intent(self.spec), authored, decision_source="llm")
 
 if __name__=="__main__":
     unittest.main()

@@ -345,6 +345,8 @@ def build_parser() -> argparse.ArgumentParser:
         "creative-validate", help="Validate Creative Spec v1 and perform asset/geometry QA")
     creative_val.add_argument("spec", type=Path)
     creative_val.add_argument("--root", type=Path)
+    creative_val.add_argument("--decisions", type=Path,
+                              help="LLM-authored scene decisions JSON array; validate without rewriting")
     creative_val.add_argument("--semantic-only", action="store_true")
     creative_val.add_argument("--json", action="store_true")
 
@@ -353,6 +355,8 @@ def build_parser() -> argparse.ArgumentParser:
     creative_compile.add_argument("spec", type=Path)
     creative_compile.add_argument("--root", type=Path)
     creative_compile.add_argument("--output", type=Path)
+    creative_compile.add_argument("--decisions", type=Path,
+                                  help="LLM-authored scene decisions JSON array; validated, never rewritten")
     creative_compile.add_argument("--force", action="store_true")
     creative_compile.add_argument("--strict", action="store_true",
                                   help="Reject warnings in addition to errors")
@@ -371,6 +375,8 @@ def build_parser() -> argparse.ArgumentParser:
     creative_render.add_argument("spec", type=Path)
     creative_render.add_argument("--root", type=Path)
     creative_render.add_argument("--output", type=Path, required=True)
+    creative_render.add_argument("--decisions", type=Path,
+                                 help="LLM-authored scene decisions JSON array; validated, never rewritten")
     creative_render.add_argument("--storyboard", type=Path)
     creative_render.add_argument("--cache-dir", type=Path,
                                  help="Override the default Studio segment cache directory")

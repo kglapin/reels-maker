@@ -17,6 +17,7 @@ from ..design.tokens import DesignTokens
 from ..layout.engine import Rect
 from ..motionkit.choreography import ElementSpec
 from ..motionkit.easing import EASINGS
+from ..motionkit.keyframes import Track
 from ..motionkit.presets import (
     apply_entrance, apply_exit, canonical_preset, number_track,
 )
@@ -407,6 +408,70 @@ def _extra_icons(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
             apply_entrance(node, preset, delay, duration, ctx.tokens)
         nodes.append(node)
     return nodes
+
+
+def _graphic_nodes(ctx: SceneContext, scene: dict, theme: dict) -> list[Node]:
+    """Build validated, normalized Creative Spec vector primitives."""
+    output: list[Node] = []
+    short_side = min(ctx.width, ctx.height)
+
+    def color(value):
+        return theme[value] if value in theme else parse_hex(value)
+
+    for item in scene.get("graphic_elements") or []:
+        kind = item["type"]
+        props: dict = {}
+        if kind in ("rect", "round"):
+            props.update(x=item["x"] * ctx.width, y=item["y"] * ctx.height,
+                         w=item["w"] * ctx.width, h=item["h"] * ctx.height)
+            if "fill" in item:
+                props["fill"] = color(item["fill"])
+            if "border" in item:
+                props["border"] = color(item["border"])
+                props["border_width"] = item["border_width"] * short_side
+            if kind == "round":
+                props["radius"] = item.get("radius", 0) * short_side
+        elif kind in ("circle", "ring"):
+            props.update(cx=item["cx"] * ctx.width, cy=item["cy"] * ctx.height,
+                         r=item["r"] * short_side)
+            if kind == "circle":
+                if "fill" in item:
+                    props["fill"] = color(item["fill"])
+                if "border" in item:
+                    props["border"] = color(item["border"])
+                    props["border_width"] = item["border_width"] * short_side
+            else:
+                props["color"] = color(item["color"])
+                props["width"] = item.get(
+                    "stroke_width", item.get("width")) * short_side
+        elif kind == "line":
+            props.update(x1=item["x1"] * ctx.width, y1=item["y1"] * ctx.height,
+                         x2=item["x2"] * ctx.width, y2=item["y2"] * ctx.height,
+                         color=color(item["color"]),
+                         width=item.get("stroke_width", item.get("width")) * short_side)
+        else:  # path
+            props.update(points=[(point[0] * ctx.width, point[1] * ctx.height)
+                                 for point in item["points"]],
+                         color=color(item["color"]),
+                         width=item.get("stroke_width", item.get("width")) * short_side,
+                         closed=bool(item.get("closed", False)))
+            if "fill" in item:
+                props["fill"] = color(item["fill"])
+        node = Node(kind=kind, role=f"graphic:{item['id']}", props=props,
+                    qa_class="decor", meta={"creative_graphic_id": item["id"]})
+        enter = item.get("enter")
+        if enter is not None:
+            preset = canonical_preset(enter.get("preset", "fade-up"))
+            apply_entrance(node, preset, float(enter.get("delay", 0)),
+                           float(enter.get("duration", .45)), ctx.tokens)
+        draw = item.get("draw")
+        if draw is not None:
+            start = float(draw.get("delay", 0))
+            end = start + float(draw["duration"])
+            node.track("prop.progress", Track.from_pairs(
+                [(start, 0.0), (end, 1.0)], easing="linear"))
+        output.append(node)
+    return output
 
 
 def _icon_collisions(icon: Node, occupied: list[Node], gap: float) -> list[str]:
@@ -1021,6 +1086,9 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
     for role, (node, entrance) in overlay_nodes(ctx, scene).items():
         elements[role] = node
         specs.append(_spec(role, 5, "decor", hint=entrance, order=len(specs)))
+    # Some compositions declare optional subtitle/kicker slots. They must not
+    # acquire choreography when no corresponding renderer node exists.
+    specs = [spec for spec in specs if spec.role in elements]
     split = scene.get("split_lines")
     if split:
         mode = "words" if split == "words" else "lines"
@@ -1049,17 +1117,39 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             raise ValueError("entrance_presets must be an object")
         from dataclasses import replace
         known = {spec.role for spec in specs}
-        unknown = sorted(set(preset_overrides) - known)
+        expanded_presets: dict[str, str] = {}
+        unknown = []
+        for role, preset in preset_overrides.items():
+            targets = ([role] if role in known else [
+                spec.role for spec in specs
+                if getattr(elements.get(spec.role), "meta", {}).get("split_from") == role
+            ])
+            if not targets:
+                unknown.append(role)
+            for target in targets:
+                expanded_presets[target] = preset
+        unknown.sort()
         if unknown:
             raise ValueError("entrance_presets refer to unknown elements: "
                              + ", ".join(unknown))
         specs = [replace(spec, hint=canonical_preset(
-                    str(preset_overrides[spec.role])))
-                 if spec.role in preset_overrides else spec
+                    str(expanded_presets[spec.role])))
+                 if spec.role in expanded_presets else spec
                  for spec in specs]
     raw_cues = scene.get("cues") or {}
-    cues = {role: value for role, value in raw_cues.items() if role in roles}
-    dropped = sorted(set(raw_cues) - roles)
+    cues: dict[str, float] = {}
+    dropped = []
+    for role, value in raw_cues.items():
+        targets = ([role] if role in roles else [
+            spec.role for spec in specs
+            if getattr(elements.get(spec.role), "meta", {}).get("split_from") == role
+        ])
+        if not targets:
+            dropped.append(role)
+            continue
+        for index, target in enumerate(targets):
+            cues[target] = float(value) + index * ctx.tokens.motion.stagger
+    dropped.sort()
     plan = plan_choreography(
         specs, style=ctx.style, scene_index=ctx.scene_index,
         scene_duration=ctx.duration, tokens=ctx.tokens,
@@ -1138,7 +1228,10 @@ def _finish(ctx: SceneContext, scene: dict, layout, background: dict,
             radius=float(vlayer.get("radius", 18.0)),
             qa_class="decor",
         ))
-    final_nodes = (decor or []) + media_nodes + list(elements.values()) \
+    # Authored vector accents sit above the base/media but below copy and UI;
+    # opaque panels must never occlude the type they are meant to support.
+    graphic_nodes = _graphic_nodes(ctx, scene, _theme(ctx, scene))
+    final_nodes = (decor or []) + media_nodes + graphic_nodes + list(elements.values()) \
         + overlay_fx_nodes + counter_nodes_ + _extra_icons(
             ctx, scene, _theme(ctx, scene))
     _validate_icon_spacing(ctx, final_nodes)

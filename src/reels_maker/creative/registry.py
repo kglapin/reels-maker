@@ -66,6 +66,8 @@ class CapabilityRegistry:
                     "typography_presets": sorted(PRESETS),
                     "transitions": sorted(EFFECTS),
                     "editorial_rotations": list(ROTATION_FAMILIES),
+                    "scene_controls": ["split_lines", "cues", "perspective",
+                                       "graphic_elements"],
                     "photo_required": False,
                     "scene_effects": {
                         "polaroid_burst": {

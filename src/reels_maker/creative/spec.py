@@ -35,6 +35,169 @@ def _keys(value,permitted,path):
     if extra:
         raise CreativeSpecError(path,"unknown keys: "+", ".join(sorted(map(str,extra))))
 
+
+_GRAPHIC_COLORS={"ink","muted","accent","kicker","surface","base"}
+_GRAPHIC_GEOMETRY={
+    "rect":{"x","y","w","h"},
+    "round":{"x","y","w","h","radius"},
+    "circle":{"cx","cy","r"},
+    "ring":{"cx","cy","r"},
+    "line":{"x1","y1","x2","y2"},
+    "path":{"points","closed"},
+}
+
+
+def _graphic_color(value,path):
+    if (not isinstance(value,str) or
+            (value not in _GRAPHIC_COLORS and
+             not re.fullmatch(r"#[0-9a-fA-F]{6}",value))):
+        raise CreativeSpecError(path,"use a theme color token or literal #RRGGBB")
+
+
+def _validate_graphic_elements(elements,path,*,mode,duration,width,height):
+    if mode!="studio":
+        raise CreativeSpecError(path,"graphic_elements are Studio-only")
+    if not isinstance(elements,list) or not 1<=len(elements)<=12:
+        raise CreativeSpecError(path,"expected 1..12 graphic elements")
+    short=min(width,height)
+    scene_duration=float(duration)
+    seen=set()
+    common={"id","type","draw","enter"}
+    for index,raw in enumerate(elements):
+        p=f"{path}[{index}]"
+        item=_object(raw,p)
+        kind=item.get("type")
+        if kind not in _GRAPHIC_GEOMETRY:
+            raise CreativeSpecError(p+".type","unsupported vector primitive")
+        appearance={
+            "rect":{"fill","border","border_width"},
+            "round":{"fill","border","border_width"},
+            "circle":{"fill","border","border_width"},
+            "ring":{"color","width","stroke_width"},
+            "line":{"color","width","stroke_width"},
+            "path":{"color","width","stroke_width","fill"},
+        }[kind]
+        if kind=="round":
+            appearance=appearance|{"radius"}
+        permitted=common|_GRAPHIC_GEOMETRY[kind]|appearance
+        _keys(item,permitted,p)
+        element_id=_text(item.get("id"),p+".id",40)
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*",element_id):
+            raise CreativeSpecError(p+".id","invalid graphic element identifier")
+        if element_id in seen:
+            raise CreativeSpecError(p+".id","duplicate graphic element identifier")
+        seen.add(element_id)
+
+        for color_key in ("color","fill","border"):
+            if color_key in item:
+                _graphic_color(item[color_key],p+"."+color_key)
+        if "width" in item and "stroke_width" in item:
+            raise CreativeSpecError(p,"use width or stroke_width, not both")
+        if "border" in item and "border_width" not in item:
+            raise CreativeSpecError(p+".border_width","required when border is set")
+        if "border_width" in item and "border" not in item:
+            raise CreativeSpecError(p+".border_width","requires a border color")
+        border_px=(short*_number(item["border_width"],p+".border_width",.001,.05)
+                   if "border_width" in item else 0.0)
+        stroke_key="stroke_width" if "stroke_width" in item else "width"
+        stroke_norm=_number(item.get(stroke_key,.004),p+"."+stroke_key,.001,.05)
+        stroke_px=short*stroke_norm
+
+        box=None
+        if kind in ("rect","round"):
+            x=_number(item.get("x"),p+".x",0,1)*width
+            y=_number(item.get("y"),p+".y",0,1)*height
+            w=_number(item.get("w"),p+".w",.001,1)*width
+            h=_number(item.get("h"),p+".h",.001,1)*height
+            if x+w>width or y+h>height:
+                raise CreativeSpecError(p,"rectangle must remain within the canvas")
+            if kind=="round":
+                radius=_number(item.get("radius",0),p+".radius",0,.25)*short
+                if radius>min(w,h)/2:
+                    raise CreativeSpecError(p+".radius","exceeds half the short side")
+            if "fill" not in item and "border" not in item:
+                raise CreativeSpecError(p,"rect/round needs fill or border")
+            box=(x-border_px/2,y-border_px/2,
+                 x+w+border_px/2,y+h+border_px/2)
+        elif kind in ("circle","ring"):
+            cx=_number(item.get("cx"),p+".cx",0,1)*width
+            cy=_number(item.get("cy"),p+".cy",0,1)*height
+            radius=_number(item.get("r"),p+".r",.001,.5)*short
+            if kind=="circle":
+                if "fill" not in item and "border" not in item:
+                    raise CreativeSpecError(p,"circle needs fill or border")
+                extent=radius+border_px/2
+            else:
+                if "color" not in item or not ("width" in item or "stroke_width" in item):
+                    raise CreativeSpecError(p,"ring needs color and width/stroke_width")
+                extent=radius+stroke_px/2
+            box=(cx-extent,cy-extent,cx+extent,cy+extent)
+        elif kind=="line":
+            if "color" not in item or not ("width" in item or "stroke_width" in item):
+                raise CreativeSpecError(p,"line needs color and width/stroke_width")
+            x1=_number(item.get("x1"),p+".x1",0,1)*width
+            y1=_number(item.get("y1"),p+".y1",0,1)*height
+            x2=_number(item.get("x2"),p+".x2",0,1)*width
+            y2=_number(item.get("y2"),p+".y2",0,1)*height
+            if x1==x2 and y1==y2:
+                raise CreativeSpecError(p,"line endpoints must be distinct")
+            half=stroke_px/2
+            box=(min(x1,x2)-half,min(y1,y2)-half,
+                 max(x1,x2)+half,max(y1,y2)+half)
+        else:
+            if "color" not in item or not ("width" in item or "stroke_width" in item):
+                raise CreativeSpecError(p,"path needs color and width/stroke_width")
+            points=item.get("points")
+            if not isinstance(points,list) or not 2<=len(points)<=32:
+                raise CreativeSpecError(p+".points","expected 2..32 points")
+            px=[]
+            for point_index,point in enumerate(points):
+                pp=f"{p}.points[{point_index}]"
+                if not isinstance(point,list) or len(point)!=2:
+                    raise CreativeSpecError(pp,"expected [x, y]")
+                px.append((_number(point[0],pp+"[0]",0,1)*width,
+                           _number(point[1],pp+"[1]",0,1)*height))
+            if len(set(px))<2:
+                raise CreativeSpecError(p+".points","needs two distinct points")
+            if "closed" in item and not isinstance(item["closed"],bool):
+                raise CreativeSpecError(p+".closed","expected a boolean")
+            if item.get("closed") and "fill" not in item:
+                raise CreativeSpecError(p+".fill","closed paths require a fill color")
+            half=stroke_px/2
+            box=(min(x for x,_ in px)-half,min(y for _,y in px)-half,
+                 max(x for x,_ in px)+half,max(y for _,y in px)+half)
+        if box and (box[0]<0 or box[1]<0 or box[2]>width or box[3]>height):
+            raise CreativeSpecError(p,"graphic element and stroke must remain within canvas")
+
+        if "draw" in item:
+            if kind not in ("ring","line","path"):
+                raise CreativeSpecError(p+".draw","supported only on ring/line/path")
+            draw=_object(item["draw"],p+".draw")
+            _keys(draw,{"delay","duration"},p+".draw")
+            if "duration" not in draw:
+                raise CreativeSpecError(p+".draw.duration","is required")
+            delay=_number(draw.get("delay",0),p+".draw.delay",0,scene_duration)
+            draw_duration=_number(draw["duration"],p+".draw.duration",
+                                  .05,min(8,scene_duration))
+            if delay+draw_duration>scene_duration+.0001:
+                raise CreativeSpecError(p+".draw","must finish within scene duration")
+        if "enter" in item:
+            enter=_object(item["enter"],p+".enter")
+            _keys(enter,{"preset","delay","duration"},p+".enter")
+            preset=enter.get("preset","fade-up")
+            from ..motionkit.presets import canonical_preset
+            try:
+                canonical=canonical_preset(preset) if isinstance(preset,str) else None
+            except ValueError:
+                canonical=None
+            if canonical not in PRESETS:
+                raise CreativeSpecError(p+".enter.preset","unsupported entrance preset")
+            delay=_number(enter.get("delay",0),p+".enter.delay",0,scene_duration)
+            enter_duration=_number(enter.get("duration",.45),p+".enter.duration",
+                                   .05,min(3,scene_duration))
+            if delay+enter_duration>scene_duration+.0001:
+                raise CreativeSpecError(p+".enter","must finish within scene duration")
+
 def validate_creative_spec(spec):
     """Validate intent and capability references before invoking the renderer.
 
@@ -93,7 +256,8 @@ def validate_creative_spec(spec):
         _keys(shot,{"id","intent","headline","subtitle","duration","asset",
                     "composition","layout","camera","typography","transition",
                     "value","visual","icon_library","icon_assets","rotation",
-                    "chart","kicker","allow_repeat_reason","assets","carousel"},p)
+                    "chart","kicker","allow_repeat_reason","assets","carousel",
+                    "split_lines","cues","perspective","graphic_elements"},p)
         sid=_text(shot.get("id"),p+".id",80)
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*",sid):
             raise CreativeSpecError(p+".id","invalid scene identifier")
@@ -241,6 +405,59 @@ def validate_creative_spec(spec):
         if "duration" in trans:_number(trans["duration"],p+".transition.duration",.1,2)
         if trans.get("direction","left") not in ("left","right","up","down"):
             raise CreativeSpecError(p+".transition.direction","unsupported direction")
+        if "split_lines" in shot:
+            split=shot["split_lines"]
+            if not (isinstance(split,bool) or split == "words" or
+                    isinstance(split,list) and all(
+                        role in ("headline","body","kicker") for role in split)):
+                raise CreativeSpecError(p+".split_lines",
+                    "choose true, false, 'words', or a list of headline/body/kicker roles")
+            if isinstance(split,list):
+                available={"headline"}
+                if shot.get("subtitle"): available.add("body")
+                if shot.get("kicker"): available.add("kicker")
+                if set(split)-available:
+                    raise CreativeSpecError(p+".split_lines",
+                        "cannot split an absent headline/body/kicker role")
+        if "cues" in shot:
+            if mode != "studio":
+                raise CreativeSpecError(p+".cues","authored scene cues require Studio mode")
+            cues=_object(shot["cues"],p+".cues")
+            if len(cues)>12:
+                raise CreativeSpecError(p+".cues","at most 12 role cues are supported")
+            composition=shot.get("composition",layout)
+            available={"headline"}
+            if shot.get("subtitle"): available.add("body")
+            if shot.get("kicker"): available.add("kicker")
+            if composition=="quote": available.add("quote-mark")
+            if composition in ("amount","stats","bars","line-chart","checklist"):
+                available.add("visual")
+            for role,value in cues.items():
+                if role not in available:
+                    raise CreativeSpecError(p+f".cues.{role}",
+                        "cue must target a rendered element in this scene")
+                _number(value,p+f".cues.{role}",0,float(shot.get("duration",2.8)))
+        if "perspective" in shot:
+            if mode != "studio":
+                raise CreativeSpecError(p+".perspective","perspective is Studio-only")
+            perspective=_object(shot["perspective"],p+".perspective")
+            try:
+                from ..renderers.perspective import perspective_spec
+                normalized=perspective_spec({"perspective":perspective})
+            except (TypeError,ValueError) as exc:
+                raise CreativeSpecError(p+".perspective",str(exc)) from exc
+            duration=float(shot.get("duration",2.8))
+            if normalized["delay"]+normalized["duration"]>duration+.0001:
+                raise CreativeSpecError(p+".perspective",
+                    "camera move must finish within the scene duration")
+            if normalized["path"] and normalized["path"][-1]["t"]>duration:
+                raise CreativeSpecError(p+".perspective.path",
+                    "camera path must finish within the scene duration")
+        if "graphic_elements" in shot:
+            _validate_graphic_elements(
+                shot["graphic_elements"], p+".graphic_elements",
+                mode=mode, duration=shot.get("duration", 2.8),
+                width=width, height=height)
         if "rotation" in shot:
             if mode!="studio":
                 raise CreativeSpecError(p+".rotation","use camera.angle in camera_canvas")

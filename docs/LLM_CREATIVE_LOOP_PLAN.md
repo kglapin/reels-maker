@@ -67,8 +67,10 @@ Brief + fakty + marka + uprawnienia + preferencje
  -> trwała, kontekstowa pamięć feedbacku.
 
 Trzy role logiczne: reżyser kreatywny, projektant-wykonawca, krytyk.
-Nie muszą oznaczać trzech dostawców ani kilkunastu agentów. Oddzielić konteksty
-oraz wejścia/wyjścia. Krytyk nie otrzymuje uzasadnienia autora ani jego nazwy;
+Nie muszą oznaczać trzech dostawców ani kilkunastu agentów; mogą być trzema
+wywołaniami modelu aktualnie udostępnionego przez hosta/agenta. Projekt nie
+wybiera dostawcy i nie wymaga zdalnego API. Oddzielić konteksty oraz
+wejścia/wyjścia. Krytyk nie otrzymuje uzasadnienia autora ani jego nazwy;
 nie nagradzać autora za przekonujący opis słabego obrazu.
 
 ## 4. Backlog — zakres, pliki, zależności i odbiór
@@ -95,16 +97,23 @@ P0 = pierwszy działający cykl kreatywny; P1 = rozszerzenie swobody i pamięci.
 - Odbiór: walidowane JSON, stabilne ID, wersjonowanie i migracja v1;
   fakty/dane/licencje nie mogą być zmieniane przez artystyczną rewizję.
 
-### LC-02 / P0 — rzeczywisty interfejs do modeli
+### LC-02 / P0 — model-agnostyczny kontrakt hosta
 - Zależności: LC-01.
-- Nowe: creative/llm/providers.py, config.py; audyt llm_muse.py i .env.example.
-  Najpierw zinwentaryzować również istniejące klienty/krytyków w iso/ i innych
-  pakietach; adapterować nadające się elementy zamiast dublować integracje.
-- Konfigurowalne aliasy modeli dla trzech ról, structured output, obraz,
-  wideo/audio gdy obsługiwane, narzędzia, timeouty, retry, limity kosztu.
-- Odbiór: mocki offline + osobny jawnie włączany test rzeczywistego dostawcy.
-  Brak klucza lub zdolności vision ma dać błąd/ograniczenie, nie udawany wynik.
-  Nie wybierać niezweryfikowanego endpointu ani zapisywać kluczy w repo.
+- Podstawowa ścieżka używa modelu aktywnego w hoście/agencie (np. OpenCode,
+  Pi lub ChatGPT). Harness wywołuje model, a `reels-maker` działa jako zwykły
+  subprocess/CLI. Nie dodawać obowiązkowego SDK, endpointu ani klucza API.
+- Rozwinąć `creative/llm/contracts.py` i udokumentowany JSON-first CLI tak,
+  żeby host mógł przekazywać walidowane etapy: koncepcje, art direction,
+  SceneProgram, krytykę i RevisionPatch. Zapisywać źródło decyzji i stan runu.
+- `CreativeModel` może pozostać opcjonalnym interfejsem wstrzykiwanym dla
+  natywnych hostów lub późniejszych adapterów; nie może narzucać modelu ani
+  dostawcy. Mocki służą do testów kontraktów, nie udają jakości live modelu.
+- Obraz/audio/video wolno oceniać tylko, jeśli aktywny host/model faktycznie
+  otrzymał dane i obsługuje daną modalność. W przeciwnym razie krytyka ma
+  jawnie oznaczyć ograniczenie; tekstowy opis manifestu nie jest dowodem
+  obejrzenia renderu.
+- Odbiór: workflow działa z aktualnym modelem wybranym przez hosta bez zmian
+  w konfiguracji vendora projektu; subprocess pozostaje bez zdalnych wywołań.
 
 ### LC-03 / P0 — kontekst i reference retrieval
 - Zależności: LC-01/02.
@@ -230,7 +239,29 @@ P0 = pierwszy działający cykl kreatywny; P1 = rozszerzenie swobody i pamięci.
 - Odbiór: LLM-led workflow ma jawny status i konfigurację; stara ścieżka
   deterministyczna pozostaje dostępna. Bez sieci testy używają zapisanych,
   oznaczonych fixture'ów, a nie udają żywej inteligencji. Tryb bez LLM nazywać
-  fallback, nigdy równoważnym autonomicznym reżyserem.
+   fallback, nigdy równoważnym autonomicznym reżyserem.
+
+## Bieżący status wdrożenia (2026-11-13)
+
+| Zadanie | Status | Dowód / ograniczenie |
+|---|---|---|
+| LC-00 | planned | Nie zamrożono jeszcze osobnego kontraktu benchmarku kreatywnego. |
+| LC-01 | implemented_unverified | Dodano walidatory briefu, koncepcji, programu scen, krytyki opartej o hash renderu i patchy; testy kontraktów przechodzą. |
+| LC-02 | implemented_unverified | Aktywny host pozostaje modelem; JSON-first CLI przyjmuje `--decisions`, schema i runbook są dostępne; syntetyczny render przeszedł. Brak niezależnego hosta/CI integration run i resumable RunLedger. |
+| LC-07 | in_progress | Zachowanie kompozycji/ruchu i per-element Studio presetów działa; dowód to syntetyczny render. Creative Spec nadal nie opisuje dowolnego grafu scen ani pełnego SceneProgram v2. |
+| LC-03..06, LC-08..15 | planned | Nie traktować mockowanego orchestratora ani technicznego renderu jako ukończenia tych zadań. |
+
+Syntetyczny smoke test bez assetów klienta: 4 sceny / 540×960 / 24 fps,
+Creative QA `ok`, MP4 254 klatki, kontrola flash `pass`; render i storyboard
+obejrzano w tej sesji. To potwierdza wyłącznie techniczny subprocess flow,
+nie live multimodalną krytykę, jakość audio, odbiór telefonu ani akceptację
+kreatywną. Dwa golden-strip testy nadal nie przechodzą; fixture'ów nie
+nadpisano.
+
+Odrębna krytyka wizualna storyboardu w tej sesji: cztery sceny powtarzają
+ciemne płaskie tło i centralny wielki biały tekst; brak dowodu wizualnego,
+zmiany perspektywy lub specyficznego dla treści motywu. Wersję odrzucono jako
+dowód poprawy gustu; była to próba techniczna, nie wersja do publikacji.
 
 ## 5. Kolejność wydań
 

@@ -3,7 +3,9 @@
 The runtime validator in spec.py is authoritative for cross-field rules,
 asset scoping, supported effects and camera/scene combinations.
 """
-from .registry import CAMERA_LAYOUTS, CAMERA_TEXT_MOTIONS, STUDIO_COMPOSITIONS
+from .registry import (CAMERA_LAYOUTS, CAMERA_TEXT_MOTIONS,
+                       STUDIO_COMPOSITIONS)
+from ..motionkit.presets import PRESETS
 
 def creative_json_schema():
     number={"type":"number"}
@@ -75,6 +77,68 @@ def creative_json_schema():
                 }},
             "icon_library":{"type":"string"},
             "icon_assets":{"type":"array"},
+            "split_lines":{"oneOf":[{"type":"boolean"},{"const":"words"},
+                {"type":"array","items":{"type":"string","enum":[
+                    "headline","body","kicker"]}}]},
+            "cues":{"type":"object","maxProperties":12,
+                "additionalProperties":{"type":"number","minimum":0}},
+            "perspective":{"type":"object","additionalProperties":False,
+                "properties":{
+                    "yaw":{"type":"number","minimum":-30,"maximum":30},
+                    "pitch":{"type":"number","minimum":-30,"maximum":30},
+                    "zoom":{"type":"number","minimum":.55,"maximum":1.6},
+                    "pan_x":{"type":"number","minimum":-.35,"maximum":.35},
+                    "pan_y":{"type":"number","minimum":-.35,"maximum":.35},
+                    "duration":{"type":"number","minimum":.1,"maximum":30},
+                    "delay":{"type":"number","minimum":0,"maximum":30},
+                    "easing":{"type":"string"},
+                    "mode":{"enum":["settle","drift","push"]},
+                    "path":{"type":"array","minItems":2,"maxItems":24,
+                        "items":{"type":"object","additionalProperties":False,
+                            "properties":{
+                                "t":{"type":"number","minimum":0,"maximum":30},
+                                "yaw":{"type":"number","minimum":-30,"maximum":30},
+                                "pitch":{"type":"number","minimum":-30,"maximum":30},
+                                "zoom":{"type":"number","minimum":.55,"maximum":1.6},
+                                "pan_x":{"type":"number","minimum":-.35,"maximum":.35},
+                                "pan_y":{"type":"number","minimum":-.35,"maximum":.35},
+                            }}}}},
+            "graphic_elements":{"type":"array","minItems":1,"maxItems":12,
+                "items":{"type":"object","additionalProperties":False,
+                    "required":["id","type"],
+                    "properties":{
+                        "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":40},
+                        "type":{"enum":["rect","round","circle","ring","line","path"]},
+                        "x":{"type":"number","minimum":0,"maximum":1},
+                        "y":{"type":"number","minimum":0,"maximum":1},
+                        "w":{"type":"number","exclusiveMinimum":0,"maximum":1},
+                        "h":{"type":"number","exclusiveMinimum":0,"maximum":1},
+                        "cx":{"type":"number","minimum":0,"maximum":1},
+                        "cy":{"type":"number","minimum":0,"maximum":1},
+                        "r":{"type":"number","exclusiveMinimum":0,"maximum":0.5},
+                        "x1":{"type":"number","minimum":0,"maximum":1},
+                        "y1":{"type":"number","minimum":0,"maximum":1},
+                        "x2":{"type":"number","minimum":0,"maximum":1},
+                        "y2":{"type":"number","minimum":0,"maximum":1},
+                        "points":{"type":"array","minItems":2,"maxItems":32,
+                            "items":{"type":"array","minItems":2,"maxItems":2,
+                                "items":{"type":"number","minimum":0,"maximum":1}}},
+                        "color":{"type":"string","maxLength":16},
+                        "fill":{"type":"string","maxLength":16},
+                        "stroke_width":{"type":"number","minimum":0.001,"maximum":0.05},
+                        "border":{"type":"string","maxLength":16},
+                        "border_width":{"type":"number","minimum":0.001,"maximum":0.05},
+                        "radius":{"type":"number","minimum":0,"maximum":0.25},
+                        "width":{"type":"number","minimum":0.001,"maximum":0.05},
+                        "closed":{"type":"boolean"},
+                        "draw":{"type":"object","additionalProperties":False,
+                            "properties":{"delay":{"type":"number","minimum":0},
+                                "duration":{"type":"number","exclusiveMinimum":0}}},
+                        "enter":{"type":"object","additionalProperties":False,
+                            "properties":{"preset":{"type":"string"},
+                                "delay":{"type":"number","minimum":0},
+                                "duration":{"type":"number","exclusiveMinimum":0}}},
+                    }}},
             "allow_repeat_reason":{"type":"string","maxLength":300},
         },
     }
@@ -105,5 +169,38 @@ def creative_json_schema():
             "seed":{"type":"integer","minimum":0,"maximum":2147483647},
             "audio":{"type":"object"},
             "creative_direction":{"type":"string","maxLength":1000},
+        },
+    }
+
+
+def creative_decisions_json_schema():
+    """Schema for per-scene host-authored layout and motion decisions."""
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://reels-maker.local/schemas/creative-decisions-v1",
+        "title": "Reels Maker Host-Authored Scene Decisions",
+        "description": (
+            "One ordered decision per Creative Spec scene. Runtime registry "
+            "validation remains authoritative."
+        ),
+        "type": "array",
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["id", "layout", "typography_motion"],
+            "properties": {
+                "id": {"type": "string", "minLength": 1, "maxLength": 80},
+                "layout": {"type": "string", "enum": sorted(
+                    set(CAMERA_LAYOUTS) | set(STUDIO_COMPOSITIONS))},
+                "typography_motion": {"type": "string", "enum": sorted(
+                    set(CAMERA_TEXT_MOTIONS) | set(PRESETS))},
+                "layout_reason": {"type": "string", "maxLength": 500},
+                "entrance_presets": {
+                    "type": "object",
+                    "maxProperties": 12,
+                    "additionalProperties": {"type": "string",
+                                              "enum": sorted(PRESETS)},
+                },
+            },
         },
     }

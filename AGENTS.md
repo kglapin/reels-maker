@@ -70,3 +70,4 @@ See `docs/AGENTS.md` for the JSON-first CLI contract and `docs/CLI.md` for comma
 - Do not treat additional presets, higher resolution, heuristic rankings or green tests as proof of improved taste. Recipes are optional shortcuts; explicit valid LLM plans must not be silently flattened into templates.
 - Implement and evaluate the brief -> concepts -> art direction -> render -> multimodal critique -> revision loop, with scoped preference memory and bounded costs. Never claim a model saw/heard media it did not receive.
 - All LC tasks start as planned. Keep mocks, native integration, live model calls and human creative acceptance separate. Follow the existing branch/PR, confidentiality, licensing and delivery policies; saving this plan is not blanket authorization for future writes or paid calls.
+- For the model-agnostic subprocess workflow, use `docs/CREATIVE_AGENT_WORKFLOW.md`; the active host model authors decisions and the backend never makes hidden LLM calls.

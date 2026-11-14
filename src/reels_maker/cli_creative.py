@@ -18,10 +18,17 @@ def handle_creative(args) -> int:
     if args.command=="creative-capabilities":
         result=capabilities()
     elif args.command=="creative-schema":
-        from .creative.schema import creative_json_schema
-        result={"json_schema":creative_json_schema()}
+        from .creative.schema import (creative_decisions_json_schema,
+                                      creative_json_schema)
+        result={"json_schema":creative_json_schema(),
+                "scene_decisions_json_schema":creative_decisions_json_schema()}
     else:
         spec=json.loads(args.spec.read_text(encoding="utf-8"))
+        authored_decisions = None
+        if getattr(args, "decisions", None):
+            authored_decisions = json.loads(args.decisions.read_text(encoding="utf-8"))
+            if not isinstance(authored_decisions, list):
+                raise ProjectError("--decisions must contain a JSON array")
         if args.command=="creative-edit":
             patches=json.loads(args.patch.read_text(encoding="utf-8"))
             revised,changes=edit_creative_spec(spec,patches)
@@ -44,7 +51,8 @@ def handle_creative(args) -> int:
         else:
             manifest,plan=compile_creative_spec(
                 spec,source_dir=args.spec.parent,root=args.root,
-                check_assets=True)
+                check_assets=True,decisions=authored_decisions,
+                decision_source="llm" if authored_decisions is not None else None)
             qa=audit_creative_spec(spec,manifest,
                 source_dir=args.spec.parent,root=args.root)
             if not qa["ok"] or (getattr(args,"strict",False)
@@ -102,8 +110,12 @@ def handle_creative(args) -> int:
                         sheet=make_studio_storyboard(
                             project,Path(rendered["output"]),
                             args.storyboard,columns=4,motion_strip=True)
+                        from .creative.llm.evidence import bind_render_evidence
+                        evidence=bind_render_evidence(rendered,sheet)
+                    else:
+                        evidence=None
                     result={"render":rendered,"plan":plan,"qa":qa,
-                            "storyboard":sheet}
+                            "storyboard":sheet,"evidence":evidence}
                 finally:
                     path.unlink(missing_ok=True)
     _emit({"status":"ok","ok":True,**result})

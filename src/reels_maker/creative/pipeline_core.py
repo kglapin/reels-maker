@@ -69,18 +69,20 @@ class MotionDecision:
 
 @dataclass(frozen=True)
 class MotionPlan:
-    """Deterministic, intent-bound output of the existing heuristic Director."""
+    """Intent-bound authored or fallback decisions, validated for the renderer."""
 
     intent_fingerprint: str
     decisions: tuple[MotionDecision, ...]
+    decision_source: str
     _intent_json: str
 
     def __post_init__(self) -> None:
         intent = CreativeIntent(self._intent_json, self.intent_fingerprint)
-        expected = plan_shots(intent.spec)
         actual = [decision.decision for decision in self.decisions]
-        if actual != expected:
-            raise CreativeSpecError("$.motion_plan", "decisions do not match validated intent")
+        if self.decision_source not in ("llm", "explicit", "fallback"):
+            raise CreativeSpecError("$.motion_plan.decision_source", "unsupported decision source")
+        from .compiler import _validate_decisions
+        _validate_decisions(intent.spec, actual)
 
 @dataclass(frozen=True)
 class RenderScene:
@@ -165,16 +167,30 @@ def creative_intent(spec: dict) -> CreativeIntent:
     encoded = _canonical(spec, "$")
     return CreativeIntent(encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest())
 
-def plan_motion(intent: CreativeIntent) -> MotionPlan:
-    """Plan using only the deterministic, currently supported Director."""
+def plan_motion(intent: CreativeIntent, decisions: list[dict] | None = None, *,
+                decision_source: str | None = None) -> MotionPlan:
+    """Build a capability-validated plan; deterministic direction is fallback only.
+
+    Authored decisions are preserved instead of being silently replaced by the
+    heuristic director. This function does not call a model or renderer.
+    """
     if not isinstance(intent, CreativeIntent):
         raise TypeError("plan_motion requires a validated CreativeIntent")
+    source = decision_source or ("fallback" if decisions is None else "explicit")
+    if decisions is None:
+        decisions = [
+            {key: item[key] for key in ("id", "layout", "typography_motion")
+             if key in item}
+            for item in plan_shots(intent.spec)
+        ]
+    from .compiler import _validate_decisions
+    decisions = _validate_decisions(intent.spec, decisions)
     decisions = tuple(
         MotionDecision(item["id"], item["layout"], item["typography_motion"],
                        _canonical(item, "$.motion_plan"))
-        for item in plan_shots(intent.spec)
+        for item in decisions
     )
-    return MotionPlan(intent.fingerprint, decisions, intent._spec_json)
+    return MotionPlan(intent.fingerprint, decisions, source, intent._spec_json)
 
 def render_graph(intent: CreativeIntent, motion_plan: MotionPlan, *,
                  source_dir: str = ".", root: str | None = None,
@@ -191,11 +207,12 @@ def render_graph(intent: CreativeIntent, motion_plan: MotionPlan, *,
         raise CreativeSpecError("$.motion_plan", "plan was derived from a different intent")
     if motion_plan._intent_json != intent._spec_json:
         raise CreativeSpecError("$.motion_plan", "plan intent snapshot mismatch")
+    authored = [decision.decision for decision in motion_plan.decisions]
     manifest, report = compile_creative_spec(
-        intent.spec, source_dir=source_dir, root=root, check_assets=check_assets)
+        intent.spec, source_dir=source_dir, root=root, check_assets=check_assets,
+        decisions=authored, decision_source=motion_plan.decision_source)
     expected = [decision.decision for decision in motion_plan.decisions]
-    actual = plan_shots(intent.spec)
-    if expected != actual:
+    if expected != authored:
         raise CreativeSpecError("$.motion_plan", "unsupported or inconsistent motion decisions")
     width, height, fps = (manifest["video"][key] for key in ("width", "height", "fps"))
     scenes = []

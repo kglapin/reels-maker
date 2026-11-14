@@ -6,8 +6,51 @@ import json
 import math
 from pathlib import Path
 from ..design.styles import canonical_style
+from ..motionkit.presets import PRESETS
 from .director import plan_shots
+from .registry import CAMERA_LAYOUTS, CAMERA_TEXT_MOTIONS, STUDIO_COMPOSITIONS
 from .spec import CreativeSpecError, validate_creative_spec
+
+
+def _validate_decisions(spec, decisions):
+    if not isinstance(decisions, list) or len(decisions) != len(spec["shots"]):
+        raise CreativeSpecError("$.decisions", "expected one decision per scene")
+    layouts = CAMERA_LAYOUTS if spec.get("mode") == "camera_canvas" else STUDIO_COMPOSITIONS
+    motions = CAMERA_TEXT_MOTIONS if spec.get("mode") == "camera_canvas" else PRESETS
+    validated = []
+    for index, (decision, shot) in enumerate(zip(decisions, spec["shots"])):
+        path = f"$.decisions[{index}]"
+        if not isinstance(decision, dict) or decision.get("id") != shot["id"]:
+            raise CreativeSpecError(path, "decision must match scene id and order")
+        if set(decision) - {"id", "layout", "typography_motion",
+                            "layout_reason", "entrance_presets"}:
+            raise CreativeSpecError(path, "contains unsupported decision fields")
+        if ("layout_reason" in decision
+                and (not isinstance(decision["layout_reason"], str)
+                     or len(decision["layout_reason"]) > 500)):
+            raise CreativeSpecError(path + ".layout_reason",
+                                    "must be a string up to 500 characters")
+        entrance_presets = decision.get("entrance_presets", {})
+        if not isinstance(entrance_presets, dict):
+            raise CreativeSpecError(path + ".entrance_presets", "must be an object")
+        if len(entrance_presets) > 12:
+            raise CreativeSpecError(path + ".entrance_presets", "has too many roles")
+        for role, preset in entrance_presets.items():
+            if (not isinstance(role, str) or not role or len(role) > 80
+                    or not isinstance(preset, str) or preset not in PRESETS):
+                raise CreativeSpecError(path + ".entrance_presets",
+                                        "roles must map to supported renderer motion presets")
+        if spec.get("mode") == "camera_canvas" and entrance_presets:
+            raise CreativeSpecError(path + ".entrance_presets",
+                                    "per-element presets are only supported in Studio mode")
+        if (not isinstance(decision.get("layout"), str)
+                or decision["layout"] not in layouts):
+            raise CreativeSpecError(path + ".layout", "unsupported layout")
+        if (not isinstance(decision.get("typography_motion"), str)
+                or decision["typography_motion"] not in motions):
+            raise CreativeSpecError(path + ".typography_motion", "unsupported motion")
+        validated.append({**decision})
+    return validated
 
 def _auto_camera_points(shots,width,height):
     # Intentional asymmetry, not repetitive 90-degree steps.
@@ -41,7 +84,8 @@ def _relative_asset(asset,source_dir,root,brand):
         raise CreativeSpecError("$.shots.asset","only PNG, JPEG or WebP stills supported")
     return str(candidate)
 
-def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
+def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True,
+                          decisions=None,decision_source=None):
     """Pure, deterministic translation into the existing renderer's contract.
 
     The compiler never calls an LLM, invents an image, or silently downgrades
@@ -50,7 +94,18 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
     valid=validate_creative_spec(spec)
     shots=spec["shots"]
     mode=valid["mode"]
-    directed=plan_shots(spec)
+    # A valid authored plan must survive compilation unchanged. The heuristic
+    # director is only used when no plan was supplied, and is labelled as such.
+    if decisions is None:
+        directed=[{key: item[key] for key in
+                   ("id", "layout", "typography_motion") if key in item}
+                  for item in plan_shots(spec)]
+        source=decision_source or "fallback"
+    else:
+        directed=_validate_decisions(spec,decisions)
+        source=decision_source or "explicit"
+    if source not in ("llm","explicit","fallback"):
+        raise CreativeSpecError("$.decision_source","choose llm, explicit or fallback")
     brand=spec.get("brand")
     width,height,fps=valid["width"],valid["height"],valid["fps"]
     manifest={
@@ -119,16 +174,22 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
                 scene["camera_canvas"]["move_duration"]=.88
         else:
             scene["typography_motion"]=decision["typography_motion"]
+            if decision.get("entrance_presets"):
+                scene["entrance_presets"] = copy.deepcopy(
+                    decision["entrance_presets"])
             if "value" in shot:scene["value"]=shot["value"]
             if "visual" in shot:scene["visual"]=shot["visual"]
             if "chart" in shot:scene.update(copy.deepcopy(shot["chart"]))
             if "rotation" in shot:scene["editorial_rotation"]=copy.deepcopy(shot["rotation"])
             if "icon_library" in shot:scene["icon_library"]=shot["icon_library"]
             if "icon_assets" in shot:scene["icon_assets"]=copy.deepcopy(shot["icon_assets"])
+            for field in ("split_lines", "cues", "perspective", "graphic_elements"):
+                if field in shot:
+                    scene[field] = copy.deepcopy(shot[field])
             if "transition" in shot and shot["transition"].get("type","cut")!="cut":
                 scene["transition_out"]=copy.deepcopy(shot["transition"])
         manifest["scenes"].append(scene)
-    decisions=[{**choice,"camera":manifest["scenes"][idx].get("camera_canvas")}
+    decision_report=[{**choice,"camera":manifest["scenes"][idx].get("camera_canvas")}
                for idx,choice in enumerate(directed)]
     report={
         "ok":True,
@@ -137,10 +198,12 @@ def compile_creative_spec(spec,*,source_dir=".",root=None,check_assets=True):
         "name":spec["name"],
         "shot_count":len(shots),
         "duration":valid["duration"],
-        "decisions":decisions,
+        "decisions":decision_report,
+        "decision_source":source,
         "warnings":warnings,
         "limitations":[
-            "Motion ranking is deterministic heuristic direction, not semantic inference.",
+            ("Motion ranking is deterministic heuristic direction, not semantic inference."
+             if source == "fallback" else "Plan was authored outside the deterministic fallback director."),
             "Visual QC of actual rendered frames is required before publication.",
         ],
     }

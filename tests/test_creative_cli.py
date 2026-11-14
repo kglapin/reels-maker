@@ -41,6 +41,7 @@ class CreativeCLITests(unittest.TestCase):
         code,report=self.invoke("creative-schema","--json")
         self.assertEqual(code,0)
         self.assertEqual(report["json_schema"]["properties"]["creative_schema_version"]["const"],1)
+        self.assertEqual(report["scene_decisions_json_schema"]["type"],"array")
     def test_compile_cli_to_manifest(self):
         target=self.dir/"test.studio.json"
         code,report=self.invoke("creative-compile",str(self.spec),"--output",str(target),"--json")
@@ -49,6 +50,82 @@ class CreativeCLITests(unittest.TestCase):
         loaded=json.loads(target.read_text(encoding="utf-8"))
         self.assertEqual(loaded["scenes"][0]["headline"],"THE FIRST SHOT")
         self.assertIn("camera_canvas",loaded["scenes"][0])
+    def test_compile_cli_preserves_host_authored_llm_decisions(self):
+        decisions=self.dir/"decisions.json"
+        decisions.write_text(json.dumps([
+            {"id":"first","layout":"photo-left","typography_motion":"slide-up",
+             "layout_reason":"Use asymmetry to create a clear focal direction."}
+        ]),encoding="utf-8")
+        target=self.dir/"llm.studio.json"
+        code,report=self.invoke("creative-compile",str(self.spec),"--decisions",
+                                str(decisions),"--output",str(target),"--json")
+        self.assertEqual(code,0,report)
+        self.assertEqual(report["plan"]["decision_source"],"llm")
+        scene=json.loads(target.read_text(encoding="utf-8"))["scenes"][0]
+        self.assertEqual(scene["camera_canvas"]["layout"],"photo-left")
+        self.assertEqual(scene["camera_canvas"]["typography_motion"],"slide-up")
+
+    def test_compile_cli_rejects_model_decisions_outside_capability_registry(self):
+        decisions=self.dir/"bad-decisions.json"
+        decisions.write_text(json.dumps([
+            {"id":"first","layout":"teleport","typography_motion":"slide-up"}
+        ]),encoding="utf-8")
+        target=self.dir/"invalid.studio.json"
+        code,report=self.invoke("creative-compile",str(self.spec),"--decisions",
+                                str(decisions),"--output",str(target),"--json")
+        self.assertEqual(code,2)
+        self.assertFalse(target.exists())
+    def test_render_cli_binds_actual_video_and_motion_strip_hashes(self):
+        output=self.dir/"preview.mp4"
+        storyboard=self.dir/"motion-strip.png"
+        code,report=self.invoke("creative-render",str(self.spec),"--output",
+                                str(output),"--storyboard",str(storyboard),"--json")
+        self.assertEqual(code,0,report)
+        self.assertTrue(output.is_file())
+        self.assertTrue(storyboard.is_file())
+        evidence=report["evidence"]
+        self.assertEqual(len(evidence["render_sha256"]),64)
+        self.assertEqual(len(evidence["storyboard_sha256"]),64)
+        self.assertEqual(len(evidence["evidence_hash"]),64)
+        self.assertEqual(evidence["storyboard_mode"],"motion_strip")
+        self.assertTrue(evidence["host_observation_required"])
+    def test_render_cli_executes_authored_scene_choreography_and_camera(self):
+        spec=self.dir/"studio-controls.json"
+        spec.write_text(json.dumps({
+            "creative_schema_version":1,"name":"scene-controls",
+            "mode":"studio","style":"editorial-premium",
+            "video":{"width":360,"height":640,"fps":24},
+             "shots":[{"id":"quote","headline":"ONE CLEAR\nSIGNAL",
+                       "subtitle":"Room for the idea","duration":3.0,
+                       "composition":"quote","split_lines":["headline"],
+                       "cues":{"headline":0.08,"body":0.4,"quote-mark":0.0},
+                       "perspective":{"mode":"settle","yaw":-5,
+                                      "duration":1.0,"delay":0.1}}],
+        }),encoding="utf-8")
+        decisions=self.dir/"studio-decisions.json"
+        decisions.write_text(json.dumps([
+             {"id":"quote","layout":"quote","typography_motion":"mask-rise",
+              "entrance_presets":{"headline":"scale-focus"},
+              "layout_reason":"stage the statement, then its support"}
+        ]),encoding="utf-8")
+        output=self.dir/"authored-controls.mp4"
+        storyboard=self.dir/"authored-controls.png"
+        code,report=self.invoke("creative-render",str(spec),"--decisions",
+                                str(decisions),"--output",str(output),
+                                "--storyboard",str(storyboard),"--json")
+        self.assertEqual(code,0,report)
+        self.assertTrue(report["render"]["ok"])
+        self.assertEqual(report["plan"]["decision_source"],"llm")
+        self.assertTrue(report["evidence"]["evidence_hash"])
+        choreography=report["render"]["scenes"][0]["choreography"]
+        self.assertNotIn("cue_without_element",
+                         [warning["code"] for warning in choreography["warnings"]])
+        self.assertEqual(choreography["entries"]["headline-0"]["preset"],
+                         "scale-focus")
+        self.assertEqual(choreography["entries"]["headline-1"]["preset"],
+                         "scale-focus")
+        self.assertGreater(choreography["entries"]["headline-1"]["onset"],
+                           choreography["entries"]["headline-0"]["onset"])
     def test_edit_cli_writes_new_spec(self):
         patch=self.dir/"patch.json"
         patch.write_text(json.dumps([

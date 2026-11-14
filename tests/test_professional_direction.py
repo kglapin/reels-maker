@@ -74,7 +74,8 @@ class ProfessionalDirectionTests(unittest.TestCase):
         self.assertNotIn("font_size", plan[0]["scene_defaults"])
 
     def test_photograph_leads_supporting_copy(self):
-        spec = source([{"id": "a", "headline": "REALIZACJA", "asset": "a.png"}])
+        spec = source([{"id": "a", "headline": "REALIZACJA",
+                        "subtitle": "Autentyczna realizacja", "asset": "a.png"}])
         cues = refine_plan(spec, baseline(spec))[0]["scene_defaults"]["cues"]
         self.assertLess(cues["visual"], cues["headline"])
         self.assertLess(cues["headline"], cues["body"])
@@ -101,7 +102,8 @@ class ProfessionalDirectionTests(unittest.TestCase):
 class ProfessionalDirectionIntegrationTests(unittest.TestCase):
     def test_compiler_consumes_real_scene_defaults(self):
         from reels_maker.creative.professional_direction import compile_professional_spec as compile_creative_spec
-        spec = source()
+        spec = source([{"id": "open", "headline": "CZYTELNY PRZEKAZ",
+                        "subtitle": "Treść wspierająca", "duration": 4.0}])
         manifest, report = compile_creative_spec(spec, check_assets=False)
         scene = manifest["scenes"][0]
         self.assertEqual(scene["composition"], "statement")

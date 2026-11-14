@@ -270,12 +270,12 @@ def _cylinder(q, cx, cy, z0, z1, r, c_light, c_dark, c_top, n=64,
         a0 = i * math.tau / n
         a1 = (i + 1) * math.tau / n
         facing = (math.cos((a0 + a1) / 2) + math.sin((a0 + a1) / 2)) / 2
-        col = mix(c_dark, c_light, 0.5 + 0.5 * facing)
+        col = _cyl_stave(c_dark, c_light, c_top, facing)
         q.poly([(cx + r * math.cos(a0), cy + r * math.sin(a0), z0),
                 (cx + r * math.cos(a1), cy + r * math.sin(a1), z0),
                 (cx + r * math.cos(a1), cy + r * math.sin(a1), z1),
                 (cx + r * math.cos(a0), cy + r * math.sin(a0), z1)],
-               tuple(int(round(v)) for v in col))
+               col)
     if rim:
         q.ground_ellipse(cx, cy, r * 1.04, r * 1.04, c_dark, z=z0 + 0.012)
     if not top_ring:
@@ -291,7 +291,7 @@ def _cylinder(q, cx, cy, z0, z1, r, c_light, c_dark, c_top, n=64,
         a0 = i * math.tau / 12
         a1 = (i + 1) * math.tau / 12
         facing = (math.cos((a0 + a1) / 2) + math.sin((a0 + a1) / 2)) / 2
-        col = mix(c_dark, c_light, 0.5 + 0.5 * facing)
+        col = _cyl_stave(c_dark, c_light, c_top, facing)
         q.poly([(cx + r * 1.03 * math.cos(a0), cy + r * 1.03 * math.sin(a0), z1),
                 (cx + r * 1.03 * math.cos(a1), cy + r * 1.03 * math.sin(a1), z1),
                 (cx + r * 1.03 * math.cos(a1), cy + r * 1.03 * math.sin(a1),
@@ -300,6 +300,17 @@ def _cylinder(q, cx, cy, z0, z1, r, c_light, c_dark, c_top, n=64,
                  z1 + 0.05)],
                tuple(int(round(v)) for v in col))
     q.ground_ellipse(cx, cy, r * 1.03, r * 1.03, c_top, z=z1 + 0.05)
+
+
+def _cyl_stave(c_dark, c_light, c_top, facing):
+    """Stave colour: diffuse wrap plus a specular sweep near the key-light
+    azimuth (facing ~0.7), so cylinders read as coated metal, not card."""
+    t = 0.5 + 0.5 * facing
+    col = mix(c_dark, c_light, t)
+    spec = max(0.0, min(1.0, (t - 0.55) / 0.4))
+    if spec > 0.0:
+        col = mix(col, c_top, 0.55 * spec * spec)
+    return tuple(int(round(v)) for v in col)
 
 
 def _on_cylinder(cx, cy, r, theta, z):

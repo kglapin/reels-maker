@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 
-from .world import _cylinder
+from .world import _cylinder, chamfered_box
 
 
 def battery_rack(q, cx, cy, P):
@@ -48,8 +48,8 @@ def battery_module(q, cx, cy, P):
     """Single LFP block close-up: lid, top terminals, rear handle, side ribs."""
     q.boxg((cx - 0.32, cy - 0.18, 0.0), (cx + 0.32, cy + 0.18, 0.05),
           (120, 132, 122), (100, 112, 102), (140, 152, 142))
-    q.boxg((cx - 0.30, cy - 0.16, 0.03), (cx + 0.30, cy + 0.16, 0.42),
-          (150, 170, 178), (122, 142, 150), (172, 190, 198))
+    chamfered_box(q, (cx - 0.30, cy - 0.16, 0.03), (cx + 0.30, cy + 0.16, 0.42),
+                  chamfer=0.022, c=(142, 158, 168), dl=0.12)
     q.boxg((cx - 0.31, cy - 0.17, 0.40), (cx + 0.31, cy + 0.17, 0.46),
           (130, 148, 156), (108, 126, 134), (152, 168, 176))
     for tx in (cx - 0.12, cx + 0.12):
@@ -369,7 +369,8 @@ def bess_container(q, cx, cy, P):
         for fy in (cy - 0.40, cy + 0.40):
             q.boxg((fx - 0.09, fy - 0.09, 0.0), (fx + 0.09, fy + 0.09, 0.16),
                    *steel)
-    q.boxg((cx - 1.20, cy - 0.48, 0.10), (cx + 1.20, cy + 0.48, 1.20), *sage)
+    chamfered_box(q, (cx - 1.20, cy - 0.48, 0.10), (cx + 1.20, cy + 0.48, 1.20),
+                  chamfer=0.05, c=(158, 172, 148), dl=0.12)
     for hx in (cx - 1.20, cx + 1.20):
         for hy in (cy - 0.48, cy + 0.48):
             q.boxg((hx - 0.07, hy - 0.07, 1.13), (hx + 0.07, hy + 0.07, 1.27),
@@ -401,7 +402,8 @@ def ess_cabinet(q, cx, cy, P):
     sage = ((172, 186, 160), (144, 160, 134), (192, 204, 180))
     sage_d = ((150, 166, 140), (126, 142, 116), (170, 186, 160))
     q.boxg((cx - 0.50, cy - 0.36, -0.02), (cx + 0.50, cy + 0.36, 0.14), *steel)
-    q.boxg((cx - 0.45, cy - 0.32, 0.10), (cx + 0.45, cy + 0.32, 1.30), *sage)
+    chamfered_box(q, (cx - 0.45, cy - 0.32, 0.10), (cx + 0.45, cy + 0.32, 1.30),
+                  chamfer=0.035, c=(162, 176, 150), dl=0.12)
     q.boxg((cx - 0.51, cy - 0.38, 1.28), (cx + 0.51, cy + 0.38, 1.40),
            *sage_d)
     q.boxg((cx - 0.40, cy + 0.315, 0.25), (cx - 0.02, cy + 0.36, 1.15),

@@ -1,4 +1,4 @@
-"""Depth-buffer regression tests (REELS_ISO_DEPTH opt-in).
+"""Depth-buffer regression tests (default on; REELS_ISO_DEPTH=0 opts out).
 
 Locks the visibility contract from docs/ISO_PROP_AUTHORING.md §6:
 opaque geometry resolves by world depth regardless of call order,

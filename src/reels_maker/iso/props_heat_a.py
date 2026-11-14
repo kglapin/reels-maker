@@ -224,14 +224,22 @@ def dhw_tank(q, cx, cy, P):
         q.box((cx - 0.07, cy + r - 0.05, dz - 0.065),
               (cx + 0.07, cy + r + 0.02, dz + 0.065),
               TRIM, TRIM, TRIM)
-    # Thermometer dial fused on the +Y face near the centerline, where
-    # the shell surface is fullest (off-center dials float past the curve).
-    q.disc_y(cx - 0.06, cy + 0.294, 1.02, 0.055, TRIM)
-    q.disc_y(cx - 0.06, cy + 0.296, 1.02, 0.042, (243, 238, 220))
-    q.line([(cx - 0.06, cy + 0.298, 1.02),
-            (cx - 0.06 + 0.028 * math.cos(1.1), cy + 0.298,
-             1.02 + 0.028 * math.sin(1.1))], (180, 90, 50), 1.0)
-    q.dot((cx - 0.06, cy + 0.298, 1.02), 1.0, (60, 72, 64, 255))
+    # Thermometer dial wrapped ON the shell surface via _on_cylinder —
+    # conforms to the curve, so nothing is buried or floating.
+    rs = r + 0.004
+    th = math.pi / 2 + 0.267          # ~x offset -0.08 on the +Y flank
+    q.poly([_on_cylinder(cx, cy, rs, th - 0.165, 0.968),
+            _on_cylinder(cx, cy, rs, th + 0.165, 0.968),
+            _on_cylinder(cx, cy, rs, th + 0.165, 1.072),
+            _on_cylinder(cx, cy, rs, th - 0.165, 1.072)], TRIM)
+    q.poly([_on_cylinder(cx, cy, rs, th - 0.125, 0.982),
+            _on_cylinder(cx, cy, rs, th + 0.125, 0.982),
+            _on_cylinder(cx, cy, rs, th + 0.125, 1.058),
+            _on_cylinder(cx, cy, rs, th - 0.125, 1.058)], (243, 238, 220))
+    hub = _on_cylinder(cx, cy, rs, th, 1.02)
+    tip = _on_cylinder(cx, cy, rs, th + 0.021, 1.041)
+    q.line([hub, tip], (180, 90, 50), 1.0)
+    q.dot(hub, 1.2, (60, 72, 64, 255))
     # Top vent: stubby brass stem + cap seated on the lid.
     _cylinder(q, cx, cy, z1 + 0.05, z1 + 0.10, 0.040,
               (150, 130, 80), (110, 92, 58), (170, 150, 100), n=12)

@@ -6,7 +6,7 @@ import unittest
 
 from reels_maker.core.scene_graph import Node
 from reels_maker.motionkit.keyframes import Keyframe, Track
-from reels_maker.qa.motion import audit_motion
+from reels_maker.qa.motion import audit_motion, _sampled_track_values
 
 
 def _built(nodes, *, duration=2.0, index=0, entries=None, recipe="spotlight",
@@ -52,6 +52,62 @@ class MotionAuditTests(unittest.TestCase):
         codes = [issue.code for issue in audit_motion([built], SimpleNamespace(scenes=[]))]
         self.assertIn("blink_cycle", codes)
 
+    def test_blink_and_flutter_block_only_in_strict_mode(self):
+        blink = Track([
+            Keyframe(t, 1.0 if int(t * 5) % 2 == 0 else 0.0, "linear")
+            for t in [i * 0.1 for i in range(21)]])
+        jitter = _rect()
+        jitter.track("dx", Track.from_pairs([
+            (t, 50 * (1 if int(t * 12) % 2 == 0 else -1))
+            for t in [i * 0.05 for i in range(41)]]))
+        opacity = _rect()
+        opacity.track("opacity", blink)
+        built = _built([opacity, jitter], duration=2.0)
+
+        advisory = {issue.code: issue.severity for issue in
+                    audit_motion([built], SimpleNamespace(scenes=[]),
+                                 fps=24)}
+        strict = {issue.code: issue.severity for issue in
+                  audit_motion([built], SimpleNamespace(scenes=[]),
+                               fps=24, strict=True)}
+        self.assertEqual(advisory["blink_cycle"], "warning")
+        self.assertEqual(advisory["motion_flutter"], "warning")
+        self.assertEqual(strict["blink_cycle"], "error")
+        self.assertEqual(strict["motion_flutter"], "error")
+
+    def test_motion_audit_uses_encoded_fps_and_frame_quantized_locations(self):
+        track = Track([
+            Keyframe(t, 1.0 if int(t * 5) % 2 == 0 else 0.0, "linear")
+            for t in [i * 0.1 for i in range(21)]])
+        self.assertEqual(len(_sampled_track_values(track, 2.0, 24, 48)), 48)
+        self.assertEqual(len(_sampled_track_values(track, 2.0, 30, 60)), 60)
+        self.assertEqual(
+            _sampled_track_values(track, 2.0, 24, 48)[-1],
+            track.value(47 / 24),
+        )
+        node = _rect()
+        node.track("opacity", track)
+        issue = next(issue for issue in audit_motion(
+            [_built([node], duration=2.0)], SimpleNamespace(scenes=[]),
+            fps=24, frame_counts=[48]) if issue.code == "blink_cycle")
+        self.assertEqual(issue.frame, round(issue.time * 24))
+        self.assertEqual(issue.frame, 5)
+        self.assertAlmostEqual(issue.time, 0.208)
+
+    def test_motion_audit_rejects_invalid_frame_counts(self):
+        built = _built([_rect()], duration=2.0)
+        invalid_counts = ([], [0], [-1], [2.0], [True], [1, 2])
+        for frame_counts in invalid_counts:
+            with self.subTest(frame_counts=frame_counts), self.assertRaisesRegex(
+                    ValueError, "frame_counts"):
+                audit_motion([built], SimpleNamespace(scenes=[]), fps=24,
+                             frame_counts=frame_counts)
+
+    def test_motion_audit_rejects_invalid_output_fps(self):
+        for fps in (0, -1, 24.0, True):
+            with self.subTest(fps=fps), self.assertRaisesRegex(ValueError, "fps"):
+                audit_motion([], SimpleNamespace(scenes=[]), fps=fps)
+
     def test_flutter_track_is_flagged(self):
         dx = [(t, 50 * (1 if int(t * 12) % 2 == 0 else -1))
               for t in [i * 0.05 for i in range(41)]]
@@ -59,6 +115,20 @@ class MotionAuditTests(unittest.TestCase):
         built = _built([node], duration=2.0)
         codes = [issue.code for issue in audit_motion([built], SimpleNamespace(scenes=[]))]
         self.assertIn("motion_flutter", codes)
+
+    def test_discrete_press_scale_is_not_misclassified_as_flutter(self):
+        node = _rect()
+        node.meta["motion_intent"] = "discrete_press"
+        node.track("scale", Track.from_pairs([
+            (t, .92 if int(t * 10) % 2 else 1.0)
+            for t in [i * .05 for i in range(41)]
+        ]))
+        built = _built([node], duration=2.0)
+        for strict in (False, True):
+            with self.subTest(strict=strict):
+                codes = [issue.code for issue in audit_motion(
+                    [built], SimpleNamespace(scenes=[]), fps=30, strict=strict)]
+                self.assertNotIn("motion_flutter", codes)
 
     def test_static_tail_is_flagged(self):
         node = _rect(opacity=[(0.0, 0.0), (0.3, 1.0)])

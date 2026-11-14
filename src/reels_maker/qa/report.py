@@ -28,6 +28,28 @@ from .motion import audit_motion
 MIN_HOLD = .42
 MAX_READING_CPS = 22.0
 
+
+def _contrast_frame_indices(timing, samples_per_scene: int, *,
+                            strict: bool) -> list[int]:
+    """Choose contrast frames, exhaustively when strict QA is requested."""
+    if strict:
+        return list(range(timing.frames))
+    parts = (1, samples_per_scene - 2, samples_per_scene - 1)
+    return sorted({round((timing.frames - 1) * part /
+                         max(1, samples_per_scene - 1))
+                   for part in parts})
+
+
+def _append_frame_issues(destination: list[Issue], seen: set[tuple],
+                         findings: list[Issue]) -> None:
+    """Keep the first actionable frame for each repeated scene/element defect."""
+    for finding in findings:
+        key = (finding.code, tuple(sorted(finding.elements)))
+        if key not in seen:
+            destination.append(finding)
+            seen.add(key)
+
+
 def audit(project, built_scenes, timeline: Timeline, *,
           renderer=None, samples_per_scene: int = 6,
           strict: bool = False) -> dict:
@@ -70,10 +92,11 @@ def audit(project, built_scenes, timeline: Timeline, *,
             built.context.width, built.context.height)
         scene_issues.extend(_vertical_reels_content_zone(built))
         elements_seen: dict[str, dict] = {}
+        frame_issue_keys: set[tuple] = set()
         compositions.append(composition_name)
         # ---------------------------------------------------------- geometry
         samples = sample_geometry_frames(built, timing, timeline.fps,
-                                         samples_per_scene)
+                                         samples_per_scene, strict=strict)
         for local_frame in samples:
             time = local_frame / timeline.fps
             nodes = built.at(time)
@@ -81,12 +104,16 @@ def audit(project, built_scenes, timeline: Timeline, *,
             for node in nodes:
                 elements.extend(collect_qa_elements(node))
             sampled_frames += 1
-            scene_issues.extend(_collisions(elements, allowed, built, time,
-                                            local_frame))
+            _append_frame_issues(
+                scene_issues, frame_issue_keys,
+                _collisions(elements, allowed, built, time, local_frame))
             if not vertical_reels:
-                scene_issues.extend(_safe_area(elements, built, time, local_frame))
-                scene_issues.extend(_text_ink_safe_area(
-                    nodes, built, time, local_frame))
+                _append_frame_issues(
+                    scene_issues, frame_issue_keys,
+                    _safe_area(elements, built, time, local_frame))
+                _append_frame_issues(
+                    scene_issues, frame_issue_keys,
+                    _text_ink_safe_area(nodes, built, time, local_frame))
             for element in elements:
                 elements_seen.setdefault(element["role"], element)
         for element in elements_seen.values():
@@ -154,19 +181,19 @@ def audit(project, built_scenes, timeline: Timeline, *,
                     "Fix the narration transcript or scene duration."))
         # ------------------------------------------------------------- contrast
         if renderer is not None and not camera_canvas_mode:
-            probe_times = [round((timing.frames - 1) * part /
-                                 max(1, samples_per_scene - 1)) / timeline.fps
-                           for part in (1, samples_per_scene - 2,
-                                        samples_per_scene - 1)]
-            for time in sorted(set(probe_times)):
+            for frame_index in _contrast_frame_indices(
+                    timing, samples_per_scene, strict=strict):
+                time = frame_index / timeline.fps
                 frame = renderer.render(built, min(time, built.duration))
                 elements = []
                 for node in built.at(min(time, built.duration)):
                     elements.extend(collect_qa_elements(node))
-                scene_issues.extend(_contrast(
-                    elements, frame, built, time, timeline.fps,
-                    design_scale=float(getattr(getattr(project, "tokens", None),
-                                               "scale", 1.0))))
+                _append_frame_issues(
+                    scene_issues, frame_issue_keys,
+                    _contrast(
+                        elements, frame, built, time, timeline.fps,
+                        design_scale=float(getattr(
+                            getattr(project, "tokens", None), "scale", 1.0))))
         # ---------------------------------------------------------------- data
         scene_issues.extend(_data_checks(built))
         # -------------------------------------------------------------- assets
@@ -180,7 +207,9 @@ def audit(project, built_scenes, timeline: Timeline, *,
             })
         issues.extend(scene_issues)
 
-    issues.extend(audit_motion(built_scenes, project))
+    issues.extend(audit_motion(
+        built_scenes, project, fps=timeline.fps, strict=strict,
+        frame_counts=[timing.frames for timing in timeline.scenes]))
     for finding in audit_typography_tokens(project.tokens):
         issues.append(Issue(
             finding["code"], finding["severity"], finding["message"],

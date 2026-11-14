@@ -53,7 +53,8 @@ def _text_blocks(root: Node) -> list[tuple[str, TextBlock]]:
 
 
 def sample_geometry_frames(built, timing, fps: int,
-                           samples_per_scene: int = 6) -> list[int]:
+                           samples_per_scene: int = 6, *,
+                           strict: bool = False) -> list[int]:
     """Combine evenly-spaced QA frames with track keys, easing extrema and probes.
 
     Every authored keyframe is mapped onto an output frame. Each interval
@@ -69,6 +70,8 @@ def sample_geometry_frames(built, timing, fps: int,
     frames = timing.frames
     if type(frames) is not int or frames < 1 or type(fps) is not int or fps < 1:
         raise ValueError("QA frame count and FPS must be positive integers")
+    if strict:
+        return list(range(frames))
     indices = {round((frames - 1) * step / (samples_per_scene - 1))
                for step in range(samples_per_scene)}
     key_times = {0.0, max(0.0, (frames - 1) / fps)}

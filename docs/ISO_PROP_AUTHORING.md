@@ -103,16 +103,16 @@ solid (a cap would paint a phantom disc over it).
 
 ## 6. Visibility contract — painter vs depth buffer
 
-Default renderer is **painter's algorithm**: later draw calls win. Correct
-order is far → near (smaller `x+y` first, larger last).
+Default renderer is a **per-pixel depth buffer** (on unless
+`REELS_ISO_DEPTH=0`): opaque `poly`/`dot`/`line`/`grad_poly`/`boxg` calls
+resolve visibility from world depth, so **call order stops mattering for
+opaque geometry** — parts behind walls cannot paint on top, period.
+`REELS_ISO_DEPTH=0` forces the legacy painter's-algorithm fallback
+(faster, order-dependent: later calls win, far → near is required).
 
-`REELS_ISO_DEPTH=1` enables a per-pixel depth buffer: opaque `poly`/`dot`/`line`
-calls resolve visibility from world depth, so **call order stops mattering
-for opaque geometry** — parts behind walls cannot paint on top, period.
-`grad_poly`/`boxg` faces are depth-tested too (gradient composites only
-where depth wins, then claims depth). Translucent overlays (alpha < ~250)
-still composite in call order and never claim depth — shadows, glass,
-sheen and light bands keep painter semantics by design.
+In depth mode, translucent overlays (alpha < ~250) still composite in
+call order and never claim depth — shadows, glass, sheen and light bands
+keep painter semantics by design.
 
 Still painter-order regardless of mode:
 - `decal` — always composites on top; use only for intentional overlays

@@ -16,10 +16,12 @@ except ImportError:  # optional accelerator: anti-aliased rasterizer
 
 # REELS_ISO_RASTER=pil forces the legacy aliased ImageDraw path.
 _USE_AGG = _aggdraw is not None and os.environ.get("REELS_ISO_RASTER", "agg") != "pil"
-# REELS_ISO_DEPTH=1 enables the per-pixel depth buffer: opaque geometry
-# resolves visibility from world depth (x+y+z, larger = nearer) instead of
-# painter call order, so parts behind walls can never paint on top.
-_USE_DEPTH = os.environ.get("REELS_ISO_DEPTH", "") == "1"
+# Depth buffer is ON by default: opaque geometry resolves visibility from
+# world depth (x+y+z, larger = nearer) instead of painter call order, so
+# parts behind walls can never paint on top. REELS_ISO_DEPTH=0 forces the
+# legacy painter fallback (faster, order-dependent). Translucent overlays
+# and decals always keep painter semantics either way.
+_USE_DEPTH = os.environ.get("REELS_ISO_DEPTH", "1") != "0"
 
 C = math.sqrt(3) / 2
 W, H = 1080, 1920
